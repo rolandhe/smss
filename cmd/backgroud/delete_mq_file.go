@@ -8,6 +8,10 @@ import (
 	"time"
 )
 
+const (
+	WaitFileLockTimeout = time.Second * 3
+)
+
 type task struct {
 	name    string
 	notify  chan bool
@@ -52,7 +56,7 @@ func (de *mqDelExecutor) run() {
 		t := <-de.deleteList
 		unlocker, waiter := de.locker.Lock(t.name, t.who, t.traceId)
 		if waiter != nil {
-			if !waiter(time.Second * 3) {
+			if !waiter(WaitFileLockTimeout) {
 				log.Printf("waiter delete mq %s file locker failed\n", t.name)
 				t.notify <- false
 				continue

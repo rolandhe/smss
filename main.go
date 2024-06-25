@@ -1,7 +1,13 @@
 package main
 
-import "github.com/rolandhe/smss/cmd"
+import (
+	"github.com/rolandhe/smss/cmd"
+	"github.com/rolandhe/smss/conf"
+)
 
 func main() {
-	cmd.StartServer("mq-data")
+	if err := conf.Init(); err != nil {
+		return
+	}
+	cmd.StartServer(conf.MainStorePath)
 }

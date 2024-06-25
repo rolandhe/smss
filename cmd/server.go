@@ -1,21 +1,18 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/rolandhe/smss/cmd/backgroud"
 	"github.com/rolandhe/smss/cmd/protocol"
 	"github.com/rolandhe/smss/cmd/repair"
 	"github.com/rolandhe/smss/cmd/router"
+	"github.com/rolandhe/smss/conf"
 	"github.com/rolandhe/smss/pkg"
 	"github.com/rolandhe/smss/pkg/nets"
 	"github.com/rolandhe/smss/store"
 	"github.com/rolandhe/smss/store/fss"
 	"log"
 	"net"
-	"time"
-)
-
-const (
-	DefaultIoWriteTimeout = time.Second
 )
 
 func StartServer(root string) {
@@ -35,14 +32,14 @@ func StartServer(root string) {
 		return
 	}
 
-	worker, err := startBack(1000, w, fstore)
+	worker, err := startBack(conf.WorkerBuffSize, w, fstore)
 	if err != nil {
 		return
 	}
 
 	startBgAndInitRouter(fstore, worker)
 
-	ln, err := net.Listen("tcp", ":8080")
+	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", conf.Port))
 	if err != nil {
 		// handle error
 		return
@@ -88,7 +85,7 @@ func handleConnection(conn net.Conn, worker *backWorker) {
 		}
 
 		if header.GetCmd() == protocol.CommandAlive {
-			if err = nets.OutAlive(conn, DefaultIoWriteTimeout); err != nil {
+			if err = nets.OutAlive(conn, conf.DefaultIoWriteTimeout); err != nil {
 				log.Printf("tid:=%s,out alive err:%v\n", header.TraceId, err)
 				return
 			}

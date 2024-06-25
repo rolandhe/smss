@@ -4,6 +4,7 @@ import (
 	"github.com/rolandhe/smss/binlog"
 	"github.com/rolandhe/smss/cmd/protocol"
 	"github.com/rolandhe/smss/cmd/router"
+	"github.com/rolandhe/smss/conf"
 	"github.com/rolandhe/smss/pkg"
 	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store"
@@ -15,12 +16,7 @@ import (
 )
 
 const (
-	MaxLogSize int64 = 1024 * 1024 * 1024 * 2
-)
-
-const (
-	BinlogCheckpointKey = "bin@checkpoint"
-	ReplicaPositionKey  = "replica@position"
+	ReplicaPositionKey = "replica@position"
 )
 
 type backWorker struct {
@@ -29,16 +25,16 @@ type backWorker struct {
 	store  store.Store
 }
 
-func newWriter(root string,meta store.Meta) (*binlog.WalWriter[protocol.RawMessage], store.Store, error) {
+func newWriter(root string, meta store.Meta) (*binlog.WalWriter[protocol.RawMessage], store.Store, error) {
 	binlogRoot := path.Join(root, store.BinlogDir)
 	pkg.EnsurePathExist(binlogRoot)
 
-	fstore, err := fss.NewFileStore(root, 50,meta)
+	fstore, err := fss.NewFileStore(root, conf.MqBufferSize, meta)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	binlogWriter := standard.NewMsgWriter[protocol.RawMessage](store.BinlogDir, binlogRoot, MaxLogSize, func(f *os.File, msg *protocol.RawMessage) (int64, error) {
+	binlogWriter := standard.NewMsgWriter[protocol.RawMessage](store.BinlogDir, binlogRoot, conf.MaxLogSize, func(f *os.File, msg *protocol.RawMessage) (int64, error) {
 		handler := router.GetRouter(msg.Command)
 		return handler.DoBinlog(f, msg)
 	})
@@ -71,7 +67,7 @@ func startBack(buffSize int, w *binlog.WalWriter[protocol.RawMessage], store sto
 
 func (worker *backWorker) process() {
 	for {
-		msg := worker.waitMsg(time.Millisecond * 500)
+		msg := worker.waitMsg(conf.WorkerWaitMsgTimeout)
 		if msg == nil {
 			continue
 		}

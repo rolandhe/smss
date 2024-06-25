@@ -5,6 +5,7 @@ import (
 	"github.com/robfig/cron/v3"
 	"github.com/rolandhe/smss/cmd/protocol"
 	"github.com/rolandhe/smss/cmd/router"
+	"github.com/rolandhe/smss/conf"
 	"github.com/rolandhe/smss/pkg"
 	"github.com/rolandhe/smss/store"
 	"log"
@@ -15,8 +16,6 @@ import (
 
 const (
 	DeleteFileAfterStateChangeTimeout = int64(1000 * 60 * 5)
-	StoreDays                         = 7
-	CronTimeInterval                  = 10
 )
 
 var cronIns *cron.Cron
@@ -25,7 +24,7 @@ func StartClearOldFiles(store store.Store, worker router.MessageWorking, delMqFi
 	cronIns = cron.New()
 
 	// 添加定时任务（每2小时执行一次）
-	cronIns.AddFunc(fmt.Sprintf("@every %ds", CronTimeInterval), func() {
+	cronIns.AddFunc(fmt.Sprintf("@every %ds", conf.StoreClearInterval), func() {
 		deleteOldFiles(store, worker, delMqFileExecutor)
 	})
 
@@ -112,7 +111,7 @@ func deleteInvalidFiles(p string, unLockFunc func(), traceId string) {
 			continue
 		}
 		modDate := toDate(info.ModTime())
-		if diffDays(nowDate, modDate) >= StoreDays {
+		if diffDays(nowDate, modDate) >= conf.StoreMaxDays {
 			delIds = append(delIds, num)
 		}
 	}
