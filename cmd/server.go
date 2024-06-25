@@ -1,0 +1,115 @@
+package cmd
+
+import (
+	"github.com/rolandhe/smss/cmd/backgroud"
+	"github.com/rolandhe/smss/cmd/protocol"
+	"github.com/rolandhe/smss/cmd/repair"
+	"github.com/rolandhe/smss/cmd/router"
+	"github.com/rolandhe/smss/pkg"
+	"github.com/rolandhe/smss/pkg/nets"
+	"github.com/rolandhe/smss/store"
+	"github.com/rolandhe/smss/store/fss"
+	"log"
+	"net"
+	"time"
+)
+
+const (
+	DefaultIoWriteTimeout = time.Second
+)
+
+func StartServer(root string) {
+	meta, err := fss.NewMeta(root)
+	if err != nil {
+		log.Printf("meta err:%v\n", err)
+		return
+	}
+	if err = repair.RepairLog(root, meta); err != nil {
+		meta.Close()
+		return
+	}
+	w, fstore, err := newWriter(root, meta)
+	if err != nil {
+		meta.Close()
+		log.Printf("create writer err:%v\n", err)
+		return
+	}
+
+	worker, err := startBack(1000, w, fstore)
+	if err != nil {
+		return
+	}
+
+	startBgAndInitRouter(fstore, worker)
+
+	ln, err := net.Listen("tcp", ":8080")
+	if err != nil {
+		// handle error
+		return
+	}
+	for {
+		var conn net.Conn
+		conn, err = ln.Accept()
+		if err != nil {
+			log.Printf("accept conn err,end server:%v\n", err)
+			return
+		}
+		go handleConnection(conn, worker)
+	}
+	backgroud.StopClear()
+}
+
+func startBgAndInitRouter(fstore store.Store, worker router.MessageWorking) {
+	delExec := backgroud.StartMqFileDelete(fstore)
+	backgroud.StartClearOldFiles(fstore, worker, delExec)
+	lc := backgroud.StartLife(fstore, worker)
+	delayCtrl := backgroud.StartDelay(fstore, worker)
+
+	router.Init(fstore, lc, delExec)
+
+	router.InitDelay(fstore, delayCtrl)
+}
+
+func handleConnection(conn net.Conn, worker *backWorker) {
+	defer conn.Close()
+	for {
+		header, err := router.ReadHeader(conn)
+		if err != nil {
+			log.Printf("read header err:%v\n", err)
+			return
+		}
+
+		if header.GetCmd() > protocol.CommandList {
+			err = nets.OutputRecoverErr(conn, "don't support action")
+			if err != nil && !pkg.IsBizErr(err) {
+				return
+			}
+			continue
+		}
+
+		if header.GetCmd() == protocol.CommandAlive {
+			if err = nets.OutAlive(conn, DefaultIoWriteTimeout); err != nil {
+				log.Printf("tid:=%s,out alive err:%v\n", header.TraceId, err)
+				return
+			}
+			continue
+		}
+
+		handler := router.GetRouter(header.GetCmd())
+		if handler == nil {
+			log.Printf("tid=%s,don't support action:%d\n", header.TraceId, header.GetCmd())
+			err = nets.OutputRecoverErr(conn, "don't support action")
+			if err != nil && !pkg.IsBizErr(err) {
+				return
+			}
+			continue
+		}
+		err = handler.Router(conn, header, worker)
+		if err != nil {
+			log.Printf("tid=%s,router error:%d\n", header.TraceId, header.GetCmd())
+		}
+		if err != nil && !pkg.IsBizErr(err) {
+			return
+		}
+	}
+}
