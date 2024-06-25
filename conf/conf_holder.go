@@ -23,6 +23,8 @@ var LifeDefaultScanSec int64
 
 var FistExecDelay int64
 
+var WaitFileDeleteLockerTimeout time.Duration
+
 func Init() error {
 	viper.SetConfigName("config")
 	// 设置配置文件类型
@@ -46,5 +48,6 @@ func Init() error {
 	LifeDefaultScanSec = viper.GetInt64("life.defaultScanSec")
 
 	FistExecDelay = viper.GetInt64("delay.firstExec")
+	WaitFileDeleteLockerTimeout = time.Duration(viper.GetInt64("store.waitDelLockTimeoutMs")) * time.Millisecond
 	return nil
 }

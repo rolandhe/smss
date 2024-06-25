@@ -2,15 +2,16 @@ package backgroud
 
 import (
 	"github.com/rolandhe/smss/cmd/protocol"
+	"github.com/rolandhe/smss/conf"
 	"github.com/rolandhe/smss/store"
 	"log"
 	"os"
 	"time"
 )
 
-const (
-	WaitFileLockTimeout = time.Second * 3
-)
+//const (
+//	WaitFileLockTimeout = time.Second * 3
+//)
 
 type task struct {
 	name    string
@@ -56,7 +57,7 @@ func (de *mqDelExecutor) run() {
 		t := <-de.deleteList
 		unlocker, waiter := de.locker.Lock(t.name, t.who, t.traceId)
 		if waiter != nil {
-			if !waiter(WaitFileLockTimeout) {
+			if !waiter(conf.WaitFileDeleteLockerTimeout) {
 				log.Printf("waiter delete mq %s file locker failed\n", t.name)
 				t.notify <- false
 				continue
