@@ -23,7 +23,7 @@ var cronIns *cron.Cron
 func StartClearOldFiles(store store.Store, worker router.MessageWorking, delMqFileExecutor protocol.DelMqFileExecutor) {
 	cronIns = cron.New()
 
-	// 添加定时任务（每2小时执行一次）
+	// 添加定时任务
 	cronIns.AddFunc(fmt.Sprintf("@every %ds", conf.StoreClearInterval), func() {
 		deleteOldFiles(store, worker, delMqFileExecutor)
 	})

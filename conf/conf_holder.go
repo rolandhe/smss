@@ -21,6 +21,8 @@ var StoreClearInterval int
 
 var LifeDefaultScanSec int64
 
+var FistExecDelay int64
+
 func Init() error {
 	viper.SetConfigName("config")
 	// 设置配置文件类型
@@ -42,5 +44,7 @@ func Init() error {
 	StoreMaxDays = viper.GetInt("store.maxDays")
 	StoreClearInterval = viper.GetInt("store.clearInterval")
 	LifeDefaultScanSec = viper.GetInt64("life.defaultScanSec")
+
+	FistExecDelay = viper.GetInt64("delay.firstExec")
 	return nil
 }

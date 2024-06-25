@@ -13,3 +13,5 @@ mq:
   buffSize: 50
 life:
   defaultScanSec: 7200
+delay:
+  firstExec: 1

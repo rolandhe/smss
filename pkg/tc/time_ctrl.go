@@ -1,6 +1,7 @@
 package tc
 
 import (
+	"github.com/rolandhe/smss/conf"
 	"github.com/rolandhe/smss/store"
 	"log"
 	"math"
@@ -9,7 +10,7 @@ import (
 )
 
 const (
-	FirstExecDelay          = 5
+	//FirstExecDelay          = 2
 	DefaultWaitTimeoutMills = 10
 )
 
@@ -81,7 +82,7 @@ func (lc *TimeTriggerControl) dry() {
 	}
 }
 func (lc *TimeTriggerControl) Process() {
-	d := time.Second * FirstExecDelay
+	d := time.Second * time.Duration(conf.FistExecDelay)
 	for {
 		select {
 		case <-lc.quickAlive:
