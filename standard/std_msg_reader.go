@@ -218,7 +218,7 @@ func (r *StdMsgBlockReader[T]) readCore(endNotify <-chan int) ([]*T, error) {
 			}
 			if isCmd {
 				var cmdLine CmdLine
-				if cmdLine, err = r.parser.ParseCmd(cmdStep.cmdBuff); err != nil {
+				if cmdLine, err = r.parser.ParseCmd(cmdStep.getCmdBuf()); err != nil {
 					return nil, err
 				}
 				plStep.size = cmdLine.GetPayloadSize()

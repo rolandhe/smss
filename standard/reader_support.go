@@ -7,70 +7,57 @@ import (
 )
 
 type commandStep struct {
-	cmdBuff  []byte
+	cmdBuff  [512]byte
 	winCount int
+	pos      int
+	cmdLen   int
 }
 
-type buffedCmdData struct {
-	datas [][]byte
-}
-
-func (bc *buffedCmdData) readCmd() ([]byte, int) {
-	allLen := len(bc.datas[0]) + len(bc.datas[1])
-	if allLen <= 4 {
-		return nil, -1
-	}
-	readCount := 0
-	lenBuf := make([]byte, 4)
-	index := 0
-	n := copy(lenBuf, bc.datas[index])
-	readCount += n
-	if n < 4 {
-		index++
-		n = copy(lenBuf[n:], bc.datas[index])
-		readCount += n
-	}
-	cmdLen := int(binary.LittleEndian.Uint32(lenBuf))
-	if allLen < cmdLen+4 {
-		return nil, -1
-	}
-	cmdBuf := make([]byte, cmdLen)
-	n = copy(cmdBuf, bc.datas[index][n:])
-	readCount += n
-	if n < cmdLen {
-		index++
-		n = copy(cmdBuf[n:], bc.datas[index])
-		readCount += n
-	}
-
-	return cmdBuf[:cmdLen-1], readCount - len(bc.datas[0]) - 1
+func (cs *commandStep) getCmdBuf() []byte {
+	return cs.cmdBuff[4 : cs.cmdLen+4-1]
 }
 
 func (cs *commandStep) accept(rctx *readContext) (bool, error) {
-	buffedData := buffedCmdData{
-		datas: [][]byte{cs.cmdBuff, rctx.data},
-	}
-
-	cmdData, index := buffedData.readCmd()
-
-	if index == -1 {
-		if cs.winCount > 0 {
-			return false, errors.New("no cmd line, invalid pos")
+	inputData := rctx.data
+	for len(inputData) > 0 {
+		if cs.pos < 4 {
+			n := copy(cs.cmdBuff[cs.pos:4], inputData)
+			inputData = inputData[n:]
+			cs.pos += n
+			continue
 		}
-		cs.cmdBuff = append(cs.cmdBuff, rctx.data...)
-		cs.winCount++
-		rctx.consumeData(len(rctx.data))
-		return false, nil
+		if cs.pos == 4 {
+			cs.cmdLen = int(binary.LittleEndian.Uint32(cs.cmdBuff[:4]))
+			n := copy(cs.cmdBuff[cs.pos:cs.cmdLen+4], inputData)
+			cs.pos += n
+			inputData = inputData[n:]
+			continue
+		}
+		if cs.pos == cs.cmdLen+4 {
+			break
+		}
+		n := copy(cs.cmdBuff[cs.pos:cs.cmdLen+4], inputData)
+		cs.pos += n
+		inputData = inputData[n:]
 	}
-	cs.cmdBuff = nil
-	cs.cmdBuff = append(cs.cmdBuff, cmdData...)
-	rctx.consumeData(index + 1)
-	return true, nil
+
+	if cs.pos > 4 && cs.pos == cs.cmdLen+4 {
+		readCount := len(rctx.data) - len(inputData)
+		rctx.consumeData(readCount)
+		return true, nil
+	}
+	if cs.winCount > 0 {
+		return false, errors.New("no cmd line, invalid pos")
+	}
+	cs.winCount++
+	rctx.consumeData(len(rctx.data))
+	return false, nil
 }
 
 func (cs *commandStep) reset() {
-	cs.cmdBuff = nil
 	cs.winCount = 0
+	cs.cmdLen = 0
+	cs.pos = 0
 }
 
 type payloadStep struct {

@@ -44,6 +44,7 @@ func StartServer(root string) {
 		// handle error
 		return
 	}
+	log.Printf("finish to listen\n")
 	for {
 		var conn net.Conn
 		conn, err = ln.Accept()
