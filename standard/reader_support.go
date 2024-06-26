@@ -11,15 +11,47 @@ type commandStep struct {
 	winCount int
 }
 
-func (cs *commandStep) accept(rctx *readContext) (bool, error) {
-	index := -1
-	dataLen := len(rctx.data)
-	if dataLen >= 4 {
-		cmdLen := int(binary.LittleEndian.Uint32(rctx.data))
-		if dataLen >= cmdLen+4 {
-			index = cmdLen + 4 - 1
-		}
+type buffedCmdData struct {
+	datas [][]byte
+}
+
+func (bc *buffedCmdData) readCmd() ([]byte, int) {
+	allLen := len(bc.datas[0]) + len(bc.datas[1])
+	if allLen <= 4 {
+		return nil, -1
 	}
+	readCount := 0
+	lenBuf := make([]byte, 4)
+	index := 0
+	n := copy(lenBuf, bc.datas[index])
+	readCount += n
+	if n < 4 {
+		index++
+		n = copy(lenBuf[n:], bc.datas[index])
+		readCount += n
+	}
+	cmdLen := int(binary.LittleEndian.Uint32(lenBuf))
+	if allLen < cmdLen+4 {
+		return nil, -1
+	}
+	cmdBuf := make([]byte, cmdLen)
+	n = copy(cmdBuf, bc.datas[index][n:])
+	readCount += n
+	if n < cmdLen {
+		index++
+		n = copy(cmdBuf[n:], bc.datas[index])
+		readCount += n
+	}
+
+	return cmdBuf[:cmdLen-1], readCount - len(bc.datas[0]) - 1
+}
+
+func (cs *commandStep) accept(rctx *readContext) (bool, error) {
+	buffedData := buffedCmdData{
+		datas: [][]byte{cs.cmdBuff, rctx.data},
+	}
+
+	cmdData, index := buffedData.readCmd()
 
 	if index == -1 {
 		if cs.winCount > 0 {
@@ -30,7 +62,8 @@ func (cs *commandStep) accept(rctx *readContext) (bool, error) {
 		rctx.consumeData(len(rctx.data))
 		return false, nil
 	}
-	cs.cmdBuff = append(cs.cmdBuff, rctx.data[4:index]...)
+	cs.cmdBuff = nil
+	cs.cmdBuff = append(cs.cmdBuff, cmdData...)
 	rctx.consumeData(index + 1)
 	return true, nil
 }
