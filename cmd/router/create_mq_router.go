@@ -7,8 +7,10 @@ import (
 	"github.com/rolandhe/smss/pkg/nets"
 	"github.com/rolandhe/smss/pkg/tc"
 	"github.com/rolandhe/smss/store"
+	"log"
 	"net"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -22,6 +24,12 @@ func (r *createMqRouter) Router(conn net.Conn, header *protocol.CommonHeader, wo
 	buf := make([]byte, 8)
 	if err := nets.ReadAll(conn, buf); err != nil {
 		return err
+	}
+	if len(header.MQName) > 128 || strings.ContainsFunc(header.MQName, func(r rune) bool {
+		return r == ' ' || r == '\n' || r == '\t'
+	}) {
+		log.Printf("tid=%s,create %s error, mq name MUST be less than 128 char and NOT contains space/enter/tab\n", header.TraceId, header.MQName)
+		return nets.OutputRecoverErr(conn, "mq name MUST be less than 128 char and NOT contains space/enter/tab")
 	}
 	msg := &protocol.RawMessage{
 		Command:   header.GetCmd(),
