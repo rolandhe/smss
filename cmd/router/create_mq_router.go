@@ -51,6 +51,7 @@ func (r *createMqRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, 
 	if info != nil {
 		return 0, pkg.NewBizError("mq exist")
 	}
+	setupRawMessageSeqId(msg, 1)
 	return r.doBinlog(f, msg)
 }
 func (r *createMqRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) error {

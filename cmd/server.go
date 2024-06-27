@@ -21,10 +21,12 @@ func StartServer(root string) {
 		log.Printf("meta err:%v\n", err)
 		return
 	}
-	if err = repair.RepairLog(root, meta); err != nil {
+	var nextSeq int64
+	if nextSeq, err = repair.RepairLog(root, meta); err != nil {
 		meta.Close()
 		return
 	}
+	router.InitSeqId(nextSeq)
 	w, fstore, err := newWriter(root, meta)
 	if err != nil {
 		meta.Close()

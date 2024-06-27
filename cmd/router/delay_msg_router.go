@@ -41,7 +41,8 @@ func (r *delayRouter) Router(conn net.Conn, header *protocol.CommonHeader, worke
 	if delayTime < 1000 {
 		return nets.OutputRecoverErr(conn, "delay time must be more than 1 second")
 	}
-	if !protocol.CheckPayload(buf[8:]) {
+	ok, _ := protocol.CheckPayload(buf[8:])
+	if !ok {
 		return nets.OutputRecoverErr(conn, "invalid delay request")
 	}
 
@@ -77,6 +78,8 @@ func (r *delayRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, err
 	if err != nil {
 		return 0, err
 	}
+
+	setupRawMessageSeqId(msg, 1)
 	storeMsg := msg.Body.(*protocol.DelayPayload)
 	payload := storeMsg.Payload
 	newPayload := make([]byte, 8+len(payload))

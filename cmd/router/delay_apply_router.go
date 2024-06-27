@@ -29,6 +29,10 @@ func (r *delayApplyRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64
 		log.Printf("tid=%s,delayApplyRouter.DoBinlog  %s not exist\n", msg.TraceId, msg.MqName)
 		return 0, pkg.NewBizError("mq not exist")
 	}
+	payload := msg.Body.(*protocol.DelayApplyPayload)
+	_, count := protocol.CheckPayload(payload.Payload[16:])
+
+	setupRawMessageSeqId(msg, count)
 
 	buff := binlog.DelayApplyEncoder(msg)
 
@@ -41,7 +45,7 @@ func (r *delayApplyRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64
 func (r *delayApplyRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) error {
 	payload := msg.Body.(*protocol.DelayApplyPayload)
 	// 去除前面的 delayId + delayTime
-	messages, _ := protocol.ParsePayload(payload.Payload[16:], fileId, pos)
+	messages, _ := protocol.ParsePayload(payload.Payload[16:], fileId, pos, msg.MessageSeqId)
 	err := r.fstore.Save(msg.MqName, messages)
 	log.Printf("tid=%s,delayApplyRouter.AfterBinlog  %s finish:%v\n", msg.TraceId, msg.MqName, err)
 	return err

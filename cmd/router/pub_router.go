@@ -52,6 +52,9 @@ func (r *pubRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, error
 		return 0, pkg.NewBizError("mq not exist")
 	}
 
+	payload := msg.Body.(*protocol.PubPayload)
+
+	setupRawMessageSeqId(msg, payload.BatchSize)
 	buff := binlog.PubEncoder(msg)
 
 	var n int64
@@ -62,7 +65,7 @@ func (r *pubRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, error
 
 func (r *pubRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) error {
 	payload := msg.Body.(*protocol.PubPayload)
-	messages, _ := protocol.ParsePayload(payload.Payload, fileId, pos)
+	messages, _ := protocol.ParsePayload(payload.Payload, fileId, pos, msg.MessageSeqId)
 	err := r.fstore.Save(msg.MqName, messages)
 	log.Printf("tid=%s,pubRouter.AfterBinlog  %s finish:%v\n", msg.TraceId, msg.MqName, err)
 	return err
@@ -83,12 +86,14 @@ func readPubPayload(conn net.Conn, header *protocol.PubProtoHeader) (*protocol.P
 		return nil, err
 	}
 
-	if !protocol.CheckPayload(buf) {
+	ok, count := protocol.CheckPayload(buf)
+	if !ok {
 		e := nets.OutputRecoverErr(conn, "invalid pub payload")
 		return nil, e
 	}
 
 	return &protocol.PubPayload{
-		Payload: buf,
+		Payload:   buf,
+		BatchSize: count,
 	}, nil
 }

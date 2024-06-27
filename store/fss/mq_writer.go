@@ -12,32 +12,16 @@ type mqWriter struct {
 	sync.WaitGroup
 }
 
-func newWriter(mqName, mqPath string, idGen func() (int64, error)) *mqWriter {
+func newWriter(mqName, mqPath string) *mqWriter {
 	w := &mqWriter{
-		StdMsgWriter: standard.NewMsgWriter[asyncMsg](mqName, mqPath, MaxFileSize, buildWriteFunc(idGen)),
+		StdMsgWriter: standard.NewMsgWriter[asyncMsg](mqName, mqPath, MaxFileSize, buildWriteFunc()),
 	}
 	return w
 }
 
-func genIds(count int, idGen func() (int64, error)) ([]int64, error) {
-	msgIds := make([]int64, count)
-	var err error
-	for i := 0; i < count; i++ {
-		msgIds[i], err = idGen()
-		if err != nil {
-			return nil, err
-		}
-	}
-	return msgIds, nil
-}
-
-func buildWriteFunc(idGen func() (int64, error)) standard.OutputMsgFunc[asyncMsg] {
+func buildWriteFunc() standard.OutputMsgFunc[asyncMsg] {
 	return func(f *os.File, amsg *asyncMsg) (int64, error) {
-		msgIds, err := genIds(len(amsg.messages), idGen)
-		if err != nil {
-			return 0, err
-		}
-		cmds, size := buildCommandsAndCalcSize(msgIds, amsg)
+		cmds, size := buildCommandsAndCalcSize(amsg)
 		var buf bytes.Buffer
 		buf.Grow(size)
 

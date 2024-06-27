@@ -3,6 +3,7 @@ package router
 import (
 	"github.com/rolandhe/smss/cmd/protocol"
 	"github.com/rolandhe/smss/pkg/tc"
+	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store"
 	"net"
 	"os"
@@ -62,6 +63,12 @@ func InitDelay(fstore store.Store, delayCtrl *tc.TimeTriggerControl) {
 	routerMap[protocol.CommandDelay] = &delayRouter{
 		fstore:   fstore,
 		delayCtl: delayCtrl,
+	}
+}
+
+func InitReplica(binlogWriter *standard.StdMsgWriter[protocol.RawMessage]) {
+	routerMap[protocol.CommandReplica] = &replicaRouter{
+		binlogWriter: binlogWriter,
 	}
 }
 

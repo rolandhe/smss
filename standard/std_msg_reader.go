@@ -20,6 +20,7 @@ const AliveTimeout = time.Second * 30
 type CmdLine interface {
 	GetPayloadSize() int
 	GetCmd() protocol.CommandEnum
+	GetId() int64
 }
 
 type MsgParser[T any] interface {

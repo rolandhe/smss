@@ -1,6 +1,7 @@
 package repair
 
 import (
+	"bufio"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"github.com/rolandhe/smss/store"
 	"github.com/rolandhe/smss/store/fss"
 	"io"
+	"log"
 	"os"
 	"path"
 )
@@ -44,16 +46,34 @@ func ensureLogFile(ppath string) (string, int64, int64, error) {
 	return p, maxLogFileId, fileSize, nil
 }
 
-func readAllBuf(buf []byte, f *os.File) error {
-	n, err := f.Read(buf)
-	if err != nil {
-		return err
-	}
-	if n != len(buf) {
-		return errors.New("bad file, no enough")
-	}
-	return nil
-}
+//func readAllBuf(buf []byte, r *bufio.Reader) error {
+//	needLen := len(buf)
+//
+//	count := 0
+//	for {
+//		n, err := r.Read(buf)
+//		if err != nil {
+//			return err
+//		}
+//		needLen -= n
+//		//if count > 0 {
+//		//	log.Println(1)
+//		//}
+//		if needLen == 0 {
+//			break
+//		}
+//		count++
+//		buf = buf[n:]
+//	}
+//	//n, err := r.Read(buf)
+//	//if err != nil {
+//	//	return err
+//	//}
+//	//if n != len(buf) {
+//	//	return errors.New("bad file, no enough")
+//	//}
+//	return nil
+//}
 
 type extractLog[C, T any] interface {
 	extractCmd(cmdBuf []byte) (*C, int)
@@ -61,11 +81,12 @@ type extractLog[C, T any] interface {
 }
 
 type lastBinlog struct {
-	fileId  int64
-	pos     int64
-	cmd     protocol.CommandEnum
-	mqName  string
-	payload []byte
+	fileId       int64
+	pos          int64
+	cmd          protocol.CommandEnum
+	messageSeqId int64
+	mqName       string
+	payload      []byte
 }
 
 type extractBinlog struct {
@@ -78,16 +99,18 @@ func (ext *extractBinlog) extractCmd(cmdBuf []byte) (*protocol.DecodedRawMessage
 }
 func (ext *extractBinlog) extractRet(cmd *protocol.DecodedRawMessage, pos int64, payload []byte) *lastBinlog {
 	last := &lastBinlog{
-		fileId:  ext.fileId,
-		pos:     pos,
-		mqName:  cmd.MqName,
-		cmd:     cmd.Command,
-		payload: payload,
+		fileId:       ext.fileId,
+		pos:          pos,
+		mqName:       cmd.MqName,
+		cmd:          cmd.Command,
+		messageSeqId: cmd.MessageSeqId,
+		payload:      payload,
 	}
 	return last
 }
 
 type lastMqLog struct {
+	id           int64
 	cmdLen       int
 	pos          int64
 	indexOfBatch int
@@ -108,6 +131,7 @@ func (ext *extractMqLog) extractCmd(cmdBuf []byte) (*fss.MqMessageCommand, int) 
 }
 func (ext *extractMqLog) extractRet(cmd *fss.MqMessageCommand, pos int64, payload []byte) *lastMqLog {
 	last := &lastMqLog{
+		id:           cmd.GetId(),
 		cmdLen:       cmd.CmdLen,
 		pos:          pos,
 		indexOfBatch: cmd.IndexOfBatch,
@@ -123,6 +147,7 @@ func readLastLogBlock[C, T any](startPosition int64, p string, fileSize int64, e
 		return nil, err
 	}
 	defer f.Close()
+	r := bufio.NewReader(f)
 
 	cmdCommonSize := 512
 
@@ -131,7 +156,14 @@ func readLastLogBlock[C, T any](startPosition int64, p string, fileSize int64, e
 		return nil, errors.New("small file")
 	}
 	if startPosition > 0 {
-		_, err = f.Seek(startPosition, io.SeekStart)
+		var discard int
+		if discard, err = r.Discard(int(startPosition)); err != nil {
+			return nil, err
+		}
+		if discard != int(startPosition) {
+			log.Printf("invalid start pos of %s, expect:%d, but:%d\n", p, startPosition, discard)
+			return nil, errors.New("invalid start pos")
+		}
 	}
 
 	var pos = startPosition
@@ -140,7 +172,7 @@ func readLastLogBlock[C, T any](startPosition int64, p string, fileSize int64, e
 	var lastPayload []byte
 
 	for {
-		if err = readAllBuf(buf[:4], f); err != nil {
+		if _, err = io.ReadFull(r, buf[:4]); err != nil {
 			return nil, err
 		}
 
@@ -153,9 +185,9 @@ func readLastLogBlock[C, T any](startPosition int64, p string, fileSize int64, e
 			cBuf = make([]byte, cmdLen)
 		}
 
-		err = readAllBuf(cBuf, f)
-		if err != nil && err != io.EOF {
-			return nil, errors.New("bad file")
+		_, err = io.ReadFull(r, cBuf)
+		if err != nil {
+			return nil, err
 		}
 
 		var payloadLen int
@@ -169,7 +201,7 @@ func readLastLogBlock[C, T any](startPosition int64, p string, fileSize int64, e
 		if pos+allSize == fileSize {
 			if payloadLen > 0 {
 				lastPayload = make([]byte, payloadLen)
-				err = readAllBuf(lastPayload, f)
+				_, err = io.ReadFull(r, lastPayload)
 				if err != nil {
 					return nil, err
 				}
@@ -178,12 +210,15 @@ func readLastLogBlock[C, T any](startPosition int64, p string, fileSize int64, e
 		}
 
 		if payloadLen > 0 {
-			//var nextPos int64
-			_, err = f.Seek(int64(payloadLen), io.SeekCurrent)
+			var discard int
+			discard, err = r.Discard(payloadLen)
 			if err != nil {
 				return nil, err
 			}
-			//log.Printf("readLastLogBlock,next pos is:%d\n", nextPos)
+			if discard != payloadLen {
+				log.Printf("invalid file:%s, expect:%,but  discard %d err\n", p, payloadLen, discard)
+				return nil, errors.New("invalid file")
+			}
 		}
 
 		pos += allSize

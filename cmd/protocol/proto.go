@@ -39,7 +39,9 @@ const (
 
 	CommandDelay CommandEnum = 16
 	CommandAlive CommandEnum = 17
-	CommandList  CommandEnum = 100
+
+	CommandReplica CommandEnum = 64
+	CommandList    CommandEnum = 100
 
 	CommandDelayApply CommandEnum = 101
 )
@@ -124,9 +126,12 @@ func (ce CommandEnum) Byte() byte {
 }
 
 type RawMessage struct {
-	Command   CommandEnum
-	MqName    string
+	Command CommandEnum
+	MqName  string
+	// 服务端收到pub信息时的时间戳
 	Timestamp int64
+
+	MessageSeqId int64
 
 	TraceId string
 
@@ -139,7 +144,8 @@ type DecodedRawMessage struct {
 }
 
 type PubPayload struct {
-	Payload []byte
+	Payload   []byte
+	BatchSize int
 }
 
 type DDLPayload struct {

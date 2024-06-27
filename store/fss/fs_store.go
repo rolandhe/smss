@@ -151,9 +151,7 @@ func (fs *fileStore) ensureWriter(mqName string) (*mqWriter, error) {
 		if info == nil || info.IsInvalid() {
 			return nil, errors.New("mq not exist")
 		}
-		writer := newWriter(mqName, MqPath(fs.root, mqName), func() (int64, error) {
-			return fs.meta.GenerateMsgId(mqName)
-		})
+		writer := newWriter(mqName, MqPath(fs.root, mqName))
 		return writer, nil
 	})
 }

@@ -33,8 +33,11 @@ func (mc *MqMessageCommand) GetPayloadSize() int {
 func (mc *MqMessageCommand) GetCmd() protocol.CommandEnum {
 	return protocol.CommandPub
 }
+func (mc *MqMessageCommand) GetId() int64 {
+	return mc.id
+}
 
-func buildCommandsAndCalcSize(msgIds []int64, amsg *asyncMsg) ([][]byte, int) {
+func buildCommandsAndCalcSize(amsg *asyncMsg) ([][]byte, int) {
 	var builder bytes.Buffer
 
 	size := 0
@@ -46,7 +49,7 @@ func buildCommandsAndCalcSize(msgIds []int64, amsg *asyncMsg) ([][]byte, int) {
 		builder.WriteString(strconv.FormatInt(time.Now().UnixMilli(), 10))
 		builder.WriteRune('\t')
 
-		builder.WriteString(strconv.FormatInt(msgIds[i], 10))
+		builder.WriteString(strconv.FormatInt(msg.SeqId, 10))
 		builder.WriteRune('\t')
 
 		builder.WriteString(strconv.FormatInt(amsg.saveTime, 10))

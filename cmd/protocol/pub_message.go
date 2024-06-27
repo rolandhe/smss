@@ -6,7 +6,7 @@ import (
 	"github.com/rolandhe/smss/store"
 )
 
-func ParsePayload(payload []byte, fileId, pos int64) ([]*store.MQMessage, error) {
+func ParsePayload(payload []byte, fileId, pos int64, startSeqId int64) ([]*store.MQMessage, error) {
 	var ret []*store.MQMessage
 	if len(payload) <= 8 {
 		return nil, pkg.NewBizError("invalid message format")
@@ -25,10 +25,13 @@ func ParsePayload(payload []byte, fileId, pos int64) ([]*store.MQMessage, error)
 		copy(content, payload[:oneMsgLen])
 
 		ret = append(ret, &store.MQMessage{
+			SeqId:     startSeqId,
 			SrcFileId: fileId,
 			SrcPos:    pos,
 			Content:   content,
 		})
+
+		startSeqId++
 
 		if restLen == oneMsgLen {
 			break
@@ -43,30 +46,32 @@ func ParsePayload(payload []byte, fileId, pos int64) ([]*store.MQMessage, error)
 	return ret, nil
 }
 
-func CheckPayload(payload []byte) bool {
+func CheckPayload(payload []byte) (bool, int) {
 	if len(payload) <= 8 {
-		return false
+		return false, 0
 	}
+	count := 0
 	for {
 		contentSize := int(binary.LittleEndian.Uint32(payload))
 		if contentSize <= 0 {
-			return false
+			return false, 0
 		}
 		payload = payload[8:]
 		restLen := len(payload)
 		if restLen < contentSize {
-			return false
+			return false, 0
 		}
+		count++
 
 		if restLen == contentSize {
 			break
 		}
 
 		if restLen-contentSize <= 8 {
-			return false
+			return false, 0
 		}
 		payload = payload[contentSize:]
 	}
 
-	return true
+	return true, count
 }

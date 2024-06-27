@@ -28,6 +28,10 @@ type StdMsgWriter[T any] struct {
 	lastWriteTime int64
 }
 
+func (w *StdMsgWriter[T]) GetRoot() string {
+	return w.root
+}
+
 func (w *StdMsgWriter[T]) Close() error {
 	if w.curFs != nil {
 		w.curFs.Close()

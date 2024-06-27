@@ -50,6 +50,7 @@ func (r *changeLifeRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64
 	if !ok || len(cmdPayload.Payload) < 8 {
 		return 0, errors.New("need change lifetime")
 	}
+	setupRawMessageSeqId(msg, 1)
 	return r.doBinlog(f, msg)
 }
 func (r *changeLifeRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) error {

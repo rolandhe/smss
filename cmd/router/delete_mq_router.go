@@ -35,6 +35,7 @@ func (r *deleteMqRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, 
 	if info == nil {
 		return 0, pkg.NewBizError("mq not exist")
 	}
+	setupRawMessageSeqId(msg, 1)
 	return r.doBinlog(f, msg)
 }
 func (r *deleteMqRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) error {

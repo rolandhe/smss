@@ -11,7 +11,6 @@ import (
 
 type badgerMeta struct {
 	db          *badger.DB
-	mqIdMap     map[string]*badger.Sequence
 	globalIdGen *badger.Sequence
 }
 
@@ -26,7 +25,6 @@ func NewMeta(path string) (store.Meta, error) {
 	}
 	return &badgerMeta{
 		db:          db,
-		mqIdMap:     map[string]*badger.Sequence{},
 		globalIdGen: seq,
 	}, nil
 }
@@ -224,35 +222,6 @@ func (bm *badgerMeta) ChangeMQLife(mqName string, life int64) error {
 	return nil
 }
 
-func (bm *badgerMeta) GenerateMsgId(mqName string) (int64, error) {
-	seq, err := bm.ensureMQSeq(mqName)
-	if err != nil {
-		return 0, err
-	}
-	var id uint64
-	if id, err = seq.Next(); err != nil {
-		return 0, err
-	}
-	return int64(id), nil
-}
-
-func (bm *badgerMeta) GenBatchMsgIds(mqName string, batchSize int) ([]int64, error) {
-	seq, err := bm.ensureMQSeq(mqName)
-	if err != nil {
-		return nil, err
-	}
-	target := make([]int64, batchSize)
-
-	for i := 0; i < batchSize; i++ {
-		var id uint64
-		if id, err = seq.Next(); err != nil {
-			return nil, err
-		}
-		target[i] = int64(id)
-	}
-
-	return target, nil
-}
 func (bm *badgerMeta) GetMQInfo(mqName string) (*store.MqInfo, error) {
 	var creatTime int64
 	var life int64
@@ -320,10 +289,6 @@ func (bm *badgerMeta) GetMQSimpleInfoList() ([]*store.MqInfo, error) {
 }
 
 func (bm *badgerMeta) SaveDelay(mqName string, delayTime int64, payload []byte) error {
-	//id, err := bm.globalIdGen.Next()
-	//if err != nil {
-	//	return err
-	//}
 	preLen := len(delayPrefix)
 	key := make([]byte, preLen+16+len(mqName))
 	copy(key, delayPrefix)
@@ -339,7 +304,7 @@ func (bm *badgerMeta) SaveDelay(mqName string, delayTime int64, payload []byte) 
 		return txn.Set(key, payload)
 	})
 }
-func (bm *badgerMeta) ExistDelay(key []byte) (bool,error) {
+func (bm *badgerMeta) ExistDelay(key []byte) (bool, error) {
 	exist := false
 	err := bm.db.View(func(txn *badger.Txn) error {
 		var e error
@@ -354,41 +319,42 @@ func (bm *badgerMeta) ExistDelay(key []byte) (bool,error) {
 func (bm *badgerMeta) GetDelayId() (uint64, error) {
 	return bm.globalIdGen.Next()
 }
-func (bm *badgerMeta) SaveCheckPoint(key string, fileId, pos int64) error {
-	buf := make([]byte, 16)
-	binary.LittleEndian.PutUint64(buf, uint64(fileId))
-	binary.LittleEndian.PutUint64(buf[8:], uint64(pos))
 
-	return bm.db.Update(func(txn *badger.Txn) error {
-		if err := txn.Set([]byte(key), buf); err != nil {
-			return err
-		}
-		return nil
-	})
-}
+//func (bm *badgerMeta) SaveCheckPoint(key string, fileId, pos int64) error {
+//	buf := make([]byte, 16)
+//	binary.LittleEndian.PutUint64(buf, uint64(fileId))
+//	binary.LittleEndian.PutUint64(buf[8:], uint64(pos))
+//
+//	return bm.db.Update(func(txn *badger.Txn) error {
+//		if err := txn.Set([]byte(key), buf); err != nil {
+//			return err
+//		}
+//		return nil
+//	})
+//}
 
-func (bm *badgerMeta) GetCheckPoint(key string) (int64, int64, error) {
-	var value []byte
-	err := bm.db.View(func(txn *badger.Txn) error {
-		var e error
-		if value, e = getRawValue([]byte(key), txn); e != nil {
-			return e
-		}
-		return nil
-	})
-
-	if err == badger.ErrKeyNotFound {
-		return -1, -1, nil
-	}
-	if err != nil {
-		return 0, 0, err
-	}
-
-	fileId := int64(binary.LittleEndian.Uint64(value))
-	pos := int64(binary.LittleEndian.Uint64(value[8:]))
-
-	return fileId, pos, nil
-}
+//func (bm *badgerMeta) GetCheckPoint(key string) (int64, int64, error) {
+//	var value []byte
+//	err := bm.db.View(func(txn *badger.Txn) error {
+//		var e error
+//		if value, e = getRawValue([]byte(key), txn); e != nil {
+//			return e
+//		}
+//		return nil
+//	})
+//
+//	if err == badger.ErrKeyNotFound {
+//		return -1, -1, nil
+//	}
+//	if err != nil {
+//		return 0, 0, err
+//	}
+//
+//	fileId := int64(binary.LittleEndian.Uint64(value))
+//	pos := int64(binary.LittleEndian.Uint64(value[8:]))
+//
+//	return fileId, pos, nil
+//}
 
 func (bm *badgerMeta) SetInstanceRole(role store.InstanceRoleEnum) error {
 	return bm.db.Update(func(txn *badger.Txn) error {
@@ -423,18 +389,11 @@ func (bm *badgerMeta) GetInstanceRole() (store.InstanceRoleEnum, error) {
 
 func (bm *badgerMeta) Close() error {
 	if !bm.db.IsClosed() {
-		bm.releaseMqIdMap()
 		bm.globalIdGen.Release()
 		err := bm.db.Close()
 		return err
 	}
 	return nil
-}
-
-func (bm *badgerMeta) releaseMqIdMap() {
-	for _, seq := range bm.mqIdMap {
-		seq.Release()
-	}
 }
 
 func (bm *badgerMeta) existMq(normalMqName []byte) (bool, error) {
@@ -448,18 +407,6 @@ func (bm *badgerMeta) existMq(normalMqName []byte) (bool, error) {
 	})
 
 	return exist, err
-}
-
-func (bm *badgerMeta) ensureMQSeq(mqName string) (*badger.Sequence, error) {
-	var err error
-	seq, ok := bm.mqIdMap[mqName]
-	if !ok {
-		if seq, err = bm.db.GetSequence([]byte(mqIdName(mqName)), 200); err != nil {
-			return nil, err
-		}
-		bm.mqIdMap[mqName] = seq
-	}
-	return seq, nil
 }
 
 func existKey(key []byte, txn *badger.Txn) (bool, error) {

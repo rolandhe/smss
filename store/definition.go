@@ -35,8 +35,9 @@ type DelayItem struct {
 }
 
 type ManagerMeta interface {
-	SaveCheckPoint(Key string, fileId, pos int64) error
-	GetCheckPoint(Key string) (int64, int64, error)
+	// SaveCheckPoint(Key string, fileId, pos int64) error
+	// GetCheckPoint(Key string) (int64, int64, error)
+
 	SetInstanceRole(role InstanceRoleEnum) error
 	GetInstanceRole() (InstanceRoleEnum, error)
 }
@@ -77,9 +78,6 @@ type Meta interface {
 	DeleteMQ(mqName string, force bool) (bool, error)
 
 	SaveDelay(mqName string, delayTime int64, payload []byte) error
-
-	GenerateMsgId(mqName string) (int64, error)
-	GenBatchMsgIds(mqName string, batchSize int) ([]int64, error)
 
 	io.Closer
 	ManagerMeta
@@ -122,6 +120,7 @@ type MsgHeader struct {
 }
 
 type MQMessage struct {
+	SeqId     int64
 	SrcFileId int64
 	SrcPos    int64
 	Content   []byte

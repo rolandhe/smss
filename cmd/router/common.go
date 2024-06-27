@@ -4,9 +4,22 @@ import (
 	"github.com/rolandhe/smss/binlog"
 	"github.com/rolandhe/smss/cmd/protocol"
 	"github.com/rolandhe/smss/pkg/nets"
+	"log"
 	"net"
 	"os"
 )
+
+var globalSeqId int64
+
+func InitSeqId(id int64) {
+	globalSeqId = id
+	log.Printf("int seq id:%d\n", globalSeqId)
+}
+
+func setupRawMessageSeqId(msg *protocol.RawMessage, count int) {
+	msg.MessageSeqId = globalSeqId
+	globalSeqId += int64(count)
+}
 
 func ReadHeader(conn net.Conn) (*protocol.CommonHeader, error) {
 	buff := make([]byte, protocol.HeaderSize)
