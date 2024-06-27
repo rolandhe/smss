@@ -216,7 +216,7 @@ func readLastLogBlock[C, T any](startPosition int64, p string, fileSize int64, e
 				return nil, err
 			}
 			if discard != payloadLen {
-				log.Printf("invalid file:%s, expect:%,but  discard %d err\n", p, payloadLen, discard)
+				log.Printf("invalid file:%s, expect:%d,but  discard %d err\n", p, payloadLen, discard)
 				return nil, errors.New("invalid file")
 			}
 		}

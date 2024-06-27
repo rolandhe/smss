@@ -94,6 +94,12 @@ type SubHeader struct {
 	// ack timeout flag 1
 	// reserve 14
 	// traceId len 1
+
+	// next:
+	// pos, 8
+	// ack timeout(optional),8,
+	// who am i, var string
+
 	*CommonHeader
 }
 
@@ -109,8 +115,7 @@ func (sh *SubHeader) HasAckTimeoutFlag() bool {
 
 type SubInfo struct {
 	Who        string
-	FileId     int64
-	Pos        int64
+	MessageId  int64
 	BatchSize  int
 	AckTimeout time.Duration
 }

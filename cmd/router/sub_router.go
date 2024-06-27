@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/rolandhe/smss/cmd/protocol"
+	"github.com/rolandhe/smss/cmd/repair"
 	"github.com/rolandhe/smss/pkg/nets"
 	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store"
@@ -83,7 +84,13 @@ func (r *subRouter) Router(conn net.Conn, commHeader *protocol.CommonHeader, wor
 		return nets.OutputRecoverErr(conn, "mq not exist")
 	}
 
-	reader, err := r.fstore.GetReader(header.MQName, info.Who, info.FileId, info.Pos, info.BatchSize)
+	var fileId, pos int64
+	if fileId, pos, err = getSubPos(info.MessageId, r.fstore.GetMqPath(header.MQName)); err != nil {
+		log.Printf("message id not found:%s, %d\n", header.MQName, info.MessageId)
+		return nets.OutputRecoverErr(conn, "message id not found")
+	}
+
+	reader, err := r.fstore.GetReader(header.MQName, info.Who, fileId, pos, info.BatchSize)
 	if err != nil {
 		return nets.OutputRecoverErr(conn, err.Error())
 	}
@@ -148,42 +155,63 @@ func (r *subRouter) Router(conn net.Conn, commHeader *protocol.CommonHeader, wor
 	}
 }
 
+func getSubPos(messageId int64, mqPath string) (int64, int64, error) {
+	var fileId int64
+	var err error
+
+	if messageId == 0 {
+		fileId, err = standard.ReadFirstFileId(mqPath)
+		if err != nil {
+			return 0, 0, err
+		}
+		return fileId, 0, nil
+	}
+	if messageId == -1 {
+		fileId, err = standard.ReadMaxFileId(mqPath)
+		if err != nil {
+			return 0, 0, err
+		}
+		return fileId - 1, 0, nil
+	}
+
+	return repair.FindMqPosByMessageId(mqPath, messageId)
+}
+
 // readSubInfo, sub 格式
 // 20 个字节的头：see SubHeader
-// who am i, 变长字符串，4 字节表示长度，紧跟着是这个长度的字节，字符串
+// sub position, 订阅位点，8字节
 // ack timeout, 如果 SubHeader HasAckTimeoutFlag is true
-// sub position, 订阅位点，16字节
+// who am i, 变长字符串，4 字节表示长度，紧跟着是这个长度的字节，字符串
 func readSubInfo(conn net.Conn, header *protocol.SubHeader) (*protocol.SubInfo, error) {
-	buf := make([]byte, 24)
-	if err := nets.ReadAll(conn, buf[:4]); err != nil {
+	buf := make([]byte, 20)
+	n := 12
+	if header.HasAckTimeoutFlag() {
+		n += 8
+	}
+	if err := nets.ReadAll(conn, buf[:n]); err != nil {
 		return nil, err
 	}
-	l := int(binary.LittleEndian.Uint32(buf[:4]))
+
+	messageId := int64(binary.LittleEndian.Uint64(buf))
+
+	n = 8
+	ackTimeout := protocol.AckDefaultTimeout
+	if header.HasAckTimeoutFlag() {
+		ackTimeout = time.Duration(binary.LittleEndian.Uint64(buf[n:]))
+		n += 8
+	}
+	if ackTimeout <= 0 {
+		ackTimeout = protocol.AckDefaultTimeout
+	}
+	l := int(binary.LittleEndian.Uint32(buf[n:]))
 	whoBuff := make([]byte, l)
 	if err := nets.ReadAll(conn, whoBuff); err != nil {
 		return nil, err
 	}
 
-	readBuf := buf[8:]
-	iBuf := buf[8:]
-	if header.HasAckTimeoutFlag() {
-		readBuf = buf
-	}
-	if err := nets.ReadAll(conn, readBuf); err != nil {
-		return nil, err
-	}
-	ackTimeout := protocol.AckDefaultTimeout
-	if header.HasAckTimeoutFlag() {
-		ackTimeout = time.Duration(binary.LittleEndian.Uint64(buf[:8]))
-	}
-	if ackTimeout <= 0 {
-		ackTimeout = protocol.AckDefaultTimeout
-	}
-
 	return &protocol.SubInfo{
 		Who:        string(whoBuff),
-		FileId:     int64(binary.LittleEndian.Uint64(iBuf)),
-		Pos:        int64(binary.LittleEndian.Uint64(iBuf[8:])),
+		MessageId:  messageId,
 		BatchSize:  header.GetBatchSize(),
 		AckTimeout: ackTimeout,
 	}, nil
