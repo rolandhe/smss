@@ -15,10 +15,6 @@ import (
 	"time"
 )
 
-const (
-	ReplicaPositionKey = "replica@position"
-)
-
 type backWorker struct {
 	c      chan *standard.FutureMsg[protocol.RawMessage]
 	writer *binlog.WalWriter[protocol.RawMessage]

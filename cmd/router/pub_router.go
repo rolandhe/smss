@@ -5,6 +5,7 @@ import (
 	"github.com/rolandhe/smss/cmd/protocol"
 	"github.com/rolandhe/smss/pkg"
 	"github.com/rolandhe/smss/pkg/nets"
+	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store"
 	"log"
 	"net"
@@ -16,7 +17,7 @@ type pubRouter struct {
 	fstore store.Store
 }
 
-func (r *pubRouter) Router(conn net.Conn, header *protocol.CommonHeader, worker MessageWorking) error {
+func (r *pubRouter) Router(conn net.Conn, header *protocol.CommonHeader, worker standard.MessageWorking) error {
 	pubPayload, err := readPubPayload(conn, &protocol.PubProtoHeader{
 		CommonHeader: header,
 	})
@@ -54,7 +55,7 @@ func (r *pubRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, error
 
 	payload := msg.Body.(*protocol.PubPayload)
 
-	setupRawMessageSeqId(msg, payload.BatchSize)
+	setupRawMessageSeqIdAndWriteTime(msg, payload.BatchSize)
 	buff := binlog.PubEncoder(msg)
 
 	var n int64

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/rolandhe/smss/cmd/protocol"
 	"github.com/rolandhe/smss/pkg"
+	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store"
 	"log"
 	"net"
@@ -17,7 +18,7 @@ type deleteMqRouter struct {
 	delExecutor protocol.DelMqFileExecutor
 }
 
-func (r *deleteMqRouter) Router(conn net.Conn, header *protocol.CommonHeader, worker MessageWorking) error {
+func (r *deleteMqRouter) Router(conn net.Conn, header *protocol.CommonHeader, worker standard.MessageWorking) error {
 	msg := &protocol.RawMessage{
 		Command:   header.GetCmd(),
 		MqName:    header.MQName,
@@ -35,7 +36,7 @@ func (r *deleteMqRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, 
 	if info == nil {
 		return 0, pkg.NewBizError("mq not exist")
 	}
-	setupRawMessageSeqId(msg, 1)
+	setupRawMessageSeqIdAndWriteTime(msg, 1)
 	return r.doBinlog(f, msg)
 }
 func (r *deleteMqRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) error {

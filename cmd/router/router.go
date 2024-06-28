@@ -12,7 +12,7 @@ import (
 var routerMap = map[protocol.CommandEnum]CmdRouter{}
 
 type CmdRouter interface {
-	Router(conn net.Conn, header *protocol.CommonHeader, worker MessageWorking) error
+	Router(conn net.Conn, header *protocol.CommonHeader, worker standard.MessageWorking) error
 	DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, error)
 	AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) error
 }

@@ -2,6 +2,7 @@ package fss
 
 import (
 	"bytes"
+	"github.com/rolandhe/smss/conf"
 	"github.com/rolandhe/smss/standard"
 	"os"
 	"sync"
@@ -14,7 +15,7 @@ type mqWriter struct {
 
 func newWriter(mqName, mqPath string) *mqWriter {
 	w := &mqWriter{
-		StdMsgWriter: standard.NewMsgWriter[asyncMsg](mqName, mqPath, MaxFileSize, buildWriteFunc()),
+		StdMsgWriter: standard.NewMsgWriter[asyncMsg](mqName, mqPath, conf.MaxLogSize, buildWriteFunc()),
 	}
 	return w
 }

@@ -1,6 +1,7 @@
 package fss
 
 import (
+	"github.com/rolandhe/smss/conf"
 	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store"
 )
@@ -63,8 +64,8 @@ func (reg *MqNotifyRegister) UnRegisterReaderNotify() {
 	reg.fs.unRegisterReaderNotify(reg.mqName, reg.whoami)
 }
 
-func newBlockReader(root string, whoami string, mq string, maxBatch int, register standard.NotifyRegister) store.BlockReader {
-	r := standard.NewStdMsgBlockReader[store.ReadMessage](mq, root, whoami, maxBatch, MaxFileSize, register, &msgParser{})
+func newBlockReader(root string, whoami string, mq string, maxBatch int, register standard.NotifyRegister) store.MqBlockReader {
+	r := standard.NewStdMsgBlockReader[store.ReadMessage](mq, root, whoami, maxBatch, conf.MaxLogSize, register, &msgParser{})
 	return &blockReader{
 		mq:                mq,
 		StdMsgBlockReader: r,

@@ -5,6 +5,7 @@ import (
 	"github.com/rolandhe/smss/binlog"
 	"github.com/rolandhe/smss/cmd/protocol"
 	"github.com/rolandhe/smss/pkg"
+	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store"
 	"log"
 	"net"
@@ -15,7 +16,7 @@ type delayApplyRouter struct {
 	fstore store.Store
 }
 
-func (r *delayApplyRouter) Router(conn net.Conn, header *protocol.CommonHeader, worker MessageWorking) error {
+func (r *delayApplyRouter) Router(conn net.Conn, header *protocol.CommonHeader, worker standard.MessageWorking) error {
 	return errors.New("don't support this action")
 }
 
@@ -32,7 +33,7 @@ func (r *delayApplyRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64
 	payload := msg.Body.(*protocol.DelayApplyPayload)
 	_, count := protocol.CheckPayload(payload.Payload[16:])
 
-	setupRawMessageSeqId(msg, count)
+	setupRawMessageSeqIdAndWriteTime(msg, count)
 
 	buff := binlog.DelayApplyEncoder(msg)
 

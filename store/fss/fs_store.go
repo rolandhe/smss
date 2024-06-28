@@ -223,15 +223,15 @@ func (fs *fileStore) Save(mqName string, messages []*store.MQMessage) error {
 	return wrapMsg.err
 }
 
-func (fs *fileStore) SaveDelayMsg(mqName string, delayTime int64, payload []byte) error {
-	return fs.meta.SaveDelay(mqName, delayTime, payload)
+func (fs *fileStore) SaveDelayMsg(mqName string, payload []byte) error {
+	return fs.meta.SaveDelay(mqName, payload)
 }
 
 func (fs *fileStore) Close() error {
 	return fs.meta.Close()
 }
 
-func (fs *fileStore) GetReader(mqName, whoami string, fileId, pos int64, batchSize int) (store.BlockReader, error) {
+func (fs *fileStore) GetReader(mqName, whoami string, fileId, pos int64, batchSize int) (store.MqBlockReader, error) {
 	info, err := fs.meta.GetMQInfo(mqName)
 	if err != nil {
 		return nil, err

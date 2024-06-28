@@ -6,6 +6,7 @@ import (
 	"github.com/rolandhe/smss/pkg"
 	"github.com/rolandhe/smss/pkg/nets"
 	"github.com/rolandhe/smss/pkg/tc"
+	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store"
 	"log"
 	"net"
@@ -20,7 +21,7 @@ type createMqRouter struct {
 	ddlRouter
 }
 
-func (r *createMqRouter) Router(conn net.Conn, header *protocol.CommonHeader, worker MessageWorking) error {
+func (r *createMqRouter) Router(conn net.Conn, header *protocol.CommonHeader, worker standard.MessageWorking) error {
 	buf := make([]byte, 8)
 	if err := nets.ReadAll(conn, buf); err != nil {
 		return err
@@ -51,7 +52,7 @@ func (r *createMqRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, 
 	if info != nil {
 		return 0, pkg.NewBizError("mq exist")
 	}
-	setupRawMessageSeqId(msg, 1)
+	setupRawMessageSeqIdAndWriteTime(msg, 1)
 	return r.doBinlog(f, msg)
 }
 func (r *createMqRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) error {

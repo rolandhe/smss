@@ -9,10 +9,6 @@ import (
 	"time"
 )
 
-const (
-	RespHeaderSize = 10
-)
-
 func ReadAll(conn net.Conn, buff []byte) error {
 	rb := buff[:]
 	all := 0
@@ -48,7 +44,7 @@ func WriteAll(conn net.Conn, buf []byte) error {
 }
 
 func OutputRecoverErr(conn net.Conn, errMsg string) error {
-	buf := make([]byte, RespHeaderSize)
+	buf := make([]byte, protocol.RespHeaderSize)
 	binary.LittleEndian.PutUint16(buf, protocol.ErrCode)
 	l := len(errMsg)
 	binary.LittleEndian.PutUint16(buf[2:], uint16(l))
@@ -62,7 +58,7 @@ func OutputRecoverErr(conn net.Conn, errMsg string) error {
 }
 
 func OutputOk(conn net.Conn) error {
-	buf := make([]byte, RespHeaderSize)
+	buf := make([]byte, protocol.RespHeaderSize)
 	binary.LittleEndian.PutUint16(buf, protocol.OkCode)
 	if err := WriteAll(conn, buf); err != nil {
 		log.Printf("outputRecoverErr,write code to conn err,%s\v", err)
@@ -72,17 +68,29 @@ func OutputOk(conn net.Conn) error {
 }
 
 func OutAlive(conn net.Conn, timeout time.Duration) error {
-	buf := make([]byte, RespHeaderSize)
+	buf := make([]byte, protocol.RespHeaderSize)
 	binary.LittleEndian.PutUint16(buf, protocol.AliveCode)
 	conn.SetWriteDeadline(time.Now().Add(timeout))
 	return WriteAll(conn, buf)
 }
 
 func OutSubEnd(conn net.Conn, timeout time.Duration) error {
-	buf := make([]byte, RespHeaderSize)
+	buf := make([]byte, protocol.RespHeaderSize)
 	binary.LittleEndian.PutUint16(buf, protocol.SubEndCode)
 	conn.SetWriteDeadline(time.Now().Add(timeout))
 	return WriteAll(conn, buf)
+}
+
+func InputAck(conn net.Conn, timeout time.Duration) (int, error) {
+	conn.SetReadDeadline(time.Now().Add(timeout))
+	buf := make([]byte, 2)
+	if err := ReadAll(conn, buf); err != nil {
+		return 0, err
+	}
+
+	code := binary.LittleEndian.Uint16(buf)
+
+	return int(code), nil
 }
 
 func IsTimeoutError(err error) bool {

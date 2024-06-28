@@ -24,10 +24,9 @@ const (
 )
 
 const (
-	HeaderSize int = 20
-
-	//Pub = 0
-	//Sub = 1
+	HeaderSize     int = 20
+	RespHeaderSize     = 10
+	ConnPeerClosed     = -100
 )
 
 const (
@@ -44,6 +43,16 @@ const (
 	CommandList    CommandEnum = 100
 
 	CommandDelayApply CommandEnum = 101
+)
+
+const (
+	RawMessageBase    RawMessageSourceEnum = 0
+	RawMessageReplica RawMessageSourceEnum = 1
+)
+
+const (
+	LongtimeBlockReadTimeout  = time.Millisecond * 2000
+	LongtimeBlockWriteTimeout = time.Millisecond * 3000
 )
 
 type CommonHeader struct {
@@ -130,9 +139,33 @@ func (ce CommandEnum) Byte() byte {
 	return byte(ce)
 }
 
+type RawMessageSourceEnum uint8
+
+func (ce RawMessageSourceEnum) Int() int {
+	return int(ce)
+}
+
+func (ce RawMessageSourceEnum) Byte() byte {
+	return byte(ce)
+}
+
+type ReplicaHeader struct {
+	// 20字节
+	// pub/sub 1 byte
+	// mq name len, 2
+	// reserve 17
+
+	// next:
+	// messageId,8
+
+	*CommonHeader
+}
+
 type RawMessage struct {
-	Command CommandEnum
-	MqName  string
+	Src       RawMessageSourceEnum
+	WriteTime int64
+	Command   CommandEnum
+	MqName    string
 	// 服务端收到pub信息时的时间戳
 	Timestamp int64
 
@@ -158,8 +191,8 @@ type DDLPayload struct {
 }
 
 type DelayPayload struct {
-	Payload   []byte
-	DelayTime int64
+	Payload []byte
+	//DelayTime int64
 }
 
 type DelayApplyPayload struct {

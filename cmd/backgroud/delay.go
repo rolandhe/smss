@@ -3,8 +3,8 @@ package backgroud
 import (
 	"fmt"
 	"github.com/rolandhe/smss/cmd/protocol"
-	"github.com/rolandhe/smss/cmd/router"
 	"github.com/rolandhe/smss/pkg/tc"
+	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store"
 	"log"
 	"time"
@@ -15,7 +15,7 @@ const (
 	DefaultDelayTimeout = 180 * 60 * 1000
 )
 
-func StartDelay(fstore store.Store, worker router.MessageWorking) *tc.TimeTriggerControl {
+func StartDelay(fstore store.Store, worker standard.MessageWorking) *tc.TimeTriggerControl {
 	f := func(fstore store.Store) int64 {
 		return doDelay(fstore, worker)
 	}
@@ -27,7 +27,7 @@ func StartDelay(fstore store.Store, worker router.MessageWorking) *tc.TimeTrigge
 	return lc
 }
 
-func doDelay(fstore store.Store, worker router.MessageWorking) int64 {
+func doDelay(fstore store.Store, worker standard.MessageWorking) int64 {
 	tid := fmt.Sprintf("delay-%d", time.Now().UnixMilli())
 	var ret int64
 	for {
@@ -63,7 +63,7 @@ func doDelay(fstore store.Store, worker router.MessageWorking) int64 {
 	return ret
 }
 
-func procOneDelayMsg(fstore store.Store, worker router.MessageWorking, item *store.DelayItem, tid string) error {
+func procOneDelayMsg(fstore store.Store, worker standard.MessageWorking, item *store.DelayItem, tid string) error {
 	info, err := fstore.GetMqInfoReader().GetMQInfo(item.MqName)
 	if err != nil {
 		log.Printf("tid=%s,procOneDelayMsg get mq info %s  error:%v\n", tid, item.MqName, err)

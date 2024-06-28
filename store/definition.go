@@ -52,7 +52,6 @@ type Scanner interface {
 	ScanDelays(batchSize int) ([]*DelayItem, int64, error)
 	RemoveDelay(key []byte) error
 	ExistDelay(key []byte) (bool, error)
-	GetDelayId() (uint64, error)
 }
 
 type InstanceRoleEnum byte
@@ -77,7 +76,7 @@ type Meta interface {
 	ChangeMQLife(mqName string, life int64) error
 	DeleteMQ(mqName string, force bool) (bool, error)
 
-	SaveDelay(mqName string, delayTime int64, payload []byte) error
+	SaveDelay(mqName string, payload []byte) error
 
 	io.Closer
 	ManagerMeta
@@ -85,23 +84,27 @@ type Meta interface {
 	Scanner
 }
 
-type BlockReader interface {
-	Read(endNotify <-chan int) ([]*ReadMessage, error)
+type BlockReader[T any] interface {
+	Read(endNotify <-chan int) ([]*T, error)
 	Init(fileId, pos int64) error
 	io.Closer
+}
+
+type MqBlockReader interface {
+	BlockReader[ReadMessage]
 }
 
 type Store interface {
 	io.Closer
 	Save(mqName string, messages []*MQMessage) error
 
-	GetReader(mqName, who string, fileId, pos int64, batchSize int) (BlockReader, error)
+	GetReader(mqName, who string, fileId, pos int64, batchSize int) (MqBlockReader, error)
 
 	CreateMq(mqName string, life int64) error
 
 	ForceDeleteMQ(mqName string, cb func() error) error
 
-	SaveDelayMsg(mqName string, delayTime int64, payload []byte) error
+	SaveDelayMsg(mqName string, payload []byte) error
 
 	ChangeMqLife(mqName string, life int64) error
 

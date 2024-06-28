@@ -3,9 +3,9 @@ package backgroud
 import (
 	"fmt"
 	"github.com/rolandhe/smss/cmd/protocol"
-	"github.com/rolandhe/smss/cmd/router"
 	"github.com/rolandhe/smss/conf"
 	"github.com/rolandhe/smss/pkg/tc"
+	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store"
 	"log"
 	"time"
@@ -15,7 +15,7 @@ import (
 //	DefaultScanLifeTime int64 = 120 * 60 * 1000
 //)
 
-func StartLife(fstore store.Store, worker router.MessageWorking) *tc.TimeTriggerControl {
+func StartLife(fstore store.Store, worker standard.MessageWorking) *tc.TimeTriggerControl {
 	lc := tc.NewTimeTriggerControl(fstore, "life", conf.LifeDefaultScanSec*1000, func(fstore store.Store) int64 {
 		traceId := fmt.Sprintf("life-%d", time.Now().UnixMilli())
 		return doLife(fstore, worker, traceId)
@@ -25,7 +25,7 @@ func StartLife(fstore store.Store, worker router.MessageWorking) *tc.TimeTrigger
 	return lc
 }
 
-func doLife(fstore store.Store, worker router.MessageWorking, traceId string) int64 {
+func doLife(fstore store.Store, worker standard.MessageWorking, traceId string) int64 {
 	mqs, next, err := fstore.GetScanner().ScanExpireMqs()
 	if err != nil {
 		log.Printf("tid=%s,doLife err:%v\n", traceId, err)
@@ -47,7 +47,7 @@ func doLife(fstore store.Store, worker router.MessageWorking, traceId string) in
 	return next
 }
 
-func removeMq(worker router.MessageWorking, mqName string, traceId string) error {
+func removeMq(worker standard.MessageWorking, mqName string, traceId string) error {
 	msg := &protocol.RawMessage{
 		Command:   protocol.CommandDeleteMQ,
 		MqName:    mqName,

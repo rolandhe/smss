@@ -9,6 +9,7 @@ import (
 	"github.com/rolandhe/smss/conf"
 	"github.com/rolandhe/smss/pkg"
 	"github.com/rolandhe/smss/pkg/nets"
+	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store"
 	"github.com/rolandhe/smss/store/fss"
 	"log"
@@ -59,7 +60,7 @@ func StartServer(root string) {
 	backgroud.StopClear()
 }
 
-func startBgAndInitRouter(fstore store.Store, worker router.MessageWorking) {
+func startBgAndInitRouter(fstore store.Store, worker standard.MessageWorking) {
 	delExec := backgroud.StartMqFileDelete(fstore)
 	backgroud.StartClearOldFiles(fstore, worker, delExec)
 	lc := backgroud.StartLife(fstore, worker)

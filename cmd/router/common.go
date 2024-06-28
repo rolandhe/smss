@@ -4,9 +4,11 @@ import (
 	"github.com/rolandhe/smss/binlog"
 	"github.com/rolandhe/smss/cmd/protocol"
 	"github.com/rolandhe/smss/pkg/nets"
+	"github.com/rolandhe/smss/standard"
 	"log"
 	"net"
 	"os"
+	"time"
 )
 
 var globalSeqId int64
@@ -16,7 +18,11 @@ func InitSeqId(id int64) {
 	log.Printf("int seq id:%d\n", globalSeqId)
 }
 
-func setupRawMessageSeqId(msg *protocol.RawMessage, count int) {
+func setupRawMessageSeqIdAndWriteTime(msg *protocol.RawMessage, count int) {
+	if msg.Src == protocol.RawMessageReplica {
+		return
+	}
+	msg.WriteTime = time.Now().UnixMilli()
 	msg.MessageSeqId = globalSeqId
 	globalSeqId += int64(count)
 }
@@ -46,14 +52,10 @@ func ReadHeader(conn net.Conn) (*protocol.CommonHeader, error) {
 	return header, nil
 }
 
-type MessageWorking interface {
-	Work(msg *protocol.RawMessage) error
-}
-
 type ddlRouter struct {
 }
 
-func (ddl *ddlRouter) router(conn net.Conn, msg *protocol.RawMessage, worker MessageWorking) error {
+func (ddl *ddlRouter) router(conn net.Conn, msg *protocol.RawMessage, worker standard.MessageWorking) error {
 	err := worker.Work(msg)
 	if err != nil {
 		return nets.OutputRecoverErr(conn, err.Error())

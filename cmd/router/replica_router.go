@@ -12,7 +12,6 @@ type replicaRouter struct {
 	noBinlog
 }
 
-func (r *replicaRouter) Router(conn net.Conn, commHeader *protocol.CommonHeader, worker MessageWorking) error {
-
-	return replica.HandleServer(conn,commHeader,r.binlogWriter)
+func (r *replicaRouter) Router(conn net.Conn, commHeader *protocol.CommonHeader, worker standard.MessageWorking) error {
+	return replica.MasterHandle(conn, commHeader, r.binlogWriter)
 }

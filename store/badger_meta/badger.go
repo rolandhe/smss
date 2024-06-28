@@ -10,8 +10,8 @@ import (
 )
 
 type badgerMeta struct {
-	db          *badger.DB
-	globalIdGen *badger.Sequence
+	db *badger.DB
+	//globalIdGen *badger.Sequence
 }
 
 func NewMeta(path string) (store.Meta, error) {
@@ -19,13 +19,13 @@ func NewMeta(path string) (store.Meta, error) {
 	if err != nil {
 		return nil, err
 	}
-	var seq *badger.Sequence
-	if seq, err = db.GetSequence([]byte(globalIdName), 200); err != nil {
-		return nil, err
-	}
+	//var seq *badger.Sequence
+	//if seq, err = db.GetSequence([]byte(globalIdName), 200); err != nil {
+	//	return nil, err
+	//}
 	return &badgerMeta{
-		db:          db,
-		globalIdGen: seq,
+		db: db,
+		//globalIdGen: seq,
 	}, nil
 }
 
@@ -288,14 +288,16 @@ func (bm *badgerMeta) GetMQSimpleInfoList() ([]*store.MqInfo, error) {
 	return infoList, err
 }
 
-func (bm *badgerMeta) SaveDelay(mqName string, delayTime int64, payload []byte) error {
+func (bm *badgerMeta) SaveDelay(mqName string,  payload []byte) error {
 	preLen := len(delayPrefix)
 	key := make([]byte, preLen+16+len(mqName))
 	copy(key, delayPrefix)
 
 	buf := key[preLen:]
-	binary.LittleEndian.PutUint64(buf, uint64(delayTime))
+	// copy 时间戳
+	copy(buf[:8],payload[8:])
 	buf = buf[8:]
+	// 直接从内容中copy seq id
 	copy(buf, payload[:8])
 	buf = buf[8:]
 	copy(buf, mqName)
@@ -316,9 +318,10 @@ func (bm *badgerMeta) ExistDelay(key []byte) (bool, error) {
 
 	return exist, err
 }
-func (bm *badgerMeta) GetDelayId() (uint64, error) {
-	return bm.globalIdGen.Next()
-}
+
+//func (bm *badgerMeta) GetDelayId() (uint64, error) {
+//	return bm.globalIdGen.Next()
+//}
 
 //func (bm *badgerMeta) SaveCheckPoint(key string, fileId, pos int64) error {
 //	buf := make([]byte, 16)
@@ -389,7 +392,6 @@ func (bm *badgerMeta) GetInstanceRole() (store.InstanceRoleEnum, error) {
 
 func (bm *badgerMeta) Close() error {
 	if !bm.db.IsClosed() {
-		bm.globalIdGen.Release()
 		err := bm.db.Close()
 		return err
 	}

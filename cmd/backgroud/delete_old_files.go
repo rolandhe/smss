@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"github.com/robfig/cron/v3"
 	"github.com/rolandhe/smss/cmd/protocol"
-	"github.com/rolandhe/smss/cmd/router"
 	"github.com/rolandhe/smss/conf"
 	"github.com/rolandhe/smss/pkg"
+	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store"
 	"log"
 	"os"
@@ -20,7 +20,7 @@ const (
 
 var cronIns *cron.Cron
 
-func StartClearOldFiles(store store.Store, worker router.MessageWorking, delMqFileExecutor protocol.DelMqFileExecutor) {
+func StartClearOldFiles(store store.Store, worker standard.MessageWorking, delMqFileExecutor protocol.DelMqFileExecutor) {
 	cronIns = cron.New()
 
 	// 添加定时任务
@@ -40,7 +40,7 @@ func StopClear() {
 	cronIns = nil
 }
 
-func deleteOldFiles(fstore store.Store, worker router.MessageWorking, delMqFileExecutor protocol.DelMqFileExecutor) {
+func deleteOldFiles(fstore store.Store, worker standard.MessageWorking, delMqFileExecutor protocol.DelMqFileExecutor) {
 	traceId := fmt.Sprintf("delOldFile-%d", time.Now().UnixMilli())
 	infoList, err := fstore.GetMqInfoReader().GetMQSimpleInfoList()
 	if err != nil {

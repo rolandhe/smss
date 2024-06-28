@@ -7,6 +7,7 @@ import (
 	"github.com/rolandhe/smss/pkg"
 	"github.com/rolandhe/smss/pkg/nets"
 	"github.com/rolandhe/smss/pkg/tc"
+	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store"
 	"net"
 	"os"
@@ -23,13 +24,13 @@ type delayRouter struct {
 	delayCtl *tc.TimeTriggerControl
 }
 
-func (r *delayRouter) Router(conn net.Conn, header *protocol.CommonHeader, worker MessageWorking) error {
+func (r *delayRouter) Router(conn net.Conn, header *protocol.CommonHeader, worker standard.MessageWorking) error {
 	pubHeader := &protocol.PubProtoHeader{
 		CommonHeader: header,
 	}
 	// delayTime + pub message
 	// 最终存储在binlog的格式
-	// delayId + delayTime + pub message
+	// delayTime + delayId  + pub message
 	buf := make([]byte, 8+pubHeader.GetPayloadSize())
 	if err := nets.ReadAll(conn, buf); err != nil {
 		return err
@@ -47,15 +48,17 @@ func (r *delayRouter) Router(conn net.Conn, header *protocol.CommonHeader, worke
 	}
 
 	triggerTime := time.Now().Add(time.Millisecond * time.Duration(delayTime)).UnixMilli()
+	// 把时间间隔给出具体的执行时间
+	binary.LittleEndian.PutUint64(buf, uint64(triggerTime))
 	msg := &protocol.RawMessage{
 		Command:   header.GetCmd(),
 		MqName:    header.MQName,
 		Timestamp: time.Now().UnixMilli(),
 		TraceId:   header.TraceId,
 		Body: &protocol.DelayPayload{
-			// 原始的带delayTime的数据
-			Payload:   buf,
-			DelayTime: triggerTime,
+			// 原始的带delayTime的数据, 是毫秒，不是一个具体触发的时间戳
+			Payload: buf,
+			//DelayTime: triggerTime,
 		},
 	}
 	err := worker.Work(msg)
@@ -74,18 +77,19 @@ func (r *delayRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, err
 		return 0, pkg.NewBizError("mq not exist")
 	}
 
-	delayId, err := r.fstore.GetScanner().GetDelayId()
-	if err != nil {
-		return 0, err
+	setupRawMessageSeqIdAndWriteTime(msg, 1)
+	if msg.Src != protocol.RawMessageReplica {
+		storeMsg := msg.Body.(*protocol.DelayPayload)
+		payload := storeMsg.Payload
+		newPayload := make([]byte, 8+len(payload))
+		// copy 时间戳
+		copy(newPayload[:8], payload)
+		// delayId, 直接来自binlog的seq id
+		binary.LittleEndian.PutUint64(newPayload[8:], uint64(msg.MessageSeqId))
+		copy(newPayload[16:], payload[8:])
+		storeMsg.Payload = newPayload
 	}
 
-	setupRawMessageSeqId(msg, 1)
-	storeMsg := msg.Body.(*protocol.DelayPayload)
-	payload := storeMsg.Payload
-	newPayload := make([]byte, 8+len(payload))
-	binary.LittleEndian.PutUint64(newPayload, delayId)
-	copy(newPayload[8:], payload)
-	storeMsg.Payload = newPayload
 	buff := binlog.DelayEncode(msg)
 
 	return buff.WriteTo(f)
@@ -94,10 +98,13 @@ func (r *delayRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, err
 func (r *delayRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) error {
 	storeMsg := msg.Body.(*protocol.DelayPayload)
 
-	err := r.fstore.SaveDelayMsg(msg.MqName, storeMsg.DelayTime, storeMsg.Payload)
+	err := r.fstore.SaveDelayMsg(msg.MqName, storeMsg.Payload)
 	if err != nil {
 		return err
 	}
-	r.delayCtl.Set(storeMsg.DelayTime, true)
+	if msg.Src != protocol.RawMessageReplica {
+		triggerTime := binary.LittleEndian.Uint64(storeMsg.Payload)
+		r.delayCtl.Set(int64(triggerTime), true)
+	}
 	return nil
 }

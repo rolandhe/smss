@@ -7,14 +7,13 @@ import (
 	"github.com/rolandhe/smss/cmd/protocol"
 	"strconv"
 	"strings"
-	"time"
 )
 
 func PubEncoder(msg *protocol.RawMessage) *bytes.Buffer {
 	var buff bytes.Buffer
 	buff.Write([]byte{0, 0, 0, 0})
 	// worker单线程开始处理消息时的时间戳， 与 msg.Timestamp 相比，可以看到单线程积压的时间差
-	buff.WriteString(fmt.Sprintf("%d", time.Now().UnixMilli()))
+	buff.WriteString(fmt.Sprintf("%d", msg.WriteTime))
 	buff.WriteRune('\t')
 
 	buff.WriteString(fmt.Sprintf("%d", msg.Command.Int()))
@@ -43,7 +42,7 @@ func PubEncoder(msg *protocol.RawMessage) *bytes.Buffer {
 func DelayApplyEncoder(msg *protocol.RawMessage) *bytes.Buffer {
 	var buff bytes.Buffer
 	buff.Write([]byte{0, 0, 0, 0})
-	buff.WriteString(fmt.Sprintf("%d", time.Now().UnixMilli()))
+	buff.WriteString(fmt.Sprintf("%d", msg.WriteTime))
 	buff.WriteRune('\t')
 
 	buff.WriteString(fmt.Sprintf("%d", msg.Command.Int()))
@@ -71,7 +70,7 @@ func DelayApplyEncoder(msg *protocol.RawMessage) *bytes.Buffer {
 func DDLEncoder(msg *protocol.RawMessage) *bytes.Buffer {
 	var buff bytes.Buffer
 	buff.Write([]byte{0, 0, 0, 0})
-	buff.WriteString(fmt.Sprintf("%d", time.Now().UnixMilli()))
+	buff.WriteString(fmt.Sprintf("%d", msg.WriteTime))
 	buff.WriteRune('\t')
 
 	buff.WriteString(fmt.Sprintf("%d", msg.Command.Int()))
@@ -112,7 +111,7 @@ func DDLEncoder(msg *protocol.RawMessage) *bytes.Buffer {
 func DelayEncode(msg *protocol.RawMessage) *bytes.Buffer {
 	var buff bytes.Buffer
 	buff.Write([]byte{0, 0, 0, 0})
-	buff.WriteString(fmt.Sprintf("%d", time.Now().UnixMilli()))
+	buff.WriteString(fmt.Sprintf("%d", msg.WriteTime))
 	buff.WriteRune('\t')
 
 	buff.WriteString(fmt.Sprintf("%d", msg.Command.Int()))
@@ -142,11 +141,15 @@ func CmdDecoder(buf []byte) *protocol.DecodedRawMessage {
 	items := strings.Split(cmdLine, "\t")
 	var msg protocol.DecodedRawMessage
 
+	msg.WriteTime, _ = strconv.ParseInt(items[0], 10, 64)
+
 	v, _ := strconv.Atoi(items[1])
 	msg.Command = protocol.CommandEnum(v)
 
 	id, _ := strconv.Atoi(items[2])
 	msg.MessageSeqId = int64(id)
+
+	msg.Timestamp, _ = strconv.ParseInt(items[3], 10, 64)
 
 	msg.MqName = items[4]
 	msg.PayloadLen, _ = strconv.Atoi(items[5])

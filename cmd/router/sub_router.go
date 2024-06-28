@@ -2,7 +2,6 @@ package router
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"github.com/rolandhe/smss/cmd/protocol"
 	"github.com/rolandhe/smss/cmd/repair"
@@ -11,13 +10,7 @@ import (
 	"github.com/rolandhe/smss/store"
 	"log"
 	"net"
-	"sync/atomic"
 	"time"
-)
-
-const (
-	subCommonReadTimeout  = time.Millisecond * 2000
-	subCommonWriteTimeout = time.Millisecond * 3000
 )
 
 const (
@@ -25,47 +18,25 @@ const (
 	OneMsgHeaderSize       = 32
 )
 
-const (
-	ConnPeerClosed = -100
-)
-
 type subRouter struct {
 	fstore store.Store
 	noBinlog
 }
 
-func subReadMonitor(conn net.Conn, recvChan chan int, endFlag *atomic.Bool, subTraceId string) {
-	f := func(v int) {
-		select {
-		case recvChan <- v:
-		case <-time.After(time.Second):
-
-		}
-	}
-	for {
-		code, err := inputAck(conn, time.Second*5)
-		if endFlag.Load() {
-			break
-		}
-		if err != nil && nets.IsTimeoutError(err) {
-			continue
-		}
-		if err != nil {
-			log.Printf("tid=%s,subReadMonitor met err,and exit monitor:%v\n", subTraceId, err)
-			f(-100)
-			break
-		}
-		f(code)
-	}
-
+type subLongtimeReader struct {
+	store.MqBlockReader
 }
 
-func (r *subRouter) Router(conn net.Conn, commHeader *protocol.CommonHeader, worker MessageWorking) error {
+func (lr *subLongtimeReader) Output(conn net.Conn, msgs []*store.ReadMessage) error {
+	return batchMessageOut(conn, msgs)
+}
+
+func (r *subRouter) Router(conn net.Conn, commHeader *protocol.CommonHeader, worker standard.MessageWorking) error {
 	header := &protocol.SubHeader{
 		CommonHeader: commHeader,
 	}
 
-	conn.SetReadDeadline(time.Now().Add(subCommonReadTimeout))
+	conn.SetReadDeadline(time.Now().Add(protocol.LongtimeBlockReadTimeout))
 	info, err := readSubInfo(conn, header)
 	if err != nil {
 		return err
@@ -95,64 +66,11 @@ func (r *subRouter) Router(conn net.Conn, commHeader *protocol.CommonHeader, wor
 		return nets.OutputRecoverErr(conn, err.Error())
 	}
 
-	subTraceId := fmt.Sprintf("%s-%s", header.MQName, info.Who)
+	tid := fmt.Sprintf("%s-%s", header.MQName, info.Who)
 
-	recvCh := make(chan int, 1)
-	var endFlag atomic.Bool
-	go subReadMonitor(conn, recvCh, &endFlag, subTraceId)
-
-	defer func() {
-		reader.Close()
-		endFlag.Store(true)
-	}()
-	for {
-		var msgs []*store.ReadMessage
-		msgs, err = reader.Read(recvCh)
-
-		if err == nil {
-			if err = batchMessageOut(conn, msgs); err != nil {
-				return err
-			}
-			var ackCode int
-			select {
-			case ackCode = <-recvCh:
-			case <-time.After(info.AckTimeout):
-				log.Printf("tid=%s,read ack timeout\n", subTraceId)
-				return errors.New("read ack timeout")
-			}
-			if ackCode == ConnPeerClosed {
-				log.Printf("tid=%s,conn peer closed\n", subTraceId)
-				return errors.New("conn peer closed")
-			}
-			if ackCode == protocol.SubAckWithEnd {
-				log.Printf("tid=%s,client send ack and closed\n", subTraceId)
-				return nil
-			}
-			if ackCode != protocol.SubAck {
-				log.Printf("tid=%s,client send invalid ack code %d\n", subTraceId, ackCode)
-				return errors.New("invalid ack")
-			}
-
-			continue
-		}
-		if err == standard.WaitNewTimeoutErr {
-			err = nets.OutAlive(conn, subCommonWriteTimeout)
-			log.Printf("tid=%s,sub wait new data timeout, send alive:%v\n", subTraceId, err)
-			if err != nil {
-				return err
-			}
-			continue
-		}
-		if err == standard.PeerClosedErr {
-			log.Printf("tid=%s,PeerClosedErr:%v\n", subTraceId, err)
-			return err
-		}
-		if err == standard.MqWriterTermiteErr {
-			log.Printf("tid=%s,MqWriterTermiteErr:%v\n", subTraceId, err)
-			return nets.OutSubEnd(conn, subCommonWriteTimeout)
-		}
-		return nets.OutputRecoverErr(conn, err.Error())
-	}
+	return nets.LongTimeRun[store.ReadMessage](conn, "sub", tid, info.AckTimeout, &subLongtimeReader{
+		MqBlockReader: reader,
+	})
 }
 
 func getSubPos(messageId int64, mqPath string) (int64, int64, error) {
@@ -171,6 +89,7 @@ func getSubPos(messageId int64, mqPath string) (int64, int64, error) {
 		if err != nil {
 			return 0, 0, err
 		}
+		// todo
 		return fileId - 1, 0, nil
 	}
 
@@ -219,7 +138,7 @@ func readSubInfo(conn net.Conn, header *protocol.SubHeader) (*protocol.SubInfo, 
 
 func batchMessageOut(conn net.Conn, messages []*store.ReadMessage) error {
 	buff := packageMessages(messages)
-	conn.SetWriteDeadline(time.Now().Add(subCommonWriteTimeout))
+	conn.SetWriteDeadline(time.Now().Add(protocol.LongtimeBlockWriteTimeout))
 	return nets.WriteAll(conn, buff)
 }
 
@@ -228,7 +147,7 @@ func packageMessages(messages []*store.ReadMessage) []byte {
 	buf := make([]byte, size)
 	binary.LittleEndian.PutUint16(buf[:2], protocol.OkCode)
 	buf[2] = byte(len(messages))
-	nextBuf := buf[nets.RespHeaderSize:]
+	nextBuf := buf[protocol.RespHeaderSize:]
 
 	payloadSize := 0
 	for _, msg := range messages {
@@ -251,17 +170,5 @@ func calPackageSize(messages []*store.ReadMessage) int {
 	for _, msg := range messages {
 		bodySize += OneMsgHeaderSize + len(msg.PayLoad)
 	}
-	return nets.RespHeaderSize + bodySize
-}
-
-func inputAck(conn net.Conn, timeout time.Duration) (int, error) {
-	conn.SetReadDeadline(time.Now().Add(timeout))
-	buf := make([]byte, 2)
-	if err := nets.ReadAll(conn, buf); err != nil {
-		return 0, err
-	}
-
-	code := binary.LittleEndian.Uint16(buf)
-
-	return int(code), nil
+	return protocol.RespHeaderSize + bodySize
 }

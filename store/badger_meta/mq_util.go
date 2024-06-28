@@ -14,7 +14,7 @@ var (
 )
 
 const (
-	globalIdName = "global@id"
+	//globalIdName = "global@id"
 
 	roleKey = "global@role"
 )
