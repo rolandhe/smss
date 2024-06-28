@@ -36,19 +36,14 @@ type msgParser struct {
 }
 
 func (p *msgParser) ToMessage(payload []byte, fileId, pos int64) *binlogBlock {
-	msgLen := len(p.cmdBuf) + len(payload) + 5
-	buf := make([]byte, msgLen+protocol.RespHeaderSize)
-	tmp := buf
-	binary.LittleEndian.PutUint16(tmp, protocol.OkCode)
-	binary.LittleEndian.PutUint32(tmp[2:], uint32(msgLen))
-	tmp = tmp[protocol.RespHeaderSize:]
+	msgLen := len(p.cmdBuf) + len(payload) + 4
+	buf := make([]byte, msgLen)
 
-	binary.LittleEndian.PutUint32(buf, uint32(len(p.cmdBuf)+1))
-	tmp = tmp[4:]
+	binary.LittleEndian.PutUint32(buf, uint32(len(p.cmdBuf)))
+	tmp := buf[4:]
 	n := copy(tmp, p.cmdBuf)
 	tmp = tmp[n:]
-	tmp[0] = '\n'
-	copy(tmp[1:], payload)
+	copy(tmp, payload)
 
 	return &binlogBlock{
 		data: buf,

@@ -22,8 +22,16 @@ func StartServer(root string) {
 		log.Printf("meta err:%v\n", err)
 		return
 	}
+
+	var role store.InstanceRoleEnum
+	role, err = meta.GetInstanceRole()
+	if err != nil {
+		log.Printf("get role error:%v\n", err)
+		return
+	}
+
 	var nextSeq int64
-	if nextSeq, err = repair.RepairLog(root, meta); err != nil {
+	if nextSeq, err = repair.RepairLog(root, role, meta); err != nil {
 		meta.Close()
 		return
 	}
@@ -41,6 +49,9 @@ func StartServer(root string) {
 	}
 
 	startBgAndInitRouter(fstore, worker)
+	if role == store.Master {
+		router.InitReplica(w.StdMsgWriter)
+	}
 
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", conf.Port))
 	if err != nil {

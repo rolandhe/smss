@@ -8,11 +8,8 @@ import (
 	"path"
 )
 
-func RepairLog(root string, meta store.Meta) (int64, error) {
-	role, err := meta.GetInstanceRole()
-	if err != nil {
-		return 0, err
-	}
+func RepairLog(root string, role store.InstanceRoleEnum, meta store.Meta) (int64, error) {
+
 	if role == store.Master {
 		return repairMaster(root, meta)
 	}

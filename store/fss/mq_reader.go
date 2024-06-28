@@ -12,8 +12,8 @@ type blockReader struct {
 }
 
 type msgParser struct {
-	msg    MqMessageCommand
-	cmdBuf []byte
+	msg MqMessageCommand
+	//cmdBuf []byte
 }
 
 func (p *msgParser) ToMessage(payload []byte, fileId, pos int64) *store.ReadMessage {
@@ -34,12 +34,10 @@ func (p *msgParser) Reset() {
 	p.msg.id = 0
 	p.msg.sendTime = 0
 	p.msg.payLoadSize = 0
-	p.cmdBuf = nil
 }
 
 func (p *msgParser) ParseCmd(cmdBuf []byte) (standard.CmdLine, error) {
-	p.cmdBuf = cmdBuf
-	err := ReadMqMessageCmd(cmdBuf, &p.msg)
+	err := ReadMqMessageCmd(cmdBuf[:len(cmdBuf)-1], &p.msg)
 	if err != nil {
 		return nil, err
 	}

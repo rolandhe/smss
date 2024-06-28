@@ -112,7 +112,7 @@ func (sc *slaveClient) replica(seqId int64) error {
 func applyBinlog(body []byte, cmdParse *msgParser, worker slave.DependWorker) error {
 	defer cmdParse.Reset()
 	cmdLen := binary.LittleEndian.Uint32(body)
-	cmdLine, err := cmdParse.ParseCmd(body[4 : cmdLen+4-1])
+	cmdLine, err := cmdParse.ParseCmd(body[4 : cmdLen+4])
 	if err != nil {
 		return err
 	}

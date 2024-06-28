@@ -14,7 +14,7 @@ type commandStep struct {
 }
 
 func (cs *commandStep) getCmdBuf() []byte {
-	return cs.cmdBuff[4 : cs.cmdLen+4-1]
+	return cs.cmdBuff[4 : cs.cmdLen+4]
 }
 
 func (cs *commandStep) accept(rctx *readContext) (bool, error) {

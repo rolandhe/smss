@@ -24,7 +24,36 @@ type replicaLongtimeReader struct {
 }
 
 func (r *replicaLongtimeReader) Output(conn net.Conn, msgs []*binlogBlock) error {
+	hbuf := make([]byte, protocol.RespHeaderSize+4)
+	binary.LittleEndian.PutUint16(hbuf, protocol.OkCode)
+	msgLen := len(msgs[0].data)
+	binary.LittleEndian.PutUint32(hbuf[protocol.RespHeaderSize:], uint32(msgLen))
+	if err := nets.WriteAll(conn, hbuf); err != nil {
+		return err
+	}
 	return nets.WriteAll(conn, msgs[0].data)
+}
+
+func getFilePosByMessageId(root string, seqId int64) (int64, int64, error) {
+	var fileId int64
+	var err error
+	if seqId == 0 {
+		fileId, err = standard.ReadFirstFileId(root)
+		if err != nil {
+			return 0, 0, err
+		}
+		return fileId, 0, nil
+	}
+	if seqId == -1 {
+		fileId, err = standard.ReadMaxFileId(root)
+		if err != nil {
+			return 0, 0, err
+		}
+		// todo
+		return fileId - 1, 0, nil
+	}
+
+	return repair.FindMqPosByMessageId(root, seqId)
 }
 
 func MasterHandle(conn net.Conn, header *protocol.CommonHeader, walMonitor WalMonitorSupport) error {
@@ -38,7 +67,7 @@ func MasterHandle(conn net.Conn, header *protocol.CommonHeader, walMonitor WalMo
 	ackTimeoutDuration := time.Duration(DefaultAckTimeout) * time.Millisecond
 
 	uuidStr := uuid.NewString()
-	fileId, pos, err := repair.FindBinlogPosByMessageId(walMonitor.GetRoot(), lastPos)
+	fileId, pos, err := getFilePosByMessageId(walMonitor.GetRoot(), lastPos)
 	if err != nil {
 		log.Printf("tid=%s,replca server error:%v\n", header.TraceId, err)
 		return nets.OutputRecoverErr(conn, err.Error())
