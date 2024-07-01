@@ -35,6 +35,11 @@ func (r *delayRouter) Router(conn net.Conn, header *protocol.CommonHeader, worke
 	if err := nets.ReadAll(conn, buf); err != nil {
 		return err
 	}
+
+	if curInsRole != store.Master {
+		return nets.OutputRecoverErr(conn, "just master can pub message")
+	}
+
 	if pubHeader.GetPayloadSize() <= 8 {
 		return nets.OutputRecoverErr(conn, "invalid delay request")
 	}
@@ -74,6 +79,9 @@ func (r *delayRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, err
 		return 0, err
 	}
 	if info == nil || info.IsInvalid() {
+		if msg.Src == protocol.RawMessageReplica {
+			return 0, nil
+		}
 		return 0, pkg.NewBizError("mq not exist")
 	}
 

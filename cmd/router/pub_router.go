@@ -26,6 +26,10 @@ func (r *pubRouter) Router(conn net.Conn, header *protocol.CommonHeader, worker 
 		return err
 	}
 
+	if curInsRole != store.Master {
+		return nets.OutputRecoverErr(conn, "just master can pub message")
+	}
+
 	msg := &protocol.RawMessage{
 		Command:   header.GetCmd(),
 		MqName:    header.MQName,
@@ -49,6 +53,9 @@ func (r *pubRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, error
 		return 0, err
 	}
 	if info == nil || info.IsInvalid() {
+		if msg.Src == protocol.RawMessageReplica {
+			return 0, nil
+		}
 		log.Printf("tid=%s,pubRouter.DoBinlog  %s not exist\n", msg.TraceId, msg.MqName)
 		return 0, pkg.NewBizError("mq not exist")
 	}

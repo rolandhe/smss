@@ -156,8 +156,8 @@ func (fs *fileStore) ensureWriter(mqName string) (*mqWriter, error) {
 	})
 }
 
-func (fs *fileStore) CreateMq(mqName string, life int64) error {
-	info, err := fs.meta.CreateMQ(mqName, life)
+func (fs *fileStore) CreateMq(mqName string, life int64, eventId int64) error {
+	info, err := fs.meta.CreateMQ(mqName, life, eventId)
 	if err != nil {
 		return err
 	}
@@ -191,8 +191,8 @@ func (fs *fileStore) ForceDeleteMQ(mqName string, cb func() error) error {
 	return err
 }
 
-func (fs *fileStore) ChangeMqLife(mqName string, life int64) error {
-	return fs.meta.ChangeMQLife(mqName, life)
+func (fs *fileStore) ChangeMqLife(mqName string, life int64, eventId int64) error {
+	return fs.meta.ChangeMQLife(mqName, life, eventId)
 }
 
 func (fs *fileStore) GetManagerMeta() store.ManagerMeta {

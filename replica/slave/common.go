@@ -7,5 +7,5 @@ import (
 
 type DependWorker interface {
 	standard.MessageWorking
-	store.Scanner
+	store.ManagerMeta
 }

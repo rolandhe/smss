@@ -24,6 +24,9 @@ func (r *changeLifeRouter) Router(conn net.Conn, header *protocol.CommonHeader, 
 	if err := nets.ReadAll(conn, buf); err != nil {
 		return err
 	}
+	if curInsRole != store.Master {
+		return nets.OutputRecoverErr(conn, "just master can manage mq")
+	}
 	msg := &protocol.RawMessage{
 		Command:   header.GetCmd(),
 		MqName:    header.MQName,
@@ -42,6 +45,9 @@ func (r *changeLifeRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64
 		return 0, err
 	}
 	if info == nil || info.IsInvalid() {
+		if msg.Src == protocol.RawMessageReplica {
+			return 0, nil
+		}
 		return 0, errors.New("mq not exist")
 	}
 	if msg.Body == nil {
@@ -57,7 +63,7 @@ func (r *changeLifeRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64
 func (r *changeLifeRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) error {
 	cmdPayload := msg.Body.(*protocol.DDLPayload)
 	lf := binary.LittleEndian.Uint64(cmdPayload.Payload)
-	err := r.fstore.ChangeMqLife(msg.MqName, int64(lf))
+	err := r.fstore.ChangeMqLife(msg.MqName, int64(lf), msg.MessageSeqId)
 	if err == nil && lf > 0 {
 		r.lc.Set(int64(lf), true)
 	}

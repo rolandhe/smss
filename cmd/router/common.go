@@ -5,6 +5,7 @@ import (
 	"github.com/rolandhe/smss/cmd/protocol"
 	"github.com/rolandhe/smss/pkg/nets"
 	"github.com/rolandhe/smss/standard"
+	"github.com/rolandhe/smss/store"
 	"log"
 	"net"
 	"os"
@@ -12,10 +13,14 @@ import (
 )
 
 var globalSeqId int64
+var curInsRole store.InstanceRoleEnum
 
-func InitSeqId(id int64) {
-	globalSeqId = id
-	log.Printf("int seq id:%d\n", globalSeqId)
+func InitSeqId(id int64, role store.InstanceRoleEnum) {
+	if role == store.Master {
+		globalSeqId = id
+		log.Printf("int seq id:%d\n", globalSeqId)
+	}
+	curInsRole = role
 }
 
 func setupRawMessageSeqIdAndWriteTime(msg *protocol.RawMessage, count int) {

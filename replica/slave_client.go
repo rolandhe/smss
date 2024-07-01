@@ -2,12 +2,14 @@ package replica
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/rolandhe/smss/cmd/protocol"
 	"github.com/rolandhe/smss/pkg"
 	"github.com/rolandhe/smss/pkg/nets"
 	"github.com/rolandhe/smss/replica/slave"
+	"github.com/rolandhe/smss/store"
 	"log"
 	"net"
 	"sync/atomic"
@@ -55,11 +57,53 @@ func (sc *slaveClient) Close() error {
 	return nil
 }
 
+func (sc *slaveClient) getValidMq(seqId int64) ([]*store.MqInfo, error) {
+	buf := make([]byte, 28)
+	buf[0] = byte(protocol.CommandValidLis)
+	binary.LittleEndian.PutUint64(buf[protocol.HeaderSize:], uint64(seqId))
+	if err := nets.WriteAll(sc.conn, buf); err != nil {
+		return nil, err
+	}
+	hBuf := buf[:protocol.RespHeaderSize]
+	if err := nets.ReadAll(sc.conn, hBuf); err != nil {
+		return nil, err
+	}
+	code := binary.LittleEndian.Uint16(hBuf)
+	if code == protocol.ErrCode {
+		errMsgLen := int(binary.LittleEndian.Uint16(hBuf[2:]))
+		if errMsgLen == 0 {
+			return nil, errors.New("unknown err")
+		}
+
+		eMsgBuf := make([]byte, errMsgLen)
+
+		if err := nets.ReadAll(sc.conn, eMsgBuf); err != nil {
+			return nil, err
+		}
+
+		return nil, errors.New(string(eMsgBuf))
+	}
+
+	payLen := int(binary.LittleEndian.Uint32(hBuf[2:]))
+	body := make([]byte, payLen)
+
+	err := nets.ReadAll(sc.conn, body)
+	if err != nil {
+		return nil, err
+	}
+	var rets []*store.MqInfo
+	err = json.Unmarshal(body, rets)
+	if err != nil {
+		return nil, err
+	}
+	return rets, nil
+}
+
 func (sc *slaveClient) replica(seqId int64) error {
 	buf := make([]byte, 28)
 	buf[0] = byte(protocol.CommandReplica)
 	binary.LittleEndian.PutUint64(buf[protocol.HeaderSize:], uint64(seqId))
-	if err := nets.ReadAll(sc.conn, buf); err != nil {
+	if err := nets.WriteAll(sc.conn, buf); err != nil {
 		return err
 	}
 

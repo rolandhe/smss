@@ -52,6 +52,10 @@ func (w *StdMsgWriter[T]) Write(msg *T, cb AfterWriteCallback) error {
 	if err != nil {
 		return err
 	}
+	// 如果没有写出任何东西，也就没必要进入下一步了
+	if outSize == 0 {
+		return nil
+	}
 
 	fid, size := w.LogFileControl.Get()
 

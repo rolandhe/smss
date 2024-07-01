@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/rolandhe/smss/cmd/protocol"
 	"github.com/rolandhe/smss/pkg"
+	"github.com/rolandhe/smss/pkg/nets"
 	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store"
 	"log"
@@ -19,6 +20,9 @@ type deleteMqRouter struct {
 }
 
 func (r *deleteMqRouter) Router(conn net.Conn, header *protocol.CommonHeader, worker standard.MessageWorking) error {
+	if curInsRole != store.Master {
+		return nets.OutputRecoverErr(conn, "just master can manage mq")
+	}
 	msg := &protocol.RawMessage{
 		Command:   header.GetCmd(),
 		MqName:    header.MQName,
@@ -34,6 +38,9 @@ func (r *deleteMqRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, 
 		return 0, err
 	}
 	if info == nil {
+		if msg.Src == protocol.RawMessageReplica {
+			return 0, nil
+		}
 		return 0, pkg.NewBizError("mq not exist")
 	}
 	setupRawMessageSeqIdAndWriteTime(msg, 1)

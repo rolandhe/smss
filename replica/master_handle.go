@@ -5,6 +5,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/rolandhe/smss/cmd/protocol"
 	"github.com/rolandhe/smss/cmd/repair"
+	"github.com/rolandhe/smss/pkg"
 	"github.com/rolandhe/smss/pkg/nets"
 	"github.com/rolandhe/smss/standard"
 	"log"
@@ -44,14 +45,15 @@ func getFilePosByMessageId(root string, seqId int64) (int64, int64, error) {
 		}
 		return fileId, 0, nil
 	}
-	if seqId == -1 {
-		fileId, err = standard.ReadMaxFileId(root)
-		if err != nil {
-			return 0, 0, err
-		}
-		// todo
-		return fileId - 1, 0, nil
-	}
+	//if seqId == -1 {
+	//	//fileId, err = standard.ReadMaxFileId(root)
+	//	//if err != nil {
+	//	//	return 0, 0, err
+	//	//}
+	//	//// todo
+	//	//return fileId - 1, 0, nil
+	//
+	//}
 
 	return repair.FindMqPosByMessageId(root, seqId)
 }
@@ -63,6 +65,10 @@ func MasterHandle(conn net.Conn, header *protocol.CommonHeader, walMonitor WalMo
 		return err
 	}
 	lastPos := int64(binary.LittleEndian.Uint64(buf))
+
+	if lastPos < 0 {
+		return pkg.NewBizError("invalid replica pos")
+	}
 
 	ackTimeoutDuration := time.Duration(DefaultAckTimeout) * time.Millisecond
 

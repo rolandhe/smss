@@ -13,11 +13,13 @@ const (
 )
 
 type MqInfo struct {
-	Name            string      `json:"name"`
-	CreateTimeStamp int64       `json:"createTimeStamp"`
-	ExpireAt        int64       `json:"expireAt"`
-	State           MqStateEnum `json:"state"`
-	StateChange     int64       `json:"stateChange"`
+	Name                  string      `json:"name" :"name"`
+	CreateEventId         int64       `json:"createEventId"`
+	CreateTimeStamp       int64       `json:"createTimeStamp" :"createTimeStamp"`
+	ExpireAt              int64       `json:"expireAt" :"expireAt"`
+	ChangeExpireAtEventId int64       `json:"changeExpireAtEventId"`
+	State                 MqStateEnum `json:"state" :"state"`
+	StateChange           int64       `json:"stateChange" :"stateChange"`
 }
 
 func (info *MqInfo) IsTemp() bool {
@@ -40,6 +42,12 @@ type ManagerMeta interface {
 
 	SetInstanceRole(role InstanceRoleEnum) error
 	GetInstanceRole() (InstanceRoleEnum, error)
+
+	RemoveDelay(key []byte) error
+	RemoveDelayByName(data []byte, mqName string) error
+	ExistDelay(key []byte) (bool, error)
+
+	CopyCreateMq(info *MqInfo) error
 }
 
 type MqInfoReader interface {
@@ -50,8 +58,6 @@ type MqInfoReader interface {
 type Scanner interface {
 	ScanExpireMqs() ([]string, int64, error)
 	ScanDelays(batchSize int) ([]*DelayItem, int64, error)
-	RemoveDelay(key []byte) error
-	ExistDelay(key []byte) (bool, error)
 }
 
 type InstanceRoleEnum byte
@@ -63,6 +69,7 @@ func (role InstanceRoleEnum) AsBytes() []byte {
 const (
 	Master InstanceRoleEnum = 0
 	Slave  InstanceRoleEnum = 1
+	Unset  InstanceRoleEnum = 2
 )
 
 const (
@@ -72,8 +79,8 @@ const (
 )
 
 type Meta interface {
-	CreateMQ(mqName string, defaultLifetime int64) (*MqInfo, error)
-	ChangeMQLife(mqName string, life int64) error
+	CreateMQ(mqName string, defaultLifetime int64, eventId int64) (*MqInfo, error)
+	ChangeMQLife(mqName string, life int64, eventId int64) error
 	DeleteMQ(mqName string, force bool) (bool, error)
 
 	SaveDelay(mqName string, payload []byte) error
@@ -100,13 +107,13 @@ type Store interface {
 
 	GetReader(mqName, who string, fileId, pos int64, batchSize int) (MqBlockReader, error)
 
-	CreateMq(mqName string, life int64) error
+	CreateMq(mqName string, life int64, eventId int64) error
 
 	ForceDeleteMQ(mqName string, cb func() error) error
 
 	SaveDelayMsg(mqName string, payload []byte) error
 
-	ChangeMqLife(mqName string, life int64) error
+	ChangeMqLife(mqName string, life int64, eventId int64) error
 
 	GetManagerMeta() ManagerMeta
 

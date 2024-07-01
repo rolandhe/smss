@@ -39,8 +39,9 @@ const (
 	CommandDelay CommandEnum = 16
 	CommandAlive CommandEnum = 17
 
-	CommandReplica CommandEnum = 64
-	CommandList    CommandEnum = 100
+	CommandReplica  CommandEnum = 64
+	CommandValidLis CommandEnum = 99
+	CommandList     CommandEnum = 100
 
 	CommandDelayApply CommandEnum = 101
 )

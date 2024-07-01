@@ -27,6 +27,9 @@ func (r *delayApplyRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64
 		return 0, err
 	}
 	if info == nil || info.IsInvalid() {
+		if msg.Src == protocol.RawMessageReplica {
+			return 0, nil
+		}
 		log.Printf("tid=%s,delayApplyRouter.DoBinlog  %s not exist\n", msg.TraceId, msg.MqName)
 		return 0, pkg.NewBizError("mq not exist")
 	}

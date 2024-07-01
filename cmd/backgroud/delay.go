@@ -71,7 +71,7 @@ func procOneDelayMsg(fstore store.Store, worker standard.MessageWorking, item *s
 	}
 	if info == nil || info.IsInvalid() {
 		log.Printf("tid=%s,procOneDelayMsg,mq is ivalid  %s \n", tid, item.MqName)
-		return fstore.GetScanner().RemoveDelay(item.Key)
+		return fstore.GetManagerMeta().RemoveDelay(item.Key)
 	}
 	pp := &protocol.DelayApplyPayload{
 		Payload: item.Payload,
@@ -87,5 +87,5 @@ func procOneDelayMsg(fstore store.Store, worker standard.MessageWorking, item *s
 		return err
 	}
 
-	return fstore.GetScanner().RemoveDelay(item.Key)
+	return fstore.GetManagerMeta().RemoveDelay(item.Key)
 }

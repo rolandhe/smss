@@ -3,7 +3,6 @@ package badger_meta
 import (
 	"encoding/binary"
 	"fmt"
-	"time"
 )
 
 var (
@@ -31,13 +30,19 @@ func mqLifetimeName(mqName string, expireAt int64) []byte {
 	return buf
 }
 
-func toMqMainValue(createTime, exportAt int64) []byte {
-	buf := make([]byte, 25)
+func toMqMainValue(createTime, exportAt int64, eventId int64) []byte {
+	buf := make([]byte, 41)
 
 	binary.LittleEndian.PutUint64(buf, uint64(createTime))
 	binary.LittleEndian.PutUint64(buf[8:], uint64(exportAt))
-	binary.LittleEndian.PutUint64(buf[16:], uint64(time.Now().UnixMilli()))
+	// 状态改变时间
+	binary.LittleEndian.PutUint64(buf[16:], uint64(createTime))
+	// 状态
 	buf[24] = 0
+	// 创建事件
+	binary.LittleEndian.PutUint64(buf[25:], uint64(eventId))
+	// 修改过期时间的事件id
+	binary.LittleEndian.PutUint64(buf[33:], uint64(eventId))
 	return buf
 }
 func fromMqMainValue(buf []byte) (int64, int64, int64, int8) {

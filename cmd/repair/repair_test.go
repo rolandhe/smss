@@ -12,6 +12,6 @@ func TestRepairMaster(t *testing.T) {
 		t.Log(err)
 		return
 	}
-	err = repairMaster(root, fstore)
+	err = repairCore(root, fstore)
 	t.Log(err)
 }

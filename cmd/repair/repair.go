@@ -8,16 +8,8 @@ import (
 	"path"
 )
 
-func RepairLog(root string, role store.InstanceRoleEnum, meta store.Meta) (int64, error) {
+func RepairLog(root string, meta store.Meta) (int64, error) {
 
-	if role == store.Master {
-		return repairMaster(root, meta)
-	}
-	panic("unknown")
-	return 0, nil
-}
-
-func repairMaster(root string, meta store.Meta) (int64, error) {
 	binlogRoot := path.Join(root, store.BinlogDir)
 	exist, err := pkg.PathExist(binlogRoot)
 	if err != nil {

@@ -29,7 +29,7 @@ func NewMeta(path string) (store.Meta, error) {
 	}, nil
 }
 
-func (bm *badgerMeta) CreateMQ(mqName string, defaultLifetime int64) (*store.MqInfo, error) {
+func (bm *badgerMeta) CreateMQ(mqName string, defaultLifetime int64, eventId int64) (*store.MqInfo, error) {
 	norMqName := normalMqName(mqName)
 	exist, err := bm.existMq(norMqName)
 	if err != nil {
@@ -45,7 +45,7 @@ func (bm *badgerMeta) CreateMQ(mqName string, defaultLifetime int64) (*store.MqI
 		ExpireAt:        defaultLifetime,
 	}
 	err = bm.db.Update(func(txn *badger.Txn) error {
-		if e := txn.Set(norMqName, toMqMainValue(info.CreateTimeStamp, defaultLifetime)); e != nil {
+		if e := txn.Set(norMqName, toMqMainValue(info.CreateTimeStamp, defaultLifetime, eventId)); e != nil {
 			return e
 		}
 		if info.IsTemp() {
@@ -61,6 +61,48 @@ func (bm *badgerMeta) CreateMQ(mqName string, defaultLifetime int64) (*store.MqI
 	}
 
 	return info, nil
+}
+
+func (bm *badgerMeta) CopyCreateMq(info *store.MqInfo) error {
+	norMqName := normalMqName(info.Name)
+	exist, err := bm.existMq(norMqName)
+	if err != nil {
+		return err
+	}
+	if exist {
+		return errors.New("mq exists")
+	}
+
+	mainValue := make([]byte, 41)
+
+	binary.LittleEndian.PutUint64(mainValue, uint64(info.CreateTimeStamp))
+	binary.LittleEndian.PutUint64(mainValue[8:], uint64(info.ExpireAt))
+	// 状态改变时间
+	binary.LittleEndian.PutUint64(mainValue[16:], uint64(info.StateChange))
+	// 状态
+	mainValue[24] = byte(info.State)
+	// 创建事件
+	binary.LittleEndian.PutUint64(mainValue[25:], uint64(info.CreateEventId))
+	// 修改过期时间
+	binary.LittleEndian.PutUint64(mainValue[33:], uint64(info.ChangeExpireAtEventId))
+
+	err = bm.db.Update(func(txn *badger.Txn) error {
+		if e := txn.Set(norMqName, mainValue); e != nil {
+			return e
+		}
+		if info.IsTemp() {
+			if e := txn.Set(mqLifetimeName(info.Name, info.ExpireAt), lifeValueHolder); e != nil {
+				return e
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (bm *badgerMeta) DeleteMQ(mqName string, force bool) (bool, error) {
@@ -186,8 +228,20 @@ func (bm *badgerMeta) RemoveDelay(key []byte) error {
 	}
 	return err
 }
+func (bm *badgerMeta) RemoveDelayByName(data []byte, mqName string) error {
+	preLen := len(delayPrefix)
+	key := make([]byte, preLen+16+len(mqName))
+	copy(key, delayPrefix)
 
-func (bm *badgerMeta) ChangeMQLife(mqName string, life int64) error {
+	buf := key[preLen:]
+	// copy 时间戳
+	copy(buf, data)
+	buf = buf[16:]
+	copy(buf, mqName)
+	return bm.RemoveDelay(key)
+}
+
+func (bm *badgerMeta) ChangeMQLife(mqName string, life int64, eventId int64) error {
 	info, err := bm.GetMQInfo(mqName)
 	if err != nil {
 		return err
@@ -203,17 +257,27 @@ func (bm *badgerMeta) ChangeMQLife(mqName string, life int64) error {
 	normMqName := normalMqName(mqName)
 
 	err = bm.db.Update(func(txn *badger.Txn) error {
-		if e := txn.Set(normMqName, toMqMainValue(info.CreateTimeStamp, life)); e != nil {
+		item, e := txn.Get(normMqName)
+		if e != nil {
+			return e
+		}
+		var mValue []byte
+		if mValue, e = item.ValueCopy(nil); e != nil {
+			return e
+		}
+		binary.LittleEndian.PutUint64(mValue[8:], uint64(life))
+		binary.LittleEndian.PutUint64(mValue[33:], uint64(eventId))
+		if e = txn.Set(normMqName, mValue); e != nil {
 			return e
 		}
 		if info.IsTemp() {
-			if e := txn.Delete(mqLifetimeName(mqName, info.ExpireAt)); e != nil {
+			if e = txn.Delete(mqLifetimeName(mqName, info.ExpireAt)); e != nil {
 				return e
 			}
 		}
 		info.ExpireAt = life
 		if info.IsTemp() {
-			if e := txn.Set(mqLifetimeName(mqName, life), lifeValueHolder); e != nil {
+			if e = txn.Set(mqLifetimeName(mqName, life), lifeValueHolder); e != nil {
 				return e
 			}
 		}
@@ -227,6 +291,7 @@ func (bm *badgerMeta) GetMQInfo(mqName string) (*store.MqInfo, error) {
 	var life int64
 	var stateChange int64
 	var state int8
+	var createEventId, changeExpirtAtEventId int64
 
 	err := bm.db.View(func(txn *badger.Txn) error {
 		var e error
@@ -235,6 +300,8 @@ func (bm *badgerMeta) GetMQInfo(mqName string) (*store.MqInfo, error) {
 			return e
 		}
 		creatTime, life, stateChange, state = fromMqMainValue(rawValue)
+		createEventId = int64(binary.LittleEndian.Uint64(rawValue[25:]))
+		changeExpirtAtEventId = int64(binary.LittleEndian.Uint64(rawValue[33:]))
 		return nil
 	})
 	if err == badger.ErrKeyNotFound {
@@ -244,11 +311,13 @@ func (bm *badgerMeta) GetMQInfo(mqName string) (*store.MqInfo, error) {
 		return nil, err
 	}
 	return &store.MqInfo{
-		Name:            mqName,
-		CreateTimeStamp: creatTime,
-		ExpireAt:        life,
-		State:           store.MqStateEnum(state),
-		StateChange:     stateChange,
+		Name:                  mqName,
+		CreateTimeStamp:       creatTime,
+		ExpireAt:              life,
+		State:                 store.MqStateEnum(state),
+		StateChange:           stateChange,
+		CreateEventId:         createEventId,
+		ChangeExpireAtEventId: changeExpirtAtEventId,
 	}, nil
 }
 
@@ -268,18 +337,24 @@ func (bm *badgerMeta) GetMQSimpleInfoList() ([]*store.MqInfo, error) {
 			var life int64
 			var state int8
 			var stateChange int64
+			var createEventId int64
+			var changeExpirtAtEventId int64
 			if e := item.Value(func(val []byte) error {
 				createTime, life, stateChange, state = fromMqMainValue(val)
+				createEventId = int64(binary.LittleEndian.Uint64(val[25:]))
+				changeExpirtAtEventId = int64(binary.LittleEndian.Uint64(val[33:]))
 				return nil
 			}); e != nil {
 				return e
 			}
 			infoList = append(infoList, &store.MqInfo{
-				Name:            mqName,
-				CreateTimeStamp: createTime,
-				ExpireAt:        life,
-				State:           store.MqStateEnum(state),
-				StateChange:     stateChange,
+				Name:                  mqName,
+				CreateTimeStamp:       createTime,
+				ExpireAt:              life,
+				State:                 store.MqStateEnum(state),
+				StateChange:           stateChange,
+				CreateEventId:         createEventId,
+				ChangeExpireAtEventId: changeExpirtAtEventId,
 			})
 		}
 		return nil
@@ -288,14 +363,14 @@ func (bm *badgerMeta) GetMQSimpleInfoList() ([]*store.MqInfo, error) {
 	return infoList, err
 }
 
-func (bm *badgerMeta) SaveDelay(mqName string,  payload []byte) error {
+func (bm *badgerMeta) SaveDelay(mqName string, payload []byte) error {
 	preLen := len(delayPrefix)
 	key := make([]byte, preLen+16+len(mqName))
 	copy(key, delayPrefix)
 
 	buf := key[preLen:]
 	// copy 时间戳
-	copy(buf[:8],payload[8:])
+	copy(buf[:8], payload[8:])
 	buf = buf[8:]
 	// 直接从内容中copy seq id
 	copy(buf, payload[:8])
@@ -382,7 +457,7 @@ func (bm *badgerMeta) GetInstanceRole() (store.InstanceRoleEnum, error) {
 	})
 
 	if err == badger.ErrKeyNotFound {
-		return store.Master, nil
+		return store.Unset, nil
 	}
 	if err != nil {
 		return store.Master, err

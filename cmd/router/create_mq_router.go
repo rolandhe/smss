@@ -32,6 +32,9 @@ func (r *createMqRouter) Router(conn net.Conn, header *protocol.CommonHeader, wo
 		log.Printf("tid=%s,create %s error, mq name MUST be less than 128 char and NOT contains space/enter/tab\n", header.TraceId, header.MQName)
 		return nets.OutputRecoverErr(conn, "mq name MUST be less than 128 char and NOT contains space/enter/tab")
 	}
+	if curInsRole != store.Master {
+		return nets.OutputRecoverErr(conn, "just master can manage mq")
+	}
 	msg := &protocol.RawMessage{
 		Command:   header.GetCmd(),
 		MqName:    header.MQName,
@@ -59,7 +62,7 @@ func (r *createMqRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64
 	payload := msg.Body.(*protocol.DDLPayload)
 	buf := payload.Payload
 	lf := binary.LittleEndian.Uint64(buf)
-	err := r.fstore.CreateMq(msg.MqName, int64(lf))
+	err := r.fstore.CreateMq(msg.MqName, int64(lf), msg.MessageSeqId)
 	if err == nil && lf > 0 {
 		r.lc.Set(int64(lf), true)
 	}
