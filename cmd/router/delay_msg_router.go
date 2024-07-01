@@ -32,24 +32,24 @@ func (r *delayRouter) Router(conn net.Conn, header *protocol.CommonHeader, worke
 	// 最终存储在binlog的格式
 	// delayTime + delayId  + pub message
 	buf := make([]byte, 8+pubHeader.GetPayloadSize())
-	if err := nets.ReadAll(conn, buf); err != nil {
+	if err := nets.ReadAll(conn, buf, NetReadTimeout); err != nil {
 		return err
 	}
 
 	if curInsRole != store.Master {
-		return nets.OutputRecoverErr(conn, "just master can pub message")
+		return nets.OutputRecoverErr(conn, "just master can pub message", NetWriteTimeout)
 	}
 
 	if pubHeader.GetPayloadSize() <= 8 {
-		return nets.OutputRecoverErr(conn, "invalid delay request")
+		return nets.OutputRecoverErr(conn, "invalid delay request", NetWriteTimeout)
 	}
 	delayTime := int64(binary.LittleEndian.Uint64(buf))
 	if delayTime < 1000 {
-		return nets.OutputRecoverErr(conn, "delay time must be more than 1 second")
+		return nets.OutputRecoverErr(conn, "delay time must be more than 1 second", NetWriteTimeout)
 	}
 	ok, _ := protocol.CheckPayload(buf[8:])
 	if !ok {
-		return nets.OutputRecoverErr(conn, "invalid delay request")
+		return nets.OutputRecoverErr(conn, "invalid delay request", NetWriteTimeout)
 	}
 
 	triggerTime := time.Now().Add(time.Millisecond * time.Duration(delayTime)).UnixMilli()
@@ -68,9 +68,9 @@ func (r *delayRouter) Router(conn net.Conn, header *protocol.CommonHeader, worke
 	}
 	err := worker.Work(msg)
 	if err != nil {
-		return nets.OutputRecoverErr(conn, err.Error())
+		return nets.OutputRecoverErr(conn, err.Error(), NetWriteTimeout)
 	}
-	return nets.OutputOk(conn)
+	return nets.OutputOk(conn, NetWriteTimeout)
 }
 
 func (r *delayRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, error) {

@@ -9,10 +9,11 @@ import (
 	"time"
 )
 
-func ReadAll(conn net.Conn, buff []byte) error {
+func ReadAll(conn net.Conn, buff []byte, timeout time.Duration) error {
 	rb := buff[:]
 	all := 0
 	for {
+		conn.SetReadDeadline(time.Now().Add(timeout))
 		n, err := conn.Read(rb)
 		if err != nil {
 			return err
@@ -29,9 +30,10 @@ func ReadAll(conn net.Conn, buff []byte) error {
 	return nil
 }
 
-func WriteAll(conn net.Conn, buf []byte) error {
+func WriteAll(conn net.Conn, buf []byte, timeout time.Duration) error {
 	for {
 		l := len(buf)
+		conn.SetWriteDeadline(time.Now().Add(timeout))
 		n, err := conn.Write(buf)
 		if err != nil {
 			return err
@@ -43,24 +45,24 @@ func WriteAll(conn net.Conn, buf []byte) error {
 	}
 }
 
-func OutputRecoverErr(conn net.Conn, errMsg string) error {
+func OutputRecoverErr(conn net.Conn, errMsg string, timeout time.Duration) error {
 	buf := make([]byte, protocol.RespHeaderSize)
 	binary.LittleEndian.PutUint16(buf, protocol.ErrCode)
 	l := len(errMsg)
 	binary.LittleEndian.PutUint16(buf[2:], uint16(l))
 	buf = append(buf, []byte(errMsg)...)
 
-	if err := WriteAll(conn, buf); err != nil {
+	if err := WriteAll(conn, buf, timeout); err != nil {
 		log.Printf("outputRecoverErr,write to err msg conn err,%s\v", err)
 		return err
 	}
 	return nil
 }
 
-func OutputOk(conn net.Conn) error {
+func OutputOk(conn net.Conn, timeout time.Duration) error {
 	buf := make([]byte, protocol.RespHeaderSize)
 	binary.LittleEndian.PutUint16(buf, protocol.OkCode)
-	if err := WriteAll(conn, buf); err != nil {
+	if err := WriteAll(conn, buf, timeout); err != nil {
 		log.Printf("outputRecoverErr,write code to conn err,%s\v", err)
 		return err
 	}
@@ -70,21 +72,18 @@ func OutputOk(conn net.Conn) error {
 func OutAlive(conn net.Conn, timeout time.Duration) error {
 	buf := make([]byte, protocol.RespHeaderSize)
 	binary.LittleEndian.PutUint16(buf, protocol.AliveCode)
-	conn.SetWriteDeadline(time.Now().Add(timeout))
-	return WriteAll(conn, buf)
+	return WriteAll(conn, buf, timeout)
 }
 
 func OutSubEnd(conn net.Conn, timeout time.Duration) error {
 	buf := make([]byte, protocol.RespHeaderSize)
 	binary.LittleEndian.PutUint16(buf, protocol.SubEndCode)
-	conn.SetWriteDeadline(time.Now().Add(timeout))
-	return WriteAll(conn, buf)
+	return WriteAll(conn, buf, timeout)
 }
 
 func InputAck(conn net.Conn, timeout time.Duration) (int, error) {
-	conn.SetReadDeadline(time.Now().Add(timeout))
 	buf := make([]byte, 2)
-	if err := ReadAll(conn, buf); err != nil {
+	if err := ReadAll(conn, buf, timeout); err != nil {
 		return 0, err
 	}
 

@@ -17,7 +17,10 @@ import (
 )
 
 const (
-	connectTimeout = time.Second * 3
+	connectTimeout           = time.Second * 3
+	netReadTimeout           = time.Millisecond * 3000
+	netWriteTimeout          = time.Millisecond * 3000
+	replicaReadNewLogTimeout = time.Millisecond * 10000
 )
 
 func newSlaveReplicaClient(masterHost string, masterPort int, worker slave.DependWorker) (*slaveClient, error) {
@@ -33,12 +36,13 @@ func newSlaveReplicaClient(masterHost string, masterPort int, worker slave.Depen
 }
 
 type slaveClient struct {
-	host      string
-	port      int
-	conn      net.Conn
-	endNotify chan struct{}
-	worker    slave.DependWorker
-	state     atomic.Bool
+	host        string
+	port        int
+	conn        net.Conn
+	endNotify   chan struct{}
+	worker      slave.DependWorker
+	state       atomic.Bool
+	lastEventId int64
 }
 
 func (sc *slaveClient) connect() error {
@@ -59,13 +63,13 @@ func (sc *slaveClient) Close() error {
 
 func (sc *slaveClient) getValidMq(seqId int64) ([]*store.MqInfo, error) {
 	buf := make([]byte, 28)
-	buf[0] = byte(protocol.CommandValidLis)
+	buf[0] = byte(protocol.CommandValidList)
 	binary.LittleEndian.PutUint64(buf[protocol.HeaderSize:], uint64(seqId))
-	if err := nets.WriteAll(sc.conn, buf); err != nil {
+	if err := nets.WriteAll(sc.conn, buf, netWriteTimeout); err != nil {
 		return nil, err
 	}
 	hBuf := buf[:protocol.RespHeaderSize]
-	if err := nets.ReadAll(sc.conn, hBuf); err != nil {
+	if err := nets.ReadAll(sc.conn, hBuf, netReadTimeout); err != nil {
 		return nil, err
 	}
 	code := binary.LittleEndian.Uint16(hBuf)
@@ -77,7 +81,7 @@ func (sc *slaveClient) getValidMq(seqId int64) ([]*store.MqInfo, error) {
 
 		eMsgBuf := make([]byte, errMsgLen)
 
-		if err := nets.ReadAll(sc.conn, eMsgBuf); err != nil {
+		if err := nets.ReadAll(sc.conn, eMsgBuf, netReadTimeout); err != nil {
 			return nil, err
 		}
 
@@ -87,12 +91,12 @@ func (sc *slaveClient) getValidMq(seqId int64) ([]*store.MqInfo, error) {
 	payLen := int(binary.LittleEndian.Uint32(hBuf[2:]))
 	body := make([]byte, payLen)
 
-	err := nets.ReadAll(sc.conn, body)
+	err := nets.ReadAll(sc.conn, body, netReadTimeout)
 	if err != nil {
 		return nil, err
 	}
 	var rets []*store.MqInfo
-	err = json.Unmarshal(body, rets)
+	err = json.Unmarshal(body, &rets)
 	if err != nil {
 		return nil, err
 	}
@@ -100,10 +104,11 @@ func (sc *slaveClient) getValidMq(seqId int64) ([]*store.MqInfo, error) {
 }
 
 func (sc *slaveClient) replica(seqId int64) error {
+	sc.lastEventId = seqId
 	buf := make([]byte, 28)
 	buf[0] = byte(protocol.CommandReplica)
 	binary.LittleEndian.PutUint64(buf[protocol.HeaderSize:], uint64(seqId))
-	if err := nets.WriteAll(sc.conn, buf); err != nil {
+	if err := nets.WriteAll(sc.conn, buf, netWriteTimeout); err != nil {
 		return err
 	}
 
@@ -111,7 +116,12 @@ func (sc *slaveClient) replica(seqId int64) error {
 
 	for {
 		hBuf := buf[:protocol.RespHeaderSize]
-		if err := nets.ReadAll(sc.conn, hBuf); err != nil {
+		err := nets.ReadAll(sc.conn, hBuf, replicaReadNewLogTimeout)
+		if err != nil {
+			if isTimeoutError(err) {
+				log.Printf("wait new binlog data timeout,wait...\n")
+				continue
+			}
 			return err
 		}
 		code := int(binary.LittleEndian.Uint16(hBuf[:2]))
@@ -120,18 +130,20 @@ func (sc *slaveClient) replica(seqId int64) error {
 			if err != nil {
 				return err
 			}
-			if err = applyBinlog(body, cmdParser, sc.worker); err != nil {
+			var lastEventId int64
+			if lastEventId, err = applyBinlog(body, cmdParser, sc.worker); err != nil {
 				return err
 			}
 			// ack
 			binary.LittleEndian.PutUint16(buf, uint16(protocol.SubAck))
-			if err = nets.WriteAll(sc.conn, buf[:2]); err != nil {
+			if err = nets.WriteAll(sc.conn, buf[:2], netWriteTimeout); err != nil {
 				return err
 			}
+			sc.lastEventId = lastEventId
 			continue
 		}
 		if code == protocol.AliveCode {
-			log.Printf("recv alive msg\n")
+			log.Printf("slave recv alive msg\n")
 			continue
 		}
 		if code == protocol.ErrCode {
@@ -142,7 +154,7 @@ func (sc *slaveClient) replica(seqId int64) error {
 
 			eMsgBuf := make([]byte, errMsgLen)
 
-			if err := nets.ReadAll(sc.conn, eMsgBuf); err != nil {
+			if err := nets.ReadAll(sc.conn, eMsgBuf, netReadTimeout); err != nil {
 				return err
 			}
 
@@ -153,12 +165,12 @@ func (sc *slaveClient) replica(seqId int64) error {
 	}
 }
 
-func applyBinlog(body []byte, cmdParse *msgParser, worker slave.DependWorker) error {
+func applyBinlog(body []byte, cmdParse *msgParser, worker slave.DependWorker) (int64, error) {
 	defer cmdParse.Reset()
 	cmdLen := binary.LittleEndian.Uint32(body)
 	cmdLine, err := cmdParse.ParseCmd(body[4 : cmdLen+4])
 	if err != nil {
-		return err
+		return 0, err
 	}
 	next := body[cmdLen+4:]
 	var payload []byte
@@ -169,21 +181,30 @@ func applyBinlog(body []byte, cmdParse *msgParser, worker slave.DependWorker) er
 	hfunc := bbHandlerMap[cmdLine.GetCmd()]
 	if hfunc == nil {
 		log.Printf("not support cmd:%d\n", cmdLine.GetCmd())
-		return pkg.NewBizError("not support cmd")
+		return 0, pkg.NewBizError("not support cmd")
 	}
-	return hfunc(cmdParse.cmd, payload, worker)
+	err = hfunc(cmdParse.cmd, payload, worker)
+	log.Printf("slave: tid=%s,cmd=%d,eventId=%d,err:%v\n", cmdParse.cmd.TraceId, cmdParse.cmd.Command, cmdParse.cmd.MessageSeqId, err)
+	return cmdParse.cmd.MessageSeqId, err
 }
 
 func readPayload(conn net.Conn, lenBuf []byte) ([]byte, error) {
-	err := nets.ReadAll(conn, lenBuf)
+	err := nets.ReadAll(conn, lenBuf, netReadTimeout)
 	if err != nil {
 		return nil, err
 	}
 	bodyLen := int(binary.LittleEndian.Uint32(lenBuf))
 	body := make([]byte, bodyLen)
-	err = nets.ReadAll(conn, body)
+	err = nets.ReadAll(conn, body, netReadTimeout)
 	if err != nil {
 		return nil, err
 	}
 	return body, nil
+}
+func isTimeoutError(err error) bool {
+	// 检查是否为 net.Error 类型并且是否为超时错误
+	if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+		return true
+	}
+	return false
 }

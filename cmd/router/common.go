@@ -12,6 +12,10 @@ import (
 	"time"
 )
 
+const NetReadTimeout = time.Millisecond * 2000
+const NetHeaderTimeout = time.Millisecond * 5000
+const NetWriteTimeout = time.Millisecond * 2000
+
 var globalSeqId int64
 var curInsRole store.InstanceRoleEnum
 
@@ -34,7 +38,7 @@ func setupRawMessageSeqIdAndWriteTime(msg *protocol.RawMessage, count int) {
 
 func ReadHeader(conn net.Conn) (*protocol.CommonHeader, error) {
 	buff := make([]byte, protocol.HeaderSize)
-	if err := nets.ReadAll(conn, buff); err != nil {
+	if err := nets.ReadAll(conn, buff, NetHeaderTimeout); err != nil {
 		return nil, err
 	}
 	header := protocol.NewCommonHeader(buff)
@@ -45,7 +49,7 @@ func ReadHeader(conn net.Conn) (*protocol.CommonHeader, error) {
 	}
 	nextBuf := make([]byte, nameLen+traceLen)
 
-	if err := nets.ReadAll(conn, nextBuf); err != nil {
+	if err := nets.ReadAll(conn, nextBuf, NetReadTimeout); err != nil {
 		return nil, err
 	}
 	if nameLen > 0 {
@@ -63,9 +67,9 @@ type ddlRouter struct {
 func (ddl *ddlRouter) router(conn net.Conn, msg *protocol.RawMessage, worker standard.MessageWorking) error {
 	err := worker.Work(msg)
 	if err != nil {
-		return nets.OutputRecoverErr(conn, err.Error())
+		return nets.OutputRecoverErr(conn, err.Error(), NetWriteTimeout)
 	}
-	return nets.OutputOk(conn)
+	return nets.OutputOk(conn, NetWriteTimeout)
 }
 
 func (ddl *ddlRouter) doBinlog(f *os.File, msg *protocol.RawMessage) (int64, error) {

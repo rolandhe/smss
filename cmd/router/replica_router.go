@@ -13,5 +13,5 @@ type replicaRouter struct {
 }
 
 func (r *replicaRouter) Router(conn net.Conn, commHeader *protocol.CommonHeader, worker standard.MessageWorking) error {
-	return replica.MasterHandle(conn, commHeader, r.binlogWriter)
+	return replica.MasterHandle(conn, commHeader, r.binlogWriter, NetReadTimeout, NetWriteTimeout)
 }

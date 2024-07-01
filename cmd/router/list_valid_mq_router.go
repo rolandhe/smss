@@ -20,7 +20,7 @@ type validListRouter struct {
 
 func (r *validListRouter) Router(conn net.Conn, commHeader *protocol.CommonHeader, worker standard.MessageWorking) error {
 	buf := make([]byte, 8)
-	if err := nets.ReadAll(conn, buf); err != nil {
+	if err := nets.ReadAll(conn, buf, NetReadTimeout); err != nil {
 		return err
 	}
 	eventId := int64(binary.LittleEndian.Uint64(buf))
@@ -46,7 +46,7 @@ func (r *validListRouter) Router(conn net.Conn, commHeader *protocol.CommonHeade
 		outBuff := make([]byte, protocol.RespHeaderSize)
 		binary.LittleEndian.PutUint16(outBuff, protocol.OkCode)
 		binary.LittleEndian.PutUint32(outBuff[2:], uint32(0))
-		return nets.WriteAll(conn, outBuff)
+		return nets.WriteAll(conn, outBuff, NetWriteTimeout)
 	}
 
 	jBuff, _ := json.Marshal(rets)
@@ -54,5 +54,5 @@ func (r *validListRouter) Router(conn net.Conn, commHeader *protocol.CommonHeade
 	binary.LittleEndian.PutUint16(outBuff, protocol.OkCode)
 	binary.LittleEndian.PutUint32(outBuff[2:], uint32(len(jBuff)))
 	copy(outBuff[protocol.RespHeaderSize:], jBuff)
-	return nets.WriteAll(conn, outBuff)
+	return nets.WriteAll(conn, outBuff, NetWriteTimeout)
 }

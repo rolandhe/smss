@@ -39,9 +39,9 @@ const (
 	CommandDelay CommandEnum = 16
 	CommandAlive CommandEnum = 17
 
-	CommandReplica  CommandEnum = 64
-	CommandValidLis CommandEnum = 99
-	CommandList     CommandEnum = 100
+	CommandReplica   CommandEnum = 64
+	CommandValidList CommandEnum = 99
+	CommandList      CommandEnum = 100
 
 	CommandDelayApply CommandEnum = 101
 )
@@ -49,11 +49,6 @@ const (
 const (
 	RawMessageBase    RawMessageSourceEnum = 0
 	RawMessageReplica RawMessageSourceEnum = 1
-)
-
-const (
-	LongtimeBlockReadTimeout  = time.Millisecond * 2000
-	LongtimeBlockWriteTimeout = time.Millisecond * 3000
 )
 
 type CommonHeader struct {
@@ -175,6 +170,7 @@ type RawMessage struct {
 	TraceId string
 
 	Body any
+	Skip bool
 }
 
 type DecodedRawMessage struct {

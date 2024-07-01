@@ -9,6 +9,7 @@ import (
 	"github.com/rolandhe/smss/conf"
 	"github.com/rolandhe/smss/pkg"
 	"github.com/rolandhe/smss/pkg/nets"
+	"github.com/rolandhe/smss/pkg/tc"
 	"github.com/rolandhe/smss/replica"
 	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store"
@@ -63,7 +64,7 @@ func StartServer(root string, insRole *InstanceRole) {
 		return
 	}
 
-	startBgAndInitRouter(fstore, worker)
+	startBgAndInitRouter(fstore, worker, insRole.Role)
 	if insRole.Role == store.Master {
 		router.InitReplica(w.StdMsgWriter)
 	} else {
@@ -73,7 +74,7 @@ func StartServer(root string, insRole *InstanceRole) {
 			seqId = nextSeq - 1
 			needSync = false
 		}
-		if err = replica.SlaveReplica(insRole.FromHost, insRole.FromPort, seqId, needSync, worker, fstore.GetManagerMeta()); err != nil {
+		if err = replica.SlaveReplica(insRole.FromHost, insRole.FromPort, seqId, needSync, worker, fstore); err != nil {
 			log.Printf("SlaveReplica err:%v\n", err)
 			return
 		}
@@ -97,28 +98,36 @@ func StartServer(root string, insRole *InstanceRole) {
 	backgroud.StopClear()
 }
 
-func startBgAndInitRouter(fstore store.Store, worker standard.MessageWorking) {
-	delExec := backgroud.StartMqFileDelete(fstore)
+func startBgAndInitRouter(fstore store.Store, worker standard.MessageWorking, role store.InstanceRoleEnum) {
+	delExec := backgroud.StartMqFileDelete(fstore, role)
 	backgroud.StartClearOldFiles(fstore, worker, delExec)
-	lc := backgroud.StartLife(fstore, worker)
-	delayCtrl := backgroud.StartDelay(fstore, worker)
+	var lc *tc.TimeTriggerControl
+	if role == store.Master {
+		delayCtrl := backgroud.StartDelay(fstore, worker)
+		router.InitDelay(fstore, delayCtrl)
+		lc = backgroud.StartLife(fstore, worker)
+	}
 
 	router.Init(fstore, lc, delExec)
 
-	router.InitDelay(fstore, delayCtrl)
 }
 
 func handleConnection(conn net.Conn, worker *backWorker) {
-	defer conn.Close()
+	var cmd protocol.CommandEnum
+	defer func() {
+		conn.Close()
+		log.Printf("handleConnection close with cmd:%d\n", cmd)
+	}()
 	for {
 		header, err := router.ReadHeader(conn)
 		if err != nil {
-			log.Printf("read header err:%v\n", err)
+			log.Printf("handleConnection read header err:%v\n", err)
 			return
 		}
+		cmd = header.GetCmd()
 
 		if header.GetCmd() > protocol.CommandList {
-			err = nets.OutputRecoverErr(conn, "don't support action")
+			err = nets.OutputRecoverErr(conn, "don't support action", router.NetWriteTimeout)
 			if err != nil && !pkg.IsBizErr(err) {
 				return
 			}
@@ -136,7 +145,7 @@ func handleConnection(conn net.Conn, worker *backWorker) {
 		handler := router.GetRouter(header.GetCmd())
 		if handler == nil {
 			log.Printf("tid=%s,don't support action:%d\n", header.TraceId, header.GetCmd())
-			err = nets.OutputRecoverErr(conn, "don't support action")
+			err = nets.OutputRecoverErr(conn, "don't support action", router.NetWriteTimeout)
 			if err != nil && !pkg.IsBizErr(err) {
 				return
 			}
@@ -144,7 +153,7 @@ func handleConnection(conn net.Conn, worker *backWorker) {
 		}
 		err = handler.Router(conn, header, worker)
 		if err != nil {
-			log.Printf("tid=%s,router error:%d\n", header.TraceId, header.GetCmd())
+			log.Printf("tid=%s,cmd=%d,router error:%v\n", header.TraceId, header.GetCmd(), err)
 		}
 		if err != nil && !pkg.IsBizErr(err) {
 			return

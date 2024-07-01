@@ -33,7 +33,7 @@ func (r *mqListRouter) Router(conn net.Conn, commHeader *protocol.CommonHeader, 
 		outBuff := make([]byte, protocol.RespHeaderSize)
 		binary.LittleEndian.PutUint16(outBuff, protocol.OkCode)
 		binary.LittleEndian.PutUint32(outBuff[2:], uint32(0))
-		return nets.WriteAll(conn, outBuff)
+		return nets.WriteAll(conn, outBuff, NetWriteTimeout)
 	}
 	rets := make([]*outMqInfo, 0, len(infos))
 	for _, info := range infos {
@@ -47,5 +47,5 @@ func (r *mqListRouter) Router(conn net.Conn, commHeader *protocol.CommonHeader, 
 	binary.LittleEndian.PutUint16(outBuff, protocol.OkCode)
 	binary.LittleEndian.PutUint32(outBuff[2:], uint32(len(jBuff)))
 	copy(outBuff[protocol.RespHeaderSize:], jBuff)
-	return nets.WriteAll(conn, outBuff)
+	return nets.WriteAll(conn, outBuff, NetWriteTimeout)
 }

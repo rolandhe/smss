@@ -27,7 +27,7 @@ func (r *pubRouter) Router(conn net.Conn, header *protocol.CommonHeader, worker 
 	}
 
 	if curInsRole != store.Master {
-		return nets.OutputRecoverErr(conn, "just master can pub message")
+		return nets.OutputRecoverErr(conn, "just master can pub message", NetWriteTimeout)
 	}
 
 	msg := &protocol.RawMessage{
@@ -40,10 +40,10 @@ func (r *pubRouter) Router(conn net.Conn, header *protocol.CommonHeader, worker 
 
 	if err = worker.Work(msg); err != nil {
 		log.Printf("tid=%s,pub to call Work err:%v\n", header.TraceId, err)
-		return nets.OutputRecoverErr(conn, err.Error())
+		return nets.OutputRecoverErr(conn, err.Error(), NetWriteTimeout)
 	}
 
-	return nets.OutputOk(conn)
+	return nets.OutputOk(conn, NetWriteTimeout)
 }
 
 func (r *pubRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, error) {
@@ -83,20 +83,20 @@ func readPubPayload(conn net.Conn, header *protocol.PubProtoHeader) (*protocol.P
 	payloadSize := header.GetPayloadSize()
 	if payloadSize <= 8 {
 		log.Printf("tid=%s,invalid request, payload size must be more than 8\n", header.TraceId)
-		e := nets.OutputRecoverErr(conn, "invalid request, payload size must be more than 8")
+		e := nets.OutputRecoverErr(conn, "invalid request, payload size must be more than 8", NetWriteTimeout)
 		return nil, e
 	}
 
 	buf := make([]byte, payloadSize)
 	var err error
 
-	if err = nets.ReadAll(conn, buf); err != nil {
+	if err = nets.ReadAll(conn, buf, NetReadTimeout); err != nil {
 		return nil, err
 	}
 
 	ok, count := protocol.CheckPayload(buf)
 	if !ok {
-		e := nets.OutputRecoverErr(conn, "invalid pub payload")
+		e := nets.OutputRecoverErr(conn, "invalid pub payload", NetWriteTimeout)
 		return nil, e
 	}
 

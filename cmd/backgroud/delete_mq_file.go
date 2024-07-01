@@ -77,14 +77,16 @@ func (de *mqDelExecutor) run() {
 	}
 }
 
-func StartMqFileDelete(fstore store.Store) protocol.DelMqFileExecutor {
+func StartMqFileDelete(fstore store.Store, role store.InstanceRoleEnum) protocol.DelMqFileExecutor {
 	exec := &mqDelExecutor{
 		deleteList: make(chan *task, 128),
 		fstore:     fstore,
 		locker:     &protocol.DelFileLock{},
 	}
 
-	go exec.run()
+	if role == store.Master {
+		go exec.run()
+	}
 
 	return exec
 }

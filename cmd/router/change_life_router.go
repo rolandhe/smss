@@ -21,11 +21,11 @@ type changeLifeRouter struct {
 
 func (r *changeLifeRouter) Router(conn net.Conn, header *protocol.CommonHeader, worker standard.MessageWorking) error {
 	buf := make([]byte, 8)
-	if err := nets.ReadAll(conn, buf); err != nil {
+	if err := nets.ReadAll(conn, buf, NetReadTimeout); err != nil {
 		return err
 	}
 	if curInsRole != store.Master {
-		return nets.OutputRecoverErr(conn, "just master can manage mq")
+		return nets.OutputRecoverErr(conn, "just master can manage mq", NetWriteTimeout)
 	}
 	msg := &protocol.RawMessage{
 		Command:   header.GetCmd(),

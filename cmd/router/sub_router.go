@@ -36,7 +36,6 @@ func (r *subRouter) Router(conn net.Conn, commHeader *protocol.CommonHeader, wor
 		CommonHeader: commHeader,
 	}
 
-	conn.SetReadDeadline(time.Now().Add(protocol.LongtimeBlockReadTimeout))
 	info, err := readSubInfo(conn, header)
 	if err != nil {
 		return err
@@ -48,27 +47,27 @@ func (r *subRouter) Router(conn net.Conn, commHeader *protocol.CommonHeader, wor
 	var mqInfo *store.MqInfo
 	mqInfo, err = r.fstore.GetMqInfoReader().GetMQInfo(header.MQName)
 	if err != nil {
-		return nets.OutputRecoverErr(conn, err.Error())
+		return nets.OutputRecoverErr(conn, err.Error(), NetWriteTimeout)
 	}
 	if mqInfo == nil || mqInfo.IsInvalid() {
 		log.Printf("mq not exist:%s\n", header.MQName)
-		return nets.OutputRecoverErr(conn, "mq not exist")
+		return nets.OutputRecoverErr(conn, "mq not exist", NetWriteTimeout)
 	}
 
 	var fileId, pos int64
 	if fileId, pos, err = getSubPos(info.MessageId, r.fstore.GetMqPath(header.MQName)); err != nil {
 		log.Printf("message id not found:%s, %d\n", header.MQName, info.MessageId)
-		return nets.OutputRecoverErr(conn, "message id not found")
+		return nets.OutputRecoverErr(conn, "message id not found", NetWriteTimeout)
 	}
 
 	reader, err := r.fstore.GetReader(header.MQName, info.Who, fileId, pos, info.BatchSize)
 	if err != nil {
-		return nets.OutputRecoverErr(conn, err.Error())
+		return nets.OutputRecoverErr(conn, err.Error(), NetWriteTimeout)
 	}
 
 	tid := fmt.Sprintf("%s-%s", header.MQName, info.Who)
 
-	return nets.LongTimeRun[store.ReadMessage](conn, "sub", tid, info.AckTimeout, &subLongtimeReader{
+	return nets.LongTimeRun[store.ReadMessage](conn, "sub", tid, info.AckTimeout, NetWriteTimeout, &subLongtimeReader{
 		MqBlockReader: reader,
 	})
 }
@@ -107,7 +106,7 @@ func readSubInfo(conn net.Conn, header *protocol.SubHeader) (*protocol.SubInfo, 
 	if header.HasAckTimeoutFlag() {
 		n += 8
 	}
-	if err := nets.ReadAll(conn, buf[:n]); err != nil {
+	if err := nets.ReadAll(conn, buf[:n], NetReadTimeout); err != nil {
 		return nil, err
 	}
 
@@ -124,7 +123,7 @@ func readSubInfo(conn net.Conn, header *protocol.SubHeader) (*protocol.SubInfo, 
 	}
 	l := int(binary.LittleEndian.Uint32(buf[n:]))
 	whoBuff := make([]byte, l)
-	if err := nets.ReadAll(conn, whoBuff); err != nil {
+	if err := nets.ReadAll(conn, whoBuff, NetReadTimeout); err != nil {
 		return nil, err
 	}
 
@@ -138,8 +137,7 @@ func readSubInfo(conn net.Conn, header *protocol.SubHeader) (*protocol.SubInfo, 
 
 func batchMessageOut(conn net.Conn, messages []*store.ReadMessage) error {
 	buff := packageMessages(messages)
-	conn.SetWriteDeadline(time.Now().Add(protocol.LongtimeBlockWriteTimeout))
-	return nets.WriteAll(conn, buff)
+	return nets.WriteAll(conn, buff, NetWriteTimeout)
 }
 
 func packageMessages(messages []*store.ReadMessage) []byte {

@@ -43,7 +43,7 @@ type LongtimeReader[T any] interface {
 	io.Closer
 }
 
-func LongTimeRun[T any](conn net.Conn, biz, tid string, ackTimeout time.Duration, reader LongtimeReader[T]) error {
+func LongTimeRun[T any](conn net.Conn, biz, tid string, ackTimeout, writeTimeout time.Duration, reader LongtimeReader[T]) error {
 	var err error
 	recvCh := make(chan int, 1)
 	var endFlag atomic.Bool
@@ -83,7 +83,7 @@ func LongTimeRun[T any](conn net.Conn, biz, tid string, ackTimeout time.Duration
 			continue
 		}
 		if err == standard.WaitNewTimeoutErr {
-			err = OutAlive(conn, protocol.LongtimeBlockWriteTimeout)
+			err = OutAlive(conn, writeTimeout)
 			log.Printf("tid=%s,sub wait new data timeout, send alive:%v\n", tid, err)
 			if err != nil {
 				return err
@@ -96,8 +96,8 @@ func LongTimeRun[T any](conn net.Conn, biz, tid string, ackTimeout time.Duration
 		}
 		if err == standard.MqWriterTermiteErr {
 			log.Printf("tid=%s,MqWriterTermiteErr:%v\n", tid, err)
-			return OutSubEnd(conn, protocol.LongtimeBlockWriteTimeout)
+			return OutSubEnd(conn, writeTimeout)
 		}
-		return OutputRecoverErr(conn, err.Error())
+		return OutputRecoverErr(conn, err.Error(), writeTimeout)
 	}
 }

@@ -21,7 +21,7 @@ type deleteMqRouter struct {
 
 func (r *deleteMqRouter) Router(conn net.Conn, header *protocol.CommonHeader, worker standard.MessageWorking) error {
 	if curInsRole != store.Master {
-		return nets.OutputRecoverErr(conn, "just master can manage mq")
+		return nets.OutputRecoverErr(conn, "just master can manage mq", NetWriteTimeout)
 	}
 	msg := &protocol.RawMessage{
 		Command:   header.GetCmd(),

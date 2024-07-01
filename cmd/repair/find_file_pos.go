@@ -26,6 +26,7 @@ func FindMqPosByMessageId(ppath string, msgId int64) (int64, int64, error) {
 		cmd := &fss.MqMessageCommand{}
 		err := fss.ReadMqMessageCmd(cmdBuf[:len(cmdBuf)-1], cmd)
 		if err != nil {
+			log.Printf("FindMqPosByMessageId for %d err:%v\n", msgId, err)
 			return -1, -1
 		}
 		return cmd.GetId(), cmd.GetPayloadSize()

@@ -37,9 +37,6 @@ type DelayItem struct {
 }
 
 type ManagerMeta interface {
-	// SaveCheckPoint(Key string, fileId, pos int64) error
-	// GetCheckPoint(Key string) (int64, int64, error)
-
 	SetInstanceRole(role InstanceRoleEnum) error
 	GetInstanceRole() (InstanceRoleEnum, error)
 
@@ -48,6 +45,7 @@ type ManagerMeta interface {
 	ExistDelay(key []byte) (bool, error)
 
 	CopyCreateMq(info *MqInfo) error
+	DeleteMQ(mqName string, force bool) (bool, error)
 }
 
 type MqInfoReader interface {
@@ -81,7 +79,6 @@ const (
 type Meta interface {
 	CreateMQ(mqName string, defaultLifetime int64, eventId int64) (*MqInfo, error)
 	ChangeMQLife(mqName string, life int64, eventId int64) error
-	DeleteMQ(mqName string, force bool) (bool, error)
 
 	SaveDelay(mqName string, payload []byte) error
 

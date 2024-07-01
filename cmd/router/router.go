@@ -55,6 +55,10 @@ func Init(fstore store.Store, lc *tc.TimeTriggerControl, delExec protocol.DelMqF
 		fstore: fstore,
 	}
 
+	routerMap[protocol.CommandValidList] = &validListRouter{
+		fstore: fstore,
+	}
+
 	routerMap[protocol.CommandDelayApply] = &delayApplyRouter{
 		fstore: fstore,
 	}
