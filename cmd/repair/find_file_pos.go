@@ -46,7 +46,7 @@ func findPosByMessageId(ppath string, msgId int64, cmdExtractFunc func(cmdBuf []
 
 	for curFileId >= 0 {
 		p := path.Join(ppath, fmt.Sprintf("%d.log", curFileId))
-		info, err := os.Stat(p)
+		_, err = os.Stat(p)
 		if err != nil && os.IsNotExist(err) {
 			return 0, 0, errors.New("can't find message id")
 		}
@@ -58,9 +58,9 @@ func findPosByMessageId(ppath string, msgId int64, cmdExtractFunc func(cmdBuf []
 			return 0, 0, err
 		}
 		if found == okFound {
-			if findPos == info.Size() {
-				return curFileId + 1, 0, nil
-			}
+			//if findPos == info.Size() {
+			//	return curFileId + 1, 0, nil
+			//}
 			return curFileId, findPos, nil
 		}
 		curFileId--

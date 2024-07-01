@@ -121,12 +121,12 @@ func (r *StdMsgBlockReader[T]) Close() error {
 }
 
 func (r *StdMsgBlockReader[T]) Init(fileId, pos int64) error {
-	if fileId < 0 || pos < 0 || pos >= r.ctrl.maxLogFileSize {
+	if fileId < 0 || pos < 0 {
 		return pkg.NewBizError("invalid pos")
 	}
 
 	p := path.Join(r.root, fmt.Sprintf("%d.log", fileId))
-	_, err := os.Stat(p)
+	info, err := os.Stat(p)
 
 	if err != nil && os.IsNotExist(err) && pos > 0 {
 		return pkg.NewBizError("invalid pos")
@@ -136,6 +136,18 @@ func (r *StdMsgBlockReader[T]) Init(fileId, pos int64) error {
 	if err != nil {
 		return pkg.NewBizError(err.Error())
 	}
+
+	lastFileId, lastPos := r.infoGet()
+
+	if fileId > lastFileId || (fileId == lastFileId && pos > lastPos) {
+		return pkg.NewBizError("invalid pos")
+	}
+
+	if lastFileId > fileId && pos == info.Size() {
+		fileId++
+		pos = 0
+	}
+
 	r.ctrl.fileId = fileId
 	r.ctrl.pos = pos
 	err = r.ctrl.ensureFs(r.root, r.infoGet)

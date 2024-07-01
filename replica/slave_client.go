@@ -104,6 +104,7 @@ func (sc *slaveClient) getValidMq(seqId int64) ([]*store.MqInfo, error) {
 }
 
 func (sc *slaveClient) replica(seqId int64) error {
+	log.Printf("slave begin to replica,eventId=%d\n", seqId)
 	sc.lastEventId = seqId
 	buf := make([]byte, 28)
 	buf[0] = byte(protocol.CommandReplica)
@@ -126,20 +127,22 @@ func (sc *slaveClient) replica(seqId int64) error {
 		}
 		code := int(binary.LittleEndian.Uint16(hBuf[:2]))
 		if code == protocol.OkCode {
-			body, err := readPayload(sc.conn, buf[:4])
+			var body []byte
+			body, err = readPayload(sc.conn, buf[:4])
 			if err != nil {
 				return err
 			}
-			var lastEventId int64
-			if lastEventId, err = applyBinlog(body, cmdParser, sc.worker); err != nil {
+
+			if sc.lastEventId, err = applyBinlog(body, cmdParser, sc.worker); err != nil {
 				return err
 			}
+
 			// ack
 			binary.LittleEndian.PutUint16(buf, uint16(protocol.SubAck))
 			if err = nets.WriteAll(sc.conn, buf[:2], netWriteTimeout); err != nil {
 				return err
 			}
-			sc.lastEventId = lastEventId
+
 			continue
 		}
 		if code == protocol.AliveCode {
@@ -184,7 +187,7 @@ func applyBinlog(body []byte, cmdParse *msgParser, worker slave.DependWorker) (i
 		return 0, pkg.NewBizError("not support cmd")
 	}
 	err = hfunc(cmdParse.cmd, payload, worker)
-	log.Printf("slave: tid=%s,cmd=%d,eventId=%d,err:%v\n", cmdParse.cmd.TraceId, cmdParse.cmd.Command, cmdParse.cmd.MessageSeqId, err)
+	log.Printf("slave: tid=%s,cmd=%d,eventId=%d,delay=%dms,err:%v\n", cmdParse.cmd.TraceId, cmdParse.cmd.Command, cmdParse.cmd.MessageSeqId, cmdParse.cmd.GetDelay(), err)
 	return cmdParse.cmd.MessageSeqId, err
 }
 

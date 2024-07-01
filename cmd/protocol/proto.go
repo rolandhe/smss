@@ -173,6 +173,10 @@ type RawMessage struct {
 	Skip bool
 }
 
+func (rm *RawMessage) GetDelay() int64 {
+	return time.Now().UnixMilli() - rm.WriteTime
+}
+
 type DecodedRawMessage struct {
 	RawMessage
 	PayloadLen int

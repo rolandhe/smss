@@ -55,7 +55,8 @@ func (r *subRouter) Router(conn net.Conn, commHeader *protocol.CommonHeader, wor
 	}
 
 	var fileId, pos int64
-	if fileId, pos, err = getSubPos(info.MessageId, r.fstore.GetMqPath(header.MQName)); err != nil {
+	mqPath := r.fstore.GetMqPath(header.MQName)
+	if fileId, pos, err = getSubPos(info.MessageId, mqPath); err != nil {
 		log.Printf("message id not found:%s, %d\n", header.MQName, info.MessageId)
 		return nets.OutputRecoverErr(conn, "message id not found", NetWriteTimeout)
 	}
@@ -83,14 +84,14 @@ func getSubPos(messageId int64, mqPath string) (int64, int64, error) {
 		}
 		return fileId, 0, nil
 	}
-	if messageId == -1 {
-		fileId, err = standard.ReadMaxFileId(mqPath)
-		if err != nil {
-			return 0, 0, err
-		}
-		// todo
-		return fileId - 1, 0, nil
-	}
+	//if messageId == -1 {
+	//	fileId, err = standard.ReadMaxFileId(mqPath)
+	//	if err != nil {
+	//		return 0, 0, err
+	//	}
+	//	// todo
+	//	return fileId - 1, 0, nil
+	//}
 
 	return repair.FindMqPosByMessageId(mqPath, messageId)
 }

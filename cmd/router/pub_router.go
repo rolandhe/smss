@@ -67,7 +67,7 @@ func (r *pubRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, error
 
 	var n int64
 	n, err = buff.WriteTo(f)
-	log.Printf("tid=%s,pubRouter.DoBinlog  %s finish:%v\n", msg.TraceId, msg.MqName, err)
+	//log.Printf("tid=%s,pubRouter.DoBinlog  %s finish:%v\n", msg.TraceId, msg.MqName, err)
 	return n, err
 }
 
@@ -75,7 +75,7 @@ func (r *pubRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) err
 	payload := msg.Body.(*protocol.PubPayload)
 	messages, _ := protocol.ParsePayload(payload.Payload, fileId, pos, msg.MessageSeqId)
 	err := r.fstore.Save(msg.MqName, messages)
-	log.Printf("tid=%s,pubRouter.AfterBinlog  %s finish:%v\n", msg.TraceId, msg.MqName, err)
+	//log.Printf("tid=%s,pubRouter.AfterBinlog  %s, eventId=%d, finish:%v\n", msg.TraceId, msg.MqName, msg.MessageSeqId, err)
 	return err
 }
 
