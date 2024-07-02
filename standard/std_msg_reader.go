@@ -180,7 +180,7 @@ func (r *StdMsgBlockReader[T]) waitPos(endNotify <-chan int) error {
 		//logger.Get().Infof("%s wait pos,notify %d/%d %s", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami)
 		waitRet := r.notify.Wait(endNotify)
 		if waitRet == WaitNotifyByInput {
-			logger.Get().Infof("%s waited notify %d.%d %s,but notified by endNotify, ret=WaitNotifyByInput(conn closed)\n", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami)
+			logger.Get().Infof("%s waited notify %d.%d %s,but notified by endNotify, ret=WaitNotifyByInput(conn closed)", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami)
 			return PeerClosedErr
 		}
 		if waitRet == WaitNotifyResultTermite {
@@ -192,7 +192,7 @@ func (r *StdMsgBlockReader[T]) waitPos(endNotify <-chan int) error {
 			return WaitNewTimeoutErr
 		}
 		if r.logCount%conf.LogSample == 0 {
-			logger.Get().Infof("%s waited pos ok,notify %d.%d %s,count=%d\n", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami, r.logCount)
+			logger.Get().Infof("%s waited pos ok,notify %d.%d %s,count=%d", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami, r.logCount)
 		}
 		r.logCount++
 

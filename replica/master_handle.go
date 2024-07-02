@@ -67,8 +67,6 @@ func MasterHandle(conn net.Conn, header *protocol.CommonHeader, walMonitor WalMo
 		return dir.NewBizError("invalid replica eventId")
 	}
 
-	//ackTimeoutDuration := time.Duration(DefaultAckTimeout) * time.Millisecond
-
 	uuidStr := uuid.NewString()
 	fileId, pos, err := getFilePosByEventId(walMonitor.GetRoot(), lastEventId)
 	if err != nil {
@@ -83,10 +81,6 @@ func MasterHandle(conn net.Conn, header *protocol.CommonHeader, walMonitor WalMo
 		return nets.OutputRecoverErr(conn, err.Error(), writeTimeout)
 	}
 
-	//err = nets.LongTimeRun[binlogBlock](conn, "replica", header.TraceId, ackTimeoutDuration, writeTimeout, &replicaLongtimeReader{
-	//	serverBinlogBlockReader: reader,
-	//	writeTimeout:            writeTimeout,
-	//})
 	err = noAckPush(conn, header.TraceId, reader)
 	if err != nil {
 		logger.Get().Infof("master handle finish,eventId=%d, err:%v", lastEventId, err)

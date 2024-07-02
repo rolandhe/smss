@@ -78,9 +78,9 @@ func (h *CommonHeader) GetTraceIdLen() int {
 
 type PubProtoHeader struct {
 	// 20字节
-	// pub/sub 1 byte
+	// cmd 1 byte
 	// mq name len, 2
-	// batchSize 4
+	// payloadSize 4
 	// reserve 12
 	// traceId len 1
 	*CommonHeader

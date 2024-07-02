@@ -140,13 +140,6 @@ func (sc *slaveClient) replica(seqId int64) error {
 				return err
 			}
 			count++
-
-			// ack, 复制不需要ack，有ack会拖慢性能
-			//binary.LittleEndian.PutUint16(buf, uint16(protocol.SubAck))
-			//if err = nets.WriteAll(sc.conn, buf[:2], netWriteTimeout); err != nil {
-			//	return err
-			//}
-
 			continue
 		}
 		if code == protocol.AliveCode {
@@ -160,7 +153,6 @@ func (sc *slaveClient) replica(seqId int64) error {
 			}
 
 			eMsgBuf := make([]byte, errMsgLen)
-
 			if err := nets.ReadAll(sc.conn, eMsgBuf, netReadTimeout); err != nil {
 				return err
 			}
