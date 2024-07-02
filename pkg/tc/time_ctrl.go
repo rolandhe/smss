@@ -10,7 +10,6 @@ import (
 )
 
 const (
-	//FirstExecDelay          = 2
 	DefaultWaitTimeoutMills = 10
 )
 
