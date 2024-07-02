@@ -16,24 +16,25 @@ const NetReadTimeout = time.Millisecond * 2000
 const NetHeaderTimeout = time.Millisecond * 5000
 const NetWriteTimeout = time.Millisecond * 2000
 
-var globalSeqId int64
+var nextEventId int64
 var curInsRole store.InstanceRoleEnum
 
-func InitSeqId(id int64, role store.InstanceRoleEnum) {
+// InitCommonInfo 初始化初始event id和实例角色
+func InitCommonInfo(id int64, role store.InstanceRoleEnum) {
 	if role == store.Master {
-		globalSeqId = id
-		log.Printf("int seq id:%d\n", globalSeqId)
+		nextEventId = id
+		log.Printf("int seq id:%d\n", nextEventId)
 	}
 	curInsRole = role
 }
 
-func setupRawMessageSeqIdAndWriteTime(msg *protocol.RawMessage, count int) {
+func setupRawMessageEventIdAndWriteTime(msg *protocol.RawMessage, count int) {
 	if msg.Src == protocol.RawMessageReplica {
 		return
 	}
 	msg.WriteTime = time.Now().UnixMilli()
-	msg.MessageSeqId = globalSeqId
-	globalSeqId += int64(count)
+	msg.EventId = nextEventId
+	nextEventId += int64(count)
 }
 
 func ReadHeader(conn net.Conn) (*protocol.CommonHeader, error) {

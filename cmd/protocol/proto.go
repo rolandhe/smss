@@ -165,7 +165,7 @@ type RawMessage struct {
 	// 服务端收到pub信息时的时间戳
 	Timestamp int64
 
-	MessageSeqId int64
+	EventId int64
 
 	TraceId string
 

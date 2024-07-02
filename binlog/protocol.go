@@ -19,7 +19,7 @@ func PubEncoder(msg *protocol.RawMessage) *bytes.Buffer {
 	buff.WriteString(fmt.Sprintf("%d", msg.Command.Int()))
 	buff.WriteRune('\t')
 
-	buff.WriteString(fmt.Sprintf("%d", msg.MessageSeqId))
+	buff.WriteString(fmt.Sprintf("%d", msg.EventId))
 	buff.WriteRune('\t')
 
 	buff.WriteString(fmt.Sprintf("%d", msg.Timestamp))
@@ -48,7 +48,7 @@ func DelayApplyEncoder(msg *protocol.RawMessage) *bytes.Buffer {
 	buff.WriteString(fmt.Sprintf("%d", msg.Command.Int()))
 	buff.WriteRune('\t')
 
-	buff.WriteString(fmt.Sprintf("%d", msg.MessageSeqId))
+	buff.WriteString(fmt.Sprintf("%d", msg.EventId))
 	buff.WriteRune('\t')
 
 	buff.WriteString(fmt.Sprintf("%d", msg.Timestamp))
@@ -76,7 +76,7 @@ func DDLEncoder(msg *protocol.RawMessage) *bytes.Buffer {
 	buff.WriteString(fmt.Sprintf("%d", msg.Command.Int()))
 	buff.WriteRune('\t')
 
-	buff.WriteString(fmt.Sprintf("%d", msg.MessageSeqId))
+	buff.WriteString(fmt.Sprintf("%d", msg.EventId))
 	buff.WriteRune('\t')
 
 	buff.WriteString(fmt.Sprintf("%d", msg.Timestamp))
@@ -117,7 +117,7 @@ func DelayEncode(msg *protocol.RawMessage) *bytes.Buffer {
 	buff.WriteString(fmt.Sprintf("%d", msg.Command.Int()))
 	buff.WriteRune('\t')
 
-	buff.WriteString(fmt.Sprintf("%d", msg.MessageSeqId))
+	buff.WriteString(fmt.Sprintf("%d", msg.EventId))
 	buff.WriteRune('\t')
 
 	buff.WriteString(fmt.Sprintf("%d", msg.Timestamp))
@@ -147,7 +147,7 @@ func CmdDecoder(buf []byte) *protocol.DecodedRawMessage {
 	msg.Command = protocol.CommandEnum(v)
 
 	id, _ := strconv.Atoi(items[2])
-	msg.MessageSeqId = int64(id)
+	msg.EventId = int64(id)
 
 	msg.Timestamp, _ = strconv.ParseInt(items[3], 10, 64)
 

@@ -14,26 +14,26 @@ import (
 	"path"
 )
 
-func FindBinlogPosByMessageId(ppath string, msgId int64) (int64, int64, error) {
-	return findPosByMessageId(ppath, msgId, func(cmdBuf []byte) (int64, int) {
+func FindBinlogPosByEventId(ppath string, eventId int64) (int64, int64, error) {
+	return findPosByEventId(ppath, eventId, func(cmdBuf []byte) (int64, int) {
 		cmd := binlog.CmdDecoder(cmdBuf)
-		return cmd.MessageSeqId, cmd.PayloadLen
+		return cmd.EventId, cmd.PayloadLen
 	})
 }
 
-func FindMqPosByMessageId(ppath string, msgId int64) (int64, int64, error) {
-	return findPosByMessageId(ppath, msgId, func(cmdBuf []byte) (int64, int) {
+func FindMqPosByEventId(ppath string, eventId int64) (int64, int64, error) {
+	return findPosByEventId(ppath, eventId, func(cmdBuf []byte) (int64, int) {
 		cmd := &fss.MqMessageCommand{}
 		err := fss.ReadMqMessageCmd(cmdBuf[:len(cmdBuf)-1], cmd)
 		if err != nil {
-			log.Printf("FindMqPosByMessageId for %d err:%v\n", msgId, err)
+			log.Printf("FindMqPosByEventId for %d err:%v\n", eventId, err)
 			return -1, -1
 		}
 		return cmd.GetId(), cmd.GetPayloadSize()
 	})
 }
 
-func findPosByMessageId(ppath string, msgId int64, cmdExtractFunc func(cmdBuf []byte) (int64, int)) (int64, int64, error) {
+func findPosByEventId(ppath string, eventId int64, cmdExtractFunc func(cmdBuf []byte) (int64, int)) (int64, int64, error) {
 	maxLogFileId, err := standard.ReadMaxFileId(ppath)
 	if err != nil {
 		return 0, 0, err
@@ -48,12 +48,12 @@ func findPosByMessageId(ppath string, msgId int64, cmdExtractFunc func(cmdBuf []
 		p := path.Join(ppath, fmt.Sprintf("%d.log", curFileId))
 		_, err = os.Stat(p)
 		if err != nil && os.IsNotExist(err) {
-			return 0, 0, errors.New("can't find message id")
+			return 0, 0, errors.New("can't find event id,because file not exist")
 		}
 		if err != nil {
 			return 0, 0, err
 		}
-		found, findPos, err := findInFile(p, msgId, cmdExtractFunc)
+		found, findPos, err := findInFile(p, eventId, cmdExtractFunc)
 		if err != nil {
 			return 0, 0, err
 		}
@@ -65,7 +65,7 @@ func findPosByMessageId(ppath string, msgId int64, cmdExtractFunc func(cmdBuf []
 		}
 		curFileId--
 	}
-	return 0, 0, errors.New("can't find message id")
+	return 0, 0, errors.New("can't find event id")
 }
 
 type foundEnum int
@@ -76,7 +76,7 @@ const (
 	needNext     foundEnum = 2
 )
 
-func findInFile(p string, msgId int64, extractCmd func(cmdBuf []byte) (int64, int)) (foundEnum, int64, error) {
+func findInFile(p string, eventId int64, extractCmd func(cmdBuf []byte) (int64, int)) (foundEnum, int64, error) {
 	f, err := os.Open(p)
 	if err != nil {
 		return defaultFound, 0, err
@@ -110,13 +110,13 @@ func findInFile(p string, msgId int64, extractCmd func(cmdBuf []byte) (int64, in
 
 		idInCmd, payloadLen := extractCmd(cBuf)
 		nextPos += int64(cmdLen + 4 + payloadLen)
-		if idInCmd == msgId {
+		if idInCmd == eventId {
 			return okFound, nextPos, nil
 		}
 
 		if first {
 			first = false
-			if idInCmd > msgId {
+			if idInCmd > eventId {
 				return needNext, 0, nil
 			}
 		}
@@ -131,5 +131,5 @@ func findInFile(p string, msgId int64, extractCmd func(cmdBuf []byte) (int64, in
 		}
 
 	}
-	return defaultFound, 0, errors.New("can't find message id")
+	return defaultFound, 0, errors.New("can't find event id")
 }

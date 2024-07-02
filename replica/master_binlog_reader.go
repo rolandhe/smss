@@ -10,7 +10,8 @@ import (
 )
 
 type binlogBlock struct {
-	data []byte
+	data   []byte
+	rawMsg *protocol.RawMessage
 }
 type serverBlockReader struct {
 	*standard.StdMsgBlockReader[binlogBlock]
@@ -46,7 +47,8 @@ func (p *msgParser) ToMessage(payload []byte, fileId, pos int64) *binlogBlock {
 	copy(tmp, payload)
 
 	return &binlogBlock{
-		data: buf,
+		data:   buf,
+		rawMsg: &p.cmd.RawMessage,
 	}
 }
 func (p *msgParser) Reset() {
@@ -77,7 +79,7 @@ func (c *binlogCmd) GetCmd() protocol.CommandEnum {
 	return c.cmd.Command
 }
 func (c *binlogCmd) GetId() int64 {
-	return c.cmd.MessageSeqId
+	return c.cmd.EventId
 }
 
 type serverRegister struct {

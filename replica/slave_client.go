@@ -115,6 +115,8 @@ func (sc *slaveClient) replica(seqId int64) error {
 
 	cmdParser := &msgParser{}
 
+	count := int64(0)
+
 	for {
 		hBuf := buf[:protocol.RespHeaderSize]
 		err := nets.ReadAll(sc.conn, hBuf, replicaReadNewLogTimeout)
@@ -133,15 +135,16 @@ func (sc *slaveClient) replica(seqId int64) error {
 				return err
 			}
 
-			if sc.lastEventId, err = applyBinlog(body, cmdParser, sc.worker); err != nil {
+			if sc.lastEventId, err = applyBinlog(body, cmdParser, sc.worker, count); err != nil {
 				return err
 			}
+			count++
 
-			// ack
-			binary.LittleEndian.PutUint16(buf, uint16(protocol.SubAck))
-			if err = nets.WriteAll(sc.conn, buf[:2], netWriteTimeout); err != nil {
-				return err
-			}
+			// ack, 复制不需要ack，有ack会拖慢性能
+			//binary.LittleEndian.PutUint16(buf, uint16(protocol.SubAck))
+			//if err = nets.WriteAll(sc.conn, buf[:2], netWriteTimeout); err != nil {
+			//	return err
+			//}
 
 			continue
 		}
@@ -168,7 +171,7 @@ func (sc *slaveClient) replica(seqId int64) error {
 	}
 }
 
-func applyBinlog(body []byte, cmdParse *msgParser, worker slave.DependWorker) (int64, error) {
+func applyBinlog(body []byte, cmdParse *msgParser, worker slave.DependWorker, count int64) (int64, error) {
 	defer cmdParse.Reset()
 	cmdLen := binary.LittleEndian.Uint32(body)
 	cmdLine, err := cmdParse.ParseCmd(body[4 : cmdLen+4])
@@ -187,8 +190,10 @@ func applyBinlog(body []byte, cmdParse *msgParser, worker slave.DependWorker) (i
 		return 0, pkg.NewBizError("not support cmd")
 	}
 	err = hfunc(cmdParse.cmd, payload, worker)
-	log.Printf("slave: tid=%s,cmd=%d,eventId=%d,delay=%dms,err:%v\n", cmdParse.cmd.TraceId, cmdParse.cmd.Command, cmdParse.cmd.MessageSeqId, cmdParse.cmd.GetDelay(), err)
-	return cmdParse.cmd.MessageSeqId, err
+	if count%100 == 0 {
+		log.Printf("slave: tid=%s,cmd=%d,eventId=%d,count=%d,delay=%dms,err:%v\n", cmdParse.cmd.TraceId, cmdParse.cmd.Command, cmdParse.cmd.EventId, count, cmdParse.cmd.GetDelay(), err)
+	}
+	return cmdParse.cmd.EventId, err
 }
 
 func readPayload(conn net.Conn, lenBuf []byte) ([]byte, error) {

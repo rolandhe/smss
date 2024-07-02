@@ -103,7 +103,7 @@ func (ext *extractBinlog) extractRet(cmd *protocol.DecodedRawMessage, pos int64,
 		pos:          pos,
 		mqName:       cmd.MqName,
 		cmd:          cmd.Command,
-		messageSeqId: cmd.MessageSeqId,
+		messageSeqId: cmd.EventId,
 		payload:      payload,
 	}
 	return last

@@ -51,7 +51,7 @@ func StartServer(root string, insRole *InstanceRole) {
 		meta.Close()
 		return
 	}
-	router.InitSeqId(nextSeq, insRole.Role)
+	router.InitCommonInfo(nextSeq, insRole.Role)
 	w, fstore, err := newWriter(root, meta)
 	if err != nil {
 		meta.Close()

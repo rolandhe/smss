@@ -85,7 +85,7 @@ func (r *delayRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, err
 		return 0, pkg.NewBizError("mq not exist")
 	}
 
-	setupRawMessageSeqIdAndWriteTime(msg, 1)
+	setupRawMessageEventIdAndWriteTime(msg, 1)
 	if msg.Src != protocol.RawMessageReplica {
 		storeMsg := msg.Body.(*protocol.DelayPayload)
 		payload := storeMsg.Payload
@@ -93,7 +93,7 @@ func (r *delayRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, err
 		// copy 时间戳
 		copy(newPayload[:8], payload)
 		// delayId, 直接来自binlog的seq id
-		binary.LittleEndian.PutUint64(newPayload[8:], uint64(msg.MessageSeqId))
+		binary.LittleEndian.PutUint64(newPayload[8:], uint64(msg.EventId))
 		copy(newPayload[16:], payload[8:])
 		storeMsg.Payload = newPayload
 	}

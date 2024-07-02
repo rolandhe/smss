@@ -12,14 +12,14 @@ func PubHandler(cmd *protocol.DecodedRawMessage, payload []byte, worker DependWo
 		BatchSize: count,
 	}
 	msg := &protocol.RawMessage{
-		Src:          protocol.RawMessageReplica,
-		WriteTime:    cmd.WriteTime,
-		Command:      cmd.Command,
-		MessageSeqId: cmd.MessageSeqId,
-		MqName:       cmd.MqName,
-		TraceId:      uuid.NewString(),
-		Timestamp:    cmd.Timestamp,
-		Body:         pubPayload,
+		Src:       protocol.RawMessageReplica,
+		WriteTime: cmd.WriteTime,
+		Command:   cmd.Command,
+		EventId:   cmd.EventId,
+		MqName:    cmd.MqName,
+		TraceId:   uuid.NewString(),
+		Timestamp: cmd.Timestamp,
+		Body:      pubPayload,
 	}
 
 	return worker.Work(msg)

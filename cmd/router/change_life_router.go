@@ -57,13 +57,13 @@ func (r *changeLifeRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64
 	if !ok || len(cmdPayload.Payload) < 8 {
 		return 0, errors.New("need change lifetime")
 	}
-	setupRawMessageSeqIdAndWriteTime(msg, 1)
+	setupRawMessageEventIdAndWriteTime(msg, 1)
 	return r.doBinlog(f, msg)
 }
 func (r *changeLifeRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) error {
 	cmdPayload := msg.Body.(*protocol.DDLPayload)
 	lf := binary.LittleEndian.Uint64(cmdPayload.Payload)
-	err := r.fstore.ChangeMqLife(msg.MqName, int64(lf), msg.MessageSeqId)
+	err := r.fstore.ChangeMqLife(msg.MqName, int64(lf), msg.EventId)
 	if err == nil && lf > 0 {
 		r.lc.Set(int64(lf), true)
 	}
