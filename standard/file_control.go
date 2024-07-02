@@ -116,7 +116,7 @@ func (n *notifier) notifyAll(closed bool) {
 			return
 		}
 		if c.Notify() {
-			log.Printf("subject:%s,notify to %s\n", n.subject, k)
+			log.Printf("writer of %s notify to %s\n", n.subject, k)
 		}
 	}
 }

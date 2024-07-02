@@ -2,6 +2,7 @@ package replica
 
 import (
 	"encoding/binary"
+	"errors"
 	"github.com/google/uuid"
 	"github.com/rolandhe/smss/cmd/protocol"
 	"github.com/rolandhe/smss/cmd/repair"
@@ -10,6 +11,7 @@ import (
 	"github.com/rolandhe/smss/standard"
 	"log"
 	"net"
+	"sync/atomic"
 	"time"
 )
 
@@ -92,12 +94,21 @@ func MasterHandle(conn net.Conn, header *protocol.CommonHeader, walMonitor WalMo
 }
 
 func noAckPush(conn net.Conn, tid string, reader serverBinlogBlockReader) error {
-	defer reader.Close()
-	recvCh := make(chan int, 1)
 	var err error
+	recvCh := make(chan int, 1)
+	var endFlag atomic.Bool
+
+	go peerCloseMonitor(conn, recvCh, &endFlag, tid)
+	defer func() {
+		reader.Close()
+		endFlag.Store(true)
+	}()
 	count := int64(0)
 	for {
 		var msgs []*binlogBlock
+		if endFlag.Load() {
+			return errors.New("conn end by flag")
+		}
 		msgs, err = reader.Read(recvCh)
 		if err == nil {
 			outBuf := make([]byte, protocol.RespHeaderSize+4+len(msgs[0].data))
@@ -106,7 +117,7 @@ func noAckPush(conn net.Conn, tid string, reader serverBinlogBlockReader) error 
 			binary.LittleEndian.PutUint32(outBuf[protocol.RespHeaderSize:], uint32(msgLen))
 			copy(outBuf[protocol.RespHeaderSize+4:], msgs[0].data)
 
-			if err = nets.WriteAll(conn, outBuf, BinlogOutTimeout); err != nil {
+			if err = writeAllWithTotalTimeout(conn, outBuf, BinlogOutTimeout, &endFlag); err != nil {
 				log.Printf("tid=%s, eventId=%d,err:%v\n", tid, msgs[0].rawMsg.EventId, err)
 				return err
 			}
@@ -126,5 +137,55 @@ func noAckPush(conn net.Conn, tid string, reader serverBinlogBlockReader) error 
 		}
 
 		return nets.OutputRecoverErr(conn, err.Error(), BinlogOutTimeout)
+	}
+}
+
+func peerCloseMonitor(conn net.Conn, recvChan chan int, endFlag *atomic.Bool, tid string) {
+	f := func(v int) {
+		select {
+		case recvChan <- v:
+		case <-time.After(time.Second):
+
+		}
+	}
+	buf := make([]byte, 20)
+	for {
+		err := nets.ReadAll(conn, buf, time.Second*5)
+		if endFlag.Load() {
+			break
+		}
+		if err != nil && nets.IsTimeoutError(err) {
+			continue
+		}
+		if err != nil {
+			log.Printf("tid=%s,peerCloseMonitor met err,and exit monitor:%v\n", tid, err)
+			f(protocol.ConnPeerClosed)
+			endFlag.Store(true)
+			break
+		}
+	}
+
+}
+
+func writeAllWithTotalTimeout(conn net.Conn, buf []byte, timeout time.Duration, endFlag *atomic.Bool) error {
+	d := time.Second
+
+	for {
+		l := len(buf)
+		conn.SetWriteDeadline(time.Now().Add(d))
+		timeout -= d
+		n, err := conn.Write(buf)
+		if err != nil {
+			if !nets.IsTimeoutError(err) || timeout <= 0 {
+				return err
+			}
+		}
+		if endFlag.Load() {
+			return errors.New("conn end by flag")
+		}
+		if n == l {
+			return nil
+		}
+		buf = buf[n:]
 	}
 }
