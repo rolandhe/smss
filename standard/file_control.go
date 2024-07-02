@@ -3,6 +3,7 @@ package standard
 import (
 	"errors"
 	"fmt"
+	"github.com/rolandhe/smss/conf"
 	"github.com/rolandhe/smss/pkg/logger"
 	"os"
 	"sync"
@@ -118,7 +119,7 @@ func (n *notifier) notifyAll(closed bool) {
 			return
 		}
 		if c.Notify() {
-			if n.logCount%100 == 0 {
+			if n.logCount%conf.LogSample == 0 {
 				logger.Get().Infof("writer of %s notify to %s,count=%d", n.subject, k, n.logCount)
 			}
 		}

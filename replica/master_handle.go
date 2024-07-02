@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/rolandhe/smss/cmd/protocol"
 	"github.com/rolandhe/smss/cmd/repair"
+	"github.com/rolandhe/smss/conf"
 	"github.com/rolandhe/smss/pkg/dir"
 	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/rolandhe/smss/pkg/nets"
@@ -121,7 +122,7 @@ func noAckPush(conn net.Conn, tid string, reader serverBinlogBlockReader) error 
 				logger.Get().Infof("tid=%s, eventId=%d,err:%v", tid, msgs[0].rawMsg.EventId, err)
 				return err
 			}
-			if count%100 == 0 {
+			if count%conf.LogSample == 0 {
 				logger.Get().Infof("master to slave:tid=%s, eventId=%d,count=%d, delay time=%dms", tid, msgs[0].rawMsg.EventId, count, msgs[0].rawMsg.GetDelay())
 			}
 			count++

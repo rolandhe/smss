@@ -27,6 +27,8 @@ var WaitFileDeleteLockerTimeout time.Duration
 
 var LogPath string
 
+var LogSample int64
+
 func Init() error {
 	viper.SetConfigName("config")
 	// 设置配置文件类型
@@ -52,6 +54,7 @@ func Init() error {
 	FistExecDelay = viper.GetInt64("delay.firstExec")
 	WaitFileDeleteLockerTimeout = time.Duration(viper.GetInt64("store.waitDelLockTimeoutMs")) * time.Millisecond
 
-	LogPath = viper.GetString("log")
+	LogPath = viper.GetString("log.path")
+	LogSample = viper.GetInt64("log.sample")
 	return nil
 }

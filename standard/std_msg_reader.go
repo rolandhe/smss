@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/rolandhe/smss/cmd/protocol"
+	"github.com/rolandhe/smss/conf"
 	"github.com/rolandhe/smss/pkg/dir"
 	"github.com/rolandhe/smss/pkg/logger"
 	"os"
@@ -108,7 +109,7 @@ func (r *StdMsgBlockReader[T]) waitFs(endNotify <-chan int) error {
 			logger.Get().Infof("%s waited file %d,notify to %s, ret=WaitNotifyResultTimeout", r.subject, r.ctrl.fileId, r.whoami)
 			return WaitNewTimeoutErr
 		}
-		if r.logCount%100 == 0 {
+		if r.logCount%conf.LogSample == 0 {
 			logger.Get().Infof("%s waited file %d ok,notify to %s,count=%d", r.subject, r.ctrl.fileId, r.whoami, r.logCount)
 		}
 		r.logCount++
@@ -190,7 +191,7 @@ func (r *StdMsgBlockReader[T]) waitPos(endNotify <-chan int) error {
 			logger.Get().Infof("%s waited pos,notify %d.%d %s,ret=WaitNotifyResultTimeout\n", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami)
 			return WaitNewTimeoutErr
 		}
-		if r.logCount%100 == 0 {
+		if r.logCount%conf.LogSample == 0 {
 			logger.Get().Infof("%s waited pos ok,notify %d.%d %s,count=%d\n", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami, r.logCount)
 		}
 		r.logCount++

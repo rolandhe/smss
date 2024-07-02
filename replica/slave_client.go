@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/rolandhe/smss/cmd/protocol"
+	"github.com/rolandhe/smss/conf"
 	"github.com/rolandhe/smss/pkg/dir"
 	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/rolandhe/smss/pkg/nets"
@@ -190,7 +191,7 @@ func applyBinlog(body []byte, cmdParse *msgParser, worker slave.DependWorker, co
 		return 0, dir.NewBizError("not support cmd")
 	}
 	err = hfunc(cmdParse.cmd, payload, worker)
-	if count%100 == 0 {
+	if count%conf.LogSample == 0 {
 		logger.Get().Infof("slave: tid=%s,cmd=%d,eventId=%d,count=%d,delay=%dms,err:%v", cmdParse.cmd.TraceId, cmdParse.cmd.Command, cmdParse.cmd.EventId, count, cmdParse.cmd.GetDelay(), err)
 	}
 	return cmdParse.cmd.EventId, err
