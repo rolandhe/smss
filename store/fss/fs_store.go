@@ -17,7 +17,9 @@ func NewMeta(root string) (store.Meta, error) {
 	return badger_meta.NewMeta(metaRoot)
 }
 
-func NewFileStore(root string, writerBuffSize int, meta store.Meta) (store.Store, error) {
+// writerBuffSize int,
+
+func NewFileStore(root string, meta store.Meta) (store.Store, error) {
 
 	fsStoreRoot := path.Join(root, store.DataDir)
 	if err := ensureStoreDirectory(fsStoreRoot); err != nil {
@@ -37,51 +39,51 @@ func NewFileStore(root string, writerBuffSize int, meta store.Meta) (store.Store
 	fstore := &fileStore{
 		root: fsStoreRoot,
 		meta: meta,
-		c:    make(chan *asyncMsg, writerBuffSize),
+		//c:    make(chan *asyncMsg, writerBuffSize),
 		writerMap: &safeMap{
 			wmap: map[string]*mqWriter{},
 		},
 	}
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		wg.Done()
-		doWriter(fstore)
-	}()
-	wg.Wait()
+	//var wg sync.WaitGroup
+	//wg.Add(1)
+	//go func() {
+	//	wg.Done()
+	//	doWriter(fstore)
+	//}()
+	//wg.Wait()
 
 	return fstore, nil
 }
 
-func doWriter(fstore *fileStore) {
-	c := fstore.c
-	for {
-		var msg *asyncMsg
-		select {
-		case msg = <-c:
-		case <-time.After(time.Millisecond * 1000):
-			continue
-		}
-		writer, err := fstore.ensureWriter(msg.mqName)
-		if err != nil {
-			msg.err = err
-		} else if writer.IsInvalid() {
-			msg.err = errors.New("mq not exist")
-		} else {
-			writer.WaitGroup.Add(1)
-			msg.err = writer.Write(msg, nil)
-			writer.WaitGroup.Done()
-		}
-		close(msg.notify)
-	}
-}
+//func doWriter(fstore *fileStore) {
+//	c := fstore.c
+//	for {
+//		var msg *asyncMsg
+//		select {
+//		case msg = <-c:
+//		case <-time.After(time.Millisecond * 1000):
+//			continue
+//		}
+//		writer, err := fstore.ensureWriter(msg.mqName)
+//		if err != nil {
+//			msg.err = err
+//		} else if writer.IsInvalid() {
+//			msg.err = errors.New("mq not exist")
+//		} else {
+//			writer.WaitGroup.Add(1)
+//			msg.err = writer.Write(msg, nil)
+//			writer.WaitGroup.Done()
+//		}
+//		close(msg.notify)
+//	}
+//}
 
 type asyncMsg struct {
 	messages []*store.MQMessage
 	saveTime int64
-	mqName   string
-	notify   chan struct{}
-	err      error
+	//mqName   string
+	//notify   chan struct{}
+	//err      error
 }
 
 type safeMap struct {
@@ -136,9 +138,9 @@ func (sm *safeMap) removeWriter(mqName string) {
 }
 
 type fileStore struct {
-	root      string
-	meta      store.Meta
-	c         chan *asyncMsg
+	root string
+	meta store.Meta
+	//c         chan *asyncMsg
 	writerMap *safeMap
 }
 
@@ -212,15 +214,31 @@ func (fs *fileStore) GetMqPath(mqName string) string {
 }
 
 func (fs *fileStore) Save(mqName string, messages []*store.MQMessage) error {
+	//wrapMsg := &asyncMsg{
+	//	messages: messages,
+	//	saveTime: time.Now().UnixMilli(),
+	//	notify:   make(chan struct{}),
+	//	mqName:   mqName,
+	//}
+	//fs.c <- wrapMsg
+	//<-wrapMsg.notify
+
 	wrapMsg := &asyncMsg{
 		messages: messages,
 		saveTime: time.Now().UnixMilli(),
-		notify:   make(chan struct{}),
-		mqName:   mqName,
+		//mqName:   mqName,
 	}
-	fs.c <- wrapMsg
-	<-wrapMsg.notify
-	return wrapMsg.err
+	writer, err := fs.ensureWriter(mqName)
+	if err != nil {
+		return err
+	}
+	if writer.IsInvalid() {
+		return errors.New("mq not exist")
+	}
+
+	writer.WaitGroup.Add(1)
+	defer writer.WaitGroup.Done()
+	return writer.Write(wrapMsg, nil)
 }
 
 func (fs *fileStore) SaveDelayMsg(mqName string, payload []byte) error {

@@ -13,7 +13,7 @@ var WorkerWaitMsgTimeout time.Duration
 var MainStorePath string
 var MaxLogSize int64
 
-var MqBufferSize int
+//var MqBufferSize int
 
 var StoreMaxDays int
 
@@ -46,7 +46,7 @@ func Init() error {
 	WorkerWaitMsgTimeout = time.Duration(viper.GetInt64("worker.waitTimeoutMs")) * time.Millisecond
 	MainStorePath = viper.GetString("store.path")
 	MaxLogSize = viper.GetInt64("store.maxLogSize")
-	MqBufferSize = viper.GetInt("mq.buffSize")
+	//MqBufferSize = viper.GetInt("mq.buffSize")
 	StoreMaxDays = viper.GetInt("store.maxDays")
 	StoreClearInterval = viper.GetInt("store.clearInterval")
 	LifeDefaultScanSec = viper.GetInt64("life.defaultScanSec")

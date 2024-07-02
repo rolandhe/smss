@@ -25,7 +25,7 @@ func newWriter(root string, meta store.Meta) (*binlog.WalWriter[protocol.RawMess
 	binlogRoot := path.Join(root, store.BinlogDir)
 	dir.EnsurePathExist(binlogRoot)
 
-	fstore, err := fss.NewFileStore(root, conf.MqBufferSize, meta)
+	fstore, err := fss.NewFileStore(root, meta)
 	if err != nil {
 		return nil, nil, err
 	}

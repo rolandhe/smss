@@ -1,4 +1,4 @@
-port: 8083
+port: 8080
 log:
   path: stdout
   sample: 1000
@@ -13,8 +13,6 @@ worker:
   waitTimeoutMs: 500
 net:
   writeTimeout: 1
-mq:
-  buffSize: 50
 life:
   defaultScanSec: 7200
 delay:
