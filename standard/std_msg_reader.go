@@ -275,7 +275,7 @@ func (r *StdMsgBlockReader[T]) readCore(endNotify <-chan int) ([]*T, error) {
 	}
 
 	if r.ctrl.isEOF() {
-		logger.Get().Infof("%s-%s log file EOF\n", r.subject, r.whoami)
+		logger.Get().Infof("%s-%s log file EOF", r.subject, r.whoami)
 		r.ctrl.reset()
 		if len(readMsgs) > 0 {
 			last := readMsgs[len(readMsgs)-1]

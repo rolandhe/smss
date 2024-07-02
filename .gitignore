@@ -23,3 +23,4 @@ go.work.sum
 mq-data
 .idea
 makefile/out
+logs
