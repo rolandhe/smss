@@ -61,6 +61,8 @@ type StdMsgBlockReader[T any] struct {
 	parser MsgParser[*T]
 
 	infoGet LogFileInfoGet
+
+	logCount int64
 }
 
 func (r *StdMsgBlockReader[T]) Read(endNotify <-chan int) ([]*T, error) {
@@ -106,7 +108,10 @@ func (r *StdMsgBlockReader[T]) waitFs(endNotify <-chan int) error {
 			log.Printf("%s waited file %d,notify to %s, ret=WaitNotifyResultTimeout\n", r.subject, r.ctrl.fileId, r.whoami)
 			return WaitNewTimeoutErr
 		}
-		log.Printf("%s waited file %d ok,notify to %s\n", r.subject, r.ctrl.fileId, r.whoami)
+		if r.logCount%100 == 0 {
+			log.Printf("%s waited file %d ok,notify to %s,count=%d\n", r.subject, r.ctrl.fileId, r.whoami, r.logCount)
+		}
+		r.logCount++
 
 		err := r.ctrl.ensureFs(r.root, r.infoGet)
 		if err != nil {
@@ -182,10 +187,13 @@ func (r *StdMsgBlockReader[T]) waitPos(endNotify <-chan int) error {
 			return MqWriterTermiteErr
 		}
 		if waitRet == WaitNotifyResultTimeout {
-			log.Printf("%s waited pos,notify %d.%d %s\n,ret=WaitNotifyResultTimeout", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami)
+			log.Printf("%s waited pos,notify %d.%d %s,ret=WaitNotifyResultTimeout\n", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami)
 			return WaitNewTimeoutErr
 		}
-		log.Printf("%s waited pos ok,notify %d.%d %s\n", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami)
+		if r.logCount%100 == 0 {
+			log.Printf("%s waited pos ok,notify %d.%d %s,count=%d\n", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami, r.logCount)
+		}
+		r.logCount++
 
 		fid, fsize := r.infoGet()
 		if fid > r.ctrl.fileId {

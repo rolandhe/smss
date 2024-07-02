@@ -104,19 +104,23 @@ type notifier struct {
 	// 主题名称, 标示为哪个对象处理日志文件
 	subject string
 	// key： 我是谁
-	waiters map[string]*NotifyDevice
+	waiters  map[string]*NotifyDevice
+	logCount int64
 }
 
 func (n *notifier) notifyAll(closed bool) {
 	n.Lock()
 	defer n.Unlock()
+	n.logCount++
 	for k, c := range n.waiters {
 		if closed {
 			c.Termite()
 			return
 		}
 		if c.Notify() {
-			log.Printf("writer of %s notify to %s\n", n.subject, k)
+			if n.logCount%100 == 0 {
+				log.Printf("writer of %s notify to %s,count=%d\n", n.subject, k, n.logCount)
+			}
 		}
 	}
 }
