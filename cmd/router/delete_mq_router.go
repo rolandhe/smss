@@ -48,7 +48,7 @@ func (r *deleteMqRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, 
 }
 func (r *deleteMqRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) error {
 	err := deleteMqRoot(msg.MqName, "deleteMqRouter", r.fstore, r.delExecutor, msg.TraceId)
-	log.Printf("tid=%s,deleteMqRouter.AfterBinlog %s err:%v\n", msg.TraceId, msg.MqName, err)
+	log.Printf("tid=%s,deleteMqRouter.AfterBinlog, mq=%s,eventId=%d, err:%v\n", msg.TraceId, msg.MqName,msg.EventId, err)
 	return err
 }
 

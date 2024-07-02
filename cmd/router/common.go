@@ -23,7 +23,7 @@ var curInsRole store.InstanceRoleEnum
 func InitCommonInfo(id int64, role store.InstanceRoleEnum) {
 	if role == store.Master {
 		nextEventId = id
-		log.Printf("int seq id:%d\n", nextEventId)
+		log.Printf("init next event id:%d\n", nextEventId)
 	}
 	curInsRole = role
 }
