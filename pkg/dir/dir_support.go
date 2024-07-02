@@ -2,7 +2,7 @@ package dir
 
 import (
 	"errors"
-	"log"
+	"github.com/rolandhe/smss/pkg/logger"
 	"os"
 	"strconv"
 )
@@ -35,7 +35,7 @@ func PathExist(p string) (bool, error) {
 func ParseNumber(s string) int64 {
 	num, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
-		log.Printf("parse number for %s err: %v\n", s, err)
+		logger.Get().Infof("parse number for %s err: %v", s, err)
 		return -1
 	}
 	return num

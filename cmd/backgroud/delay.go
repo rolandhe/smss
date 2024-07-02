@@ -3,10 +3,10 @@ package backgroud
 import (
 	"fmt"
 	"github.com/rolandhe/smss/cmd/protocol"
+	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/rolandhe/smss/pkg/tc"
 	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store"
-	"log"
 	"time"
 )
 
@@ -33,15 +33,15 @@ func doDelay(fstore store.Store, worker standard.MessageWorking) int64 {
 	for {
 		delays, next, err := fstore.GetScanner().ScanDelays(DelayBatchSize)
 		if err != nil {
-			log.Printf("tid=%s,doDelay err:%v\n", tid, err)
+			logger.Get().Infof("tid=%s,doDelay err:%v", tid, err)
 			return 0
 		}
 
-		log.Printf("tid=%s,doDelay to process %d msg\n", tid, len(delays))
+		logger.Get().Infof("tid=%s,doDelay to process %d msg", tid, len(delays))
 		for _, item := range delays {
 			err = procOneDelayMsg(fstore, worker, item, tid)
 			if err != nil {
-				log.Printf("tid=%s,procOneDelayMsg err:%v\n", tid, err)
+				logger.Get().Infof("tid=%s,procOneDelayMsg err:%v", tid, err)
 				return 0
 			}
 		}
@@ -59,18 +59,18 @@ func doDelay(fstore store.Store, worker standard.MessageWorking) int64 {
 		isDefault = true
 		ret = time.Now().UnixMilli() + DefaultDelayTimeout
 	}
-	log.Printf("tid=%s,doDelay ok,next time is %d, isDefualt %v\n", tid, ret, isDefault)
+	logger.Get().Infof("tid=%s,doDelay ok,next time is %d, isDefualt %v", tid, ret, isDefault)
 	return ret
 }
 
 func procOneDelayMsg(fstore store.Store, worker standard.MessageWorking, item *store.DelayItem, tid string) error {
 	info, err := fstore.GetMqInfoReader().GetMQInfo(item.MqName)
 	if err != nil {
-		log.Printf("tid=%s,procOneDelayMsg get mq info %s  error:%v\n", tid, item.MqName, err)
+		logger.Get().Infof("tid=%s,procOneDelayMsg get mq info %s  error:%v", tid, item.MqName, err)
 		return err
 	}
 	if info == nil || info.IsInvalid() {
-		log.Printf("tid=%s,procOneDelayMsg,mq is ivalid  %s \n", tid, item.MqName)
+		logger.Get().Infof("tid=%s,procOneDelayMsg,mq is ivalid %s", tid, item.MqName)
 		return fstore.GetManagerMeta().RemoveDelay(item.Key)
 	}
 	pp := &protocol.DelayApplyPayload{

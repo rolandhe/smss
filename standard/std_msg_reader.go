@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/rolandhe/smss/cmd/protocol"
 	"github.com/rolandhe/smss/pkg/dir"
-	"log"
+	"github.com/rolandhe/smss/pkg/logger"
 	"os"
 	"path"
 	"time"
@@ -94,22 +94,22 @@ func (r *StdMsgBlockReader[T]) waitFs(endNotify <-chan int) error {
 				break
 			}
 		}
-		//log.Printf("%s wait file %d to notify %s\n", r.subject, r.ctrl.fileId, r.whoami)
+		//logger.Get().Infof("%s wait file %d to notify %s\n", r.subject, r.ctrl.fileId, r.whoami)
 		waitRet := r.notify.Wait(endNotify)
 		if waitRet == WaitNotifyByInput {
-			log.Printf("%s waited file %d,notify to %s,ret=WaitNotifyByInput\n", r.subject, r.ctrl.fileId, r.whoami)
+			logger.Get().Infof("%s waited file %d,notify to %s,ret=WaitNotifyByInput", r.subject, r.ctrl.fileId, r.whoami)
 			return PeerClosedErr
 		}
 		if waitRet == WaitNotifyResultTermite {
-			log.Printf("%s waited file %d,notify to %s, ret=WaitNotifyResultTermite\n", r.subject, r.ctrl.fileId, r.whoami)
+			logger.Get().Infof("%s waited file %d,notify to %s, ret=WaitNotifyResultTermite", r.subject, r.ctrl.fileId, r.whoami)
 			return MqWriterTermiteErr
 		}
 		if waitRet == WaitNotifyResultTimeout {
-			log.Printf("%s waited file %d,notify to %s, ret=WaitNotifyResultTimeout\n", r.subject, r.ctrl.fileId, r.whoami)
+			logger.Get().Infof("%s waited file %d,notify to %s, ret=WaitNotifyResultTimeout", r.subject, r.ctrl.fileId, r.whoami)
 			return WaitNewTimeoutErr
 		}
 		if r.logCount%100 == 0 {
-			log.Printf("%s waited file %d ok,notify to %s,count=%d\n", r.subject, r.ctrl.fileId, r.whoami, r.logCount)
+			logger.Get().Infof("%s waited file %d ok,notify to %s,count=%d", r.subject, r.ctrl.fileId, r.whoami, r.logCount)
 		}
 		r.logCount++
 
@@ -158,7 +158,7 @@ func (r *StdMsgBlockReader[T]) Init(fileId, pos int64) error {
 	r.ctrl.pos = pos
 	err = r.ctrl.ensureFs(r.root, r.infoGet)
 	if err != nil {
-		log.Printf("init reader err:%v\n", err)
+		logger.Get().Infof("init reader err:%v", err)
 		r.register.UnRegisterReaderNotify()
 		return dir.NewBizError(err.Error())
 	}
@@ -176,22 +176,22 @@ func (r *StdMsgBlockReader[T]) waitPos(endNotify <-chan int) error {
 		if r.ctrl.pos < r.ctrl.fileSize {
 			break
 		}
-		//log.Printf("%s wait pos,notify %d/%d %s\n", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami)
+		//logger.Get().Infof("%s wait pos,notify %d/%d %s", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami)
 		waitRet := r.notify.Wait(endNotify)
 		if waitRet == WaitNotifyByInput {
-			log.Printf("%s waited notify %d.%d %s,but notified by endNotify, ret=WaitNotifyByInput(conn closed)\n", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami)
+			logger.Get().Infof("%s waited notify %d.%d %s,but notified by endNotify, ret=WaitNotifyByInput(conn closed)\n", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami)
 			return PeerClosedErr
 		}
 		if waitRet == WaitNotifyResultTermite {
-			log.Printf("%s waited pos,notify %d.%d %s\n,ret=WaitNotifyResultTermite", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami)
+			logger.Get().Infof("%s waited pos,notify %d.%d %s\n,ret=WaitNotifyResultTermite", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami)
 			return MqWriterTermiteErr
 		}
 		if waitRet == WaitNotifyResultTimeout {
-			log.Printf("%s waited pos,notify %d.%d %s,ret=WaitNotifyResultTimeout\n", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami)
+			logger.Get().Infof("%s waited pos,notify %d.%d %s,ret=WaitNotifyResultTimeout\n", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami)
 			return WaitNewTimeoutErr
 		}
 		if r.logCount%100 == 0 {
-			log.Printf("%s waited pos ok,notify %d.%d %s,count=%d\n", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami, r.logCount)
+			logger.Get().Infof("%s waited pos ok,notify %d.%d %s,count=%d\n", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami, r.logCount)
 		}
 		r.logCount++
 
@@ -274,7 +274,7 @@ func (r *StdMsgBlockReader[T]) readCore(endNotify <-chan int) ([]*T, error) {
 	}
 
 	if r.ctrl.isEOF() {
-		log.Printf("%s-%s log file EOF\n", r.subject, r.whoami)
+		logger.Get().Infof("%s-%s log file EOF\n", r.subject, r.whoami)
 		r.ctrl.reset()
 		if len(readMsgs) > 0 {
 			last := readMsgs[len(readMsgs)-1]

@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"github.com/rolandhe/smss/cmd/protocol"
-	"log"
+	"github.com/rolandhe/smss/pkg/logger"
 	"net"
 	"time"
 )
@@ -53,7 +53,7 @@ func OutputRecoverErr(conn net.Conn, errMsg string, timeout time.Duration) error
 	buf = append(buf, []byte(errMsg)...)
 
 	if err := WriteAll(conn, buf, timeout); err != nil {
-		log.Printf("outputRecoverErr,write to err msg conn err,%s\v", err)
+		logger.Get().Infof("outputRecoverErr,write to err msg conn err,%v", err)
 		return err
 	}
 	return nil
@@ -63,7 +63,7 @@ func OutputOk(conn net.Conn, timeout time.Duration) error {
 	buf := make([]byte, protocol.RespHeaderSize)
 	binary.LittleEndian.PutUint16(buf, protocol.OkCode)
 	if err := WriteAll(conn, buf, timeout); err != nil {
-		log.Printf("outputRecoverErr,write code to conn err,%s\v", err)
+		logger.Get().Infof("outputRecoverErr,write code to conn err,%v", err)
 		return err
 	}
 	return nil

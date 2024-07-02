@@ -1,8 +1,8 @@
 package binlog
 
 import (
+	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/rolandhe/smss/standard"
-	"log"
 )
 
 type CompleteHandlerFunc[T any] func(ins *T, fileId, pos int64) error
@@ -25,7 +25,7 @@ func (w *WalWriter[T]) Write(msg *T) error {
 	if err = w.StdMsgWriter.Write(msg, func(fileId, pos int64) error {
 		e := w.completeHandler(msg, fileId, pos)
 		if e != nil {
-			log.Printf("to handle msg after writing binlog error,rollback")
+			logger.Get().Infof("to handle msg after writing binlog error,rollback")
 		}
 		return e
 	}); err != nil {

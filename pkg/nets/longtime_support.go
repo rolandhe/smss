@@ -3,9 +3,9 @@ package nets
 import (
 	"errors"
 	"github.com/rolandhe/smss/cmd/protocol"
+	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/rolandhe/smss/standard"
 	"io"
-	"log"
 	"net"
 	"sync/atomic"
 	"time"
@@ -28,7 +28,7 @@ func longtimeReadMonitor(biz string, conn net.Conn, recvChan chan int, endFlag *
 			continue
 		}
 		if err != nil {
-			log.Printf("tid=%s,longtimeReadMonitor of %s met err,and exit monitor:%v\n", tid, biz, err)
+			logger.Get().Infof("tid=%s,longtimeReadMonitor of %s met err,and exit monitor:%v", tid, biz, err)
 			f(protocol.ConnPeerClosed)
 			break
 		}
@@ -65,37 +65,37 @@ func LongTimeRun[T any](conn net.Conn, biz, tid string, ackTimeout, writeTimeout
 			select {
 			case ackCode = <-recvCh:
 			case <-time.After(ackTimeout):
-				log.Printf("tid=%s,read ack timeout\n", tid)
+				logger.Get().Infof("tid=%s,read ack timeout", tid)
 				return errors.New("read ack timeout")
 			}
 			if ackCode == protocol.ConnPeerClosed {
-				log.Printf("tid=%s,conn peer closed\n", tid)
+				logger.Get().Infof("tid=%s,conn peer closed", tid)
 				return errors.New("conn peer closed")
 			}
 			if ackCode == protocol.SubAckWithEnd {
-				log.Printf("tid=%s,client send ack and closed\n", tid)
+				logger.Get().Infof("tid=%s,client send ack and closed", tid)
 				return nil
 			}
 			if ackCode != protocol.SubAck {
-				log.Printf("tid=%s,client send invalid ack code %d\n", tid, ackCode)
+				logger.Get().Infof("tid=%s,client send invalid ack code %d", tid, ackCode)
 				return errors.New("invalid ack")
 			}
 			continue
 		}
 		if err == standard.WaitNewTimeoutErr {
 			err = OutAlive(conn, writeTimeout)
-			log.Printf("tid=%s,sub wait new data timeout, send alive:%v\n", tid, err)
+			logger.Get().Infof("tid=%s,sub wait new data timeout, send alive:%v", tid, err)
 			if err != nil {
 				return err
 			}
 			continue
 		}
 		if err == standard.PeerClosedErr {
-			log.Printf("tid=%s,PeerClosedErr:%v\n", tid, err)
+			logger.Get().Infof("tid=%s,PeerClosedErr:%v", tid, err)
 			return err
 		}
 		if err == standard.MqWriterTermiteErr {
-			log.Printf("tid=%s,MqWriterTermiteErr:%v\n", tid, err)
+			logger.Get().Infof("tid=%s,MqWriterTermiteErr:%v", tid, err)
 			return OutSubEnd(conn, writeTimeout)
 		}
 		return OutputRecoverErr(conn, err.Error(), writeTimeout)

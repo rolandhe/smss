@@ -1,8 +1,8 @@
 package standard
 
 import (
+	"github.com/rolandhe/smss/pkg/logger"
 	"io"
-	"log"
 	"os"
 	"time"
 )
@@ -64,11 +64,11 @@ func (w *StdMsgWriter[T]) Write(msg *T, cb AfterWriteCallback) error {
 			var e error
 			var n int64
 			if n, e = w.curFs.Seek(-outSize, io.SeekCurrent); e != nil {
-				log.Printf("rollback to seek error,then panic:%v\n", e)
+				logger.Get().Infof("rollback to seek error,then panic:%v", e)
 				panic("rollback error")
 			}
 			if e = w.curFs.Truncate(n); e != nil {
-				log.Printf("rollback to truncate error,then panic:%v\n", e)
+				logger.Get().Infof("rollback to truncate error,then panic:%v", e)
 				panic("rollback error")
 			}
 			return err

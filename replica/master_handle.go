@@ -7,9 +7,9 @@ import (
 	"github.com/rolandhe/smss/cmd/protocol"
 	"github.com/rolandhe/smss/cmd/repair"
 	"github.com/rolandhe/smss/pkg/dir"
+	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/rolandhe/smss/pkg/nets"
 	"github.com/rolandhe/smss/standard"
-	"log"
 	"net"
 	"sync/atomic"
 	"time"
@@ -71,14 +71,14 @@ func MasterHandle(conn net.Conn, header *protocol.CommonHeader, walMonitor WalMo
 	uuidStr := uuid.NewString()
 	fileId, pos, err := getFilePosByEventId(walMonitor.GetRoot(), lastEventId)
 	if err != nil {
-		log.Printf("tid=%s,replca server,eventId=%d, error:%v\n", header.TraceId, lastEventId, err)
+		logger.Get().Infof("tid=%s,replca server,eventId=%d, error:%v", header.TraceId, lastEventId, err)
 		return nets.OutputRecoverErr(conn, err.Error(), writeTimeout)
 	}
 
 	reader := newBlockReader(uuidStr, walMonitor)
 
 	if err = reader.Init(fileId, pos); err != nil {
-		log.Printf("tid=%s,replica server,eventId=%d, init error:%v\n", header.TraceId, lastEventId, err)
+		logger.Get().Infof("tid=%s,replica server,eventId=%d, init error:%v", header.TraceId, lastEventId, err)
 		return nets.OutputRecoverErr(conn, err.Error(), writeTimeout)
 	}
 
@@ -88,7 +88,7 @@ func MasterHandle(conn net.Conn, header *protocol.CommonHeader, walMonitor WalMo
 	//})
 	err = noAckPush(conn, header.TraceId, reader)
 	if err != nil {
-		log.Printf("master handle finish,eventId=%d, err:%v\n", lastEventId, err)
+		logger.Get().Infof("master handle finish,eventId=%d, err:%v", lastEventId, err)
 	}
 	return err
 }
@@ -118,18 +118,18 @@ func noAckPush(conn net.Conn, tid string, reader serverBinlogBlockReader) error 
 			copy(outBuf[protocol.RespHeaderSize+4:], msgs[0].data)
 
 			if err = writeAllWithTotalTimeout(conn, outBuf, BinlogOutTimeout, &endFlag); err != nil {
-				log.Printf("tid=%s, eventId=%d,err:%v\n", tid, msgs[0].rawMsg.EventId, err)
+				logger.Get().Infof("tid=%s, eventId=%d,err:%v", tid, msgs[0].rawMsg.EventId, err)
 				return err
 			}
 			if count%100 == 0 {
-				log.Printf("master to slave:tid=%s, eventId=%d,count=%d, delay time=%dms\n", tid, msgs[0].rawMsg.EventId, count, msgs[0].rawMsg.GetDelay())
+				logger.Get().Infof("master to slave:tid=%s, eventId=%d,count=%d, delay time=%dms", tid, msgs[0].rawMsg.EventId, count, msgs[0].rawMsg.GetDelay())
 			}
 			count++
 			continue
 		}
 		if err == standard.WaitNewTimeoutErr {
 			err = nets.OutAlive(conn, BinlogOutTimeout)
-			log.Printf("tid=%s,sub wait new data timeout, send alive:%v\n", tid, err)
+			logger.Get().Infof("tid=%s,sub wait new data timeout, send alive:%v", tid, err)
 			if err != nil {
 				return err
 			}
@@ -158,7 +158,7 @@ func peerCloseMonitor(conn net.Conn, recvChan chan int, endFlag *atomic.Bool, ti
 			continue
 		}
 		if err != nil {
-			log.Printf("tid=%s,peerCloseMonitor met err,and exit monitor:%v\n", tid, err)
+			logger.Get().Infof("tid=%s,peerCloseMonitor met err,and exit monitor:%v", tid, err)
 			f(protocol.ConnPeerClosed)
 			endFlag.Store(true)
 			break

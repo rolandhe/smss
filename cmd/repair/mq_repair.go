@@ -150,7 +150,7 @@ func repairDelayApply(lBinlog *lastBinlog, binlogFile, dataRoot string, meta sto
 //			if err != nil {
 //				return 0, err
 //			}
-//			log.Printf("%d\n", nextPos)
+//			logger.Get().Infof("%d", nextPos)
 //		}
 //
 //		pos += allSize

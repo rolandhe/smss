@@ -2,8 +2,8 @@ package tc
 
 import (
 	"github.com/rolandhe/smss/conf"
+	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/rolandhe/smss/store"
-	"log"
 	"math"
 	"sync"
 	"time"
@@ -86,9 +86,9 @@ func (lc *TimeTriggerControl) Process() {
 		select {
 		case <-lc.quickAlive:
 			d = lc.since()
-			log.Printf("delay message notify for %s of %d\n", lc.name, d.Milliseconds())
+			logger.Get().Infof("delay message notify for %s of %d", lc.name, d.Milliseconds())
 		case <-time.After(d):
-			log.Printf("wakeup for %s of %dms\n", lc.name, d.Milliseconds())
+			logger.Get().Infof("wakeup for %s of %dms", lc.name, d.Milliseconds())
 			next := lc.doBiz(lc.fstore)
 			if next <= 0 {
 				next = time.Now().Add(time.Millisecond * DefaultWaitTimeoutMills).UnixMilli()

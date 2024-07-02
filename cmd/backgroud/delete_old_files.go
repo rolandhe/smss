@@ -6,9 +6,9 @@ import (
 	"github.com/rolandhe/smss/cmd/protocol"
 	"github.com/rolandhe/smss/conf"
 	"github.com/rolandhe/smss/pkg/dir"
+	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store"
-	"log"
 	"os"
 	"strings"
 	"time"
@@ -44,7 +44,7 @@ func deleteOldFiles(fstore store.Store, worker standard.MessageWorking, delMqFil
 	traceId := fmt.Sprintf("delOldFile-%d", time.Now().UnixMilli())
 	infoList, err := fstore.GetMqInfoReader().GetMQSimpleInfoList()
 	if err != nil {
-		log.Printf("deleteOldFiles err:%v\n", err)
+		logger.Get().Infof("deleteOldFiles err:%v", err)
 	}
 
 	locker := delMqFileExecutor.GetDeleteFileLocker()
@@ -67,7 +67,7 @@ func deleteOldFiles(fstore store.Store, worker standard.MessageWorking, delMqFil
 		if store.MqStateDeleted == info.State {
 			if info.StateChange+DeleteFileAfterStateChangeTimeout <= time.Now().UnixMilli() {
 				err = removeMq(worker, info.Name, traceId)
-				log.Printf("tid=%s,deleteOldFiles to delete expired mq %s err:%v\n", traceId, info.Name, err)
+				logger.Get().Infof("tid=%s,deleteOldFiles to delete expired mq %s err:%v", traceId, info.Name, err)
 			}
 			continue
 		}
@@ -82,7 +82,7 @@ func deleteInvalidFiles(p string, unLockFunc func(), traceId string) {
 	}
 	entries, err := os.ReadDir(p)
 	if err != nil {
-		log.Printf("tid=%s,read dir:%s error:%v\n", traceId, p, err)
+		logger.Get().Infof("tid=%s,read dir:%s error:%v", traceId, p, err)
 		return
 	}
 
@@ -97,7 +97,7 @@ func deleteInvalidFiles(p string, unLockFunc func(), traceId string) {
 		name := entry.Name()
 		items := strings.Split(name, ".")
 		if len(items) != 2 || items[1] != "log" {
-			log.Printf("tid=%s,file %s not valid log file\n", traceId, name)
+			logger.Get().Infof("tid=%s,file %s not valid log file", traceId, name)
 			continue
 		}
 		num := dir.ParseNumber(items[0])
@@ -107,7 +107,7 @@ func deleteInvalidFiles(p string, unLockFunc func(), traceId string) {
 
 		info, err := entry.Info()
 		if err != nil {
-			log.Printf("tid=%s,read dir:%s/%s error:%v\n", traceId, p, entry.Name(), err)
+			logger.Get().Infof("tid=%s,read dir:%s/%s error:%v", traceId, p, entry.Name(), err)
 			continue
 		}
 		modDate := toDate(info.ModTime())
@@ -122,7 +122,7 @@ func deleteInvalidFiles(p string, unLockFunc func(), traceId string) {
 		}
 		dp := fmt.Sprintf("%s/%d.log", p, id)
 		if err = os.Remove(dp); err != nil {
-			log.Printf("tid=%s,delete %s err:%v\n", traceId, dp, err)
+			logger.Get().Infof("tid=%s,delete %s err:%v", traceId, dp, err)
 		}
 	}
 }

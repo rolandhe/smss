@@ -4,8 +4,8 @@ import (
 	"encoding/binary"
 	"errors"
 	"github.com/dgraph-io/badger/v4"
+	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/rolandhe/smss/store"
-	"log"
 	"time"
 )
 
@@ -172,7 +172,7 @@ func (bm *badgerMeta) ScanExpireMqs() ([]string, int64, error) {
 
 		return nil
 	})
-	log.Printf("ScanExpireMqs,next scan time from db:%d\n", next)
+	logger.Get().Infof("ScanExpireMqs,next scan time from db:%d", next)
 	return mqs, next, err
 }
 

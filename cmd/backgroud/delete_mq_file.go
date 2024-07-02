@@ -3,8 +3,8 @@ package backgroud
 import (
 	"github.com/rolandhe/smss/cmd/protocol"
 	"github.com/rolandhe/smss/conf"
+	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/rolandhe/smss/store"
-	"log"
 	"os"
 	"time"
 )
@@ -58,7 +58,7 @@ func (de *mqDelExecutor) run() {
 		unlocker, waiter := de.locker.Lock(t.name, t.who, t.traceId)
 		if waiter != nil {
 			if !waiter(conf.WaitFileDeleteLockerTimeout) {
-				log.Printf("waiter delete mq %s file locker failed\n", t.name)
+				logger.Get().Infof("waiter delete mq %s file locker failed", t.name)
 				t.notify <- false
 				continue
 			}
@@ -98,7 +98,7 @@ func removeMqPath(p string, unlocker func(), traceId string) error {
 		return nil
 	}
 	err = os.RemoveAll(p)
-	log.Printf("tid=%s,deleteMqRoot %s error:%v\n", traceId, p, err)
+	logger.Get().Infof("tid=%s,deleteMqRoot %s error:%v", traceId, p, err)
 	if err != nil {
 		return err
 	}

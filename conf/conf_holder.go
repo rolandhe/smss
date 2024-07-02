@@ -1,8 +1,8 @@
 package conf
 
 import (
+	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/spf13/viper"
-	"log"
 	"time"
 )
 
@@ -25,6 +25,8 @@ var FistExecDelay int64
 
 var WaitFileDeleteLockerTimeout time.Duration
 
+var LogPath string
+
 func Init() error {
 	viper.SetConfigName("config")
 	// 设置配置文件类型
@@ -32,7 +34,7 @@ func Init() error {
 	// 设置配置文件路径，可以设置多个路径
 	viper.AddConfigPath("./config")
 	if err := viper.ReadInConfig(); err != nil {
-		log.Printf("fatal error config file: %v\n", err)
+		logger.Get().Infof("fatal error config file: %v", err)
 		return err
 	}
 
@@ -49,5 +51,7 @@ func Init() error {
 
 	FistExecDelay = viper.GetInt64("delay.firstExec")
 	WaitFileDeleteLockerTimeout = time.Duration(viper.GetInt64("store.waitDelLockTimeoutMs")) * time.Millisecond
+
+	LogPath = viper.GetString("log")
 	return nil
 }

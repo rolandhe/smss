@@ -2,9 +2,9 @@ package replica
 
 import (
 	"github.com/rolandhe/smss/pkg/dir"
+	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store"
-	"log"
 	"time"
 )
 
@@ -34,7 +34,7 @@ func SlaveReplica(masterHost string, masterPort int, seqId int64, needSync bool,
 				ManagerMeta:    fstore.GetManagerMeta(),
 			})
 			if err != nil {
-				log.Printf("new sc err:%v\n", err)
+				logger.Get().Infof("new sc err:%v", err)
 				time.Sleep(time.Millisecond * 5000)
 				continue
 			}
@@ -64,7 +64,7 @@ func syncMqInfo(sc *slaveClient, seqId int64, fstore store.Store) error {
 func run(sc *slaveClient, seqId int64) int64 {
 	defer sc.Close()
 	err := sc.replica(seqId)
-	log.Printf("slave,last eventId=%d, run err:%v\n", sc.lastEventId, err)
+	logger.Get().Infof("slave,last eventId=%d, run err:%v", sc.lastEventId, err)
 	return sc.lastEventId
 }
 

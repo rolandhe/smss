@@ -4,7 +4,6 @@ import (
 	"github.com/rolandhe/smss/cmd/protocol"
 	"github.com/rolandhe/smss/pkg/dir"
 	"github.com/rolandhe/smss/store"
-	"log"
 	"path"
 )
 
@@ -63,7 +62,6 @@ func getNextSeq(lBinlog *lastBinlog) int64 {
 		return lBinlog.messageSeqId + 1
 	}
 	payload := lBinlog.payload
-	ok, count := protocol.CheckPayload(payload[:len(payload)-1])
-	log.Println(ok)
+	_, count := protocol.CheckPayload(payload[:len(payload)-1])
 	return lBinlog.messageSeqId + int64(count)
 }

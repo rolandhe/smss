@@ -3,10 +3,10 @@ package fss
 import (
 	"errors"
 	"github.com/rolandhe/smss/pkg/dir"
+	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store"
 	"github.com/rolandhe/smss/store/badger_meta"
-	"log"
 	"path"
 	"sync"
 	"time"
@@ -161,7 +161,7 @@ func (fs *fileStore) CreateMq(mqName string, life int64, eventId int64) error {
 	if err != nil {
 		return err
 	}
-	log.Printf("%v\n", info)
+	logger.Get().Infof("%v", info)
 	p := MqPath(fs.root, mqName)
 	err = dir.EnsurePathExist(p)
 	if err != nil {

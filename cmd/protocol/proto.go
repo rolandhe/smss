@@ -2,7 +2,7 @@ package protocol
 
 import (
 	"encoding/binary"
-	"log"
+	"github.com/rolandhe/smss/pkg/logger"
 	"sync"
 	"time"
 )
@@ -228,7 +228,7 @@ func (l *DelFileLock) Lock(name, who string, traceId string) (func(), func(d tim
 			case <-oldHolder.ch:
 				return true
 			case <-time.After(d):
-				log.Printf("tid=%s,wait lock timeout, by %s(src-tid=%s) locked\n", traceId, oldHolder.who, oldHolder.traceId)
+				logger.Get().Infof("tid=%s,wait lock timeout, by %s(src-tid=%s) locked", traceId, oldHolder.who, oldHolder.traceId)
 				return false
 			}
 		}

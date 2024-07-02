@@ -4,10 +4,10 @@ import (
 	"errors"
 	"github.com/rolandhe/smss/cmd/protocol"
 	"github.com/rolandhe/smss/pkg/dir"
+	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/rolandhe/smss/pkg/nets"
 	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store"
-	"log"
 	"net"
 	"os"
 	"time"
@@ -48,7 +48,7 @@ func (r *deleteMqRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, 
 }
 func (r *deleteMqRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) error {
 	err := deleteMqRoot(msg.MqName, "deleteMqRouter", r.fstore, r.delExecutor, msg.TraceId)
-	log.Printf("tid=%s,deleteMqRouter.AfterBinlog, mq=%s,eventId=%d, err:%v\n", msg.TraceId, msg.MqName, msg.EventId, err)
+	logger.Get().Infof("tid=%s,deleteMqRouter.AfterBinlog, mq=%s,eventId=%d, err:%v", msg.TraceId, msg.MqName, msg.EventId, err)
 	return err
 }
 
@@ -56,11 +56,11 @@ func deleteMqRoot(mqName, who string, fstore store.Store, delExecutor protocol.D
 	return fstore.ForceDeleteMQ(mqName, func() error {
 		waiter := delExecutor.Submit(mqName, who, traceId)
 		if !waiter(0) {
-			log.Printf("tid=%s,delete %s mq file failed\n", traceId, mqName)
+			logger.Get().Infof("tid=%s,delete %s mq file failed", traceId, mqName)
 			return errors.New("delete mq file failed")
 		}
 
-		log.Printf("tid=%s,DeleteMqRoot %s ok\n", traceId, mqName)
+		logger.Get().Infof("tid=%s,DeleteMqRoot %s ok", traceId, mqName)
 
 		return nil
 	})

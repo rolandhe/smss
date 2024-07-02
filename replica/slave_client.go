@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"github.com/rolandhe/smss/cmd/protocol"
 	"github.com/rolandhe/smss/pkg/dir"
+	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/rolandhe/smss/pkg/nets"
 	"github.com/rolandhe/smss/replica/slave"
 	"github.com/rolandhe/smss/store"
-	"log"
 	"net"
 	"sync/atomic"
 	"time"
@@ -104,7 +104,7 @@ func (sc *slaveClient) getValidMq(seqId int64) ([]*store.MqInfo, error) {
 }
 
 func (sc *slaveClient) replica(seqId int64) error {
-	log.Printf("slave begin to replica,eventId=%d\n", seqId)
+	logger.Get().Infof("slave begin to replica,eventId=%d", seqId)
 	sc.lastEventId = seqId
 	buf := make([]byte, 28)
 	buf[0] = byte(protocol.CommandReplica)
@@ -122,7 +122,7 @@ func (sc *slaveClient) replica(seqId int64) error {
 		err := nets.ReadAll(sc.conn, hBuf, replicaReadNewLogTimeout)
 		if err != nil {
 			if isTimeoutError(err) {
-				log.Printf("wait new binlog data timeout,wait...\n")
+				logger.Get().Infof("wait new binlog data timeout,wait...")
 				continue
 			}
 			return err
@@ -149,7 +149,7 @@ func (sc *slaveClient) replica(seqId int64) error {
 			continue
 		}
 		if code == protocol.AliveCode {
-			log.Printf("slave recv alive msg\n")
+			logger.Get().Infof("slave recv alive msg")
 			continue
 		}
 		if code == protocol.ErrCode {
@@ -166,7 +166,7 @@ func (sc *slaveClient) replica(seqId int64) error {
 
 			return errors.New(string(eMsgBuf))
 		}
-		log.Printf("invalid response:%d\n", code)
+		logger.Get().Infof("invalid response:%d", code)
 		return errors.New("invalid response")
 	}
 }
@@ -186,12 +186,12 @@ func applyBinlog(body []byte, cmdParse *msgParser, worker slave.DependWorker, co
 
 	hfunc := bbHandlerMap[cmdLine.GetCmd()]
 	if hfunc == nil {
-		log.Printf("not support cmd:%d\n", cmdLine.GetCmd())
+		logger.Get().Infof("not support cmd:%d", cmdLine.GetCmd())
 		return 0, dir.NewBizError("not support cmd")
 	}
 	err = hfunc(cmdParse.cmd, payload, worker)
 	if count%100 == 0 {
-		log.Printf("slave: tid=%s,cmd=%d,eventId=%d,count=%d,delay=%dms,err:%v\n", cmdParse.cmd.TraceId, cmdParse.cmd.Command, cmdParse.cmd.EventId, count, cmdParse.cmd.GetDelay(), err)
+		logger.Get().Infof("slave: tid=%s,cmd=%d,eventId=%d,count=%d,delay=%dms,err:%v", cmdParse.cmd.TraceId, cmdParse.cmd.Command, cmdParse.cmd.EventId, count, cmdParse.cmd.GetDelay(), err)
 	}
 	return cmdParse.cmd.EventId, err
 }

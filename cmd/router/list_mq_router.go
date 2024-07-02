@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"github.com/rolandhe/smss/cmd/protocol"
 	"github.com/rolandhe/smss/pkg/dir"
+	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/rolandhe/smss/pkg/nets"
 	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store"
 	"github.com/rolandhe/smss/store/fss"
-	"log"
 	"net"
 )
 
@@ -26,7 +26,7 @@ type outMqInfo struct {
 func (r *mqListRouter) Router(conn net.Conn, commHeader *protocol.CommonHeader, worker standard.MessageWorking) error {
 	infos, err := r.fstore.GetMqInfoReader().GetMQSimpleInfoList()
 	if err != nil {
-		log.Printf("tid=%s,GetMQSimpleInfoList err:%v\n", commHeader.TraceId, err)
+		logger.Get().Infof("tid=%s,GetMQSimpleInfoList err:%v", commHeader.TraceId, err)
 		return dir.NewBizError(err.Error())
 	}
 	if len(infos) == 0 {

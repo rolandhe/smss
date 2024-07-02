@@ -4,6 +4,7 @@ import (
 	"flag"
 	"github.com/rolandhe/smss/cmd"
 	"github.com/rolandhe/smss/conf"
+	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/rolandhe/smss/store"
 )
 
@@ -21,6 +22,9 @@ func main() {
 	if err := conf.Init(); err != nil {
 		return
 	}
+
+	logger.InitLogger(conf.LogPath)
+	defer logger.Sync()
 
 	flag.Parse()
 

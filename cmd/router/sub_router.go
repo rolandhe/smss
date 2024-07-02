@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"github.com/rolandhe/smss/cmd/protocol"
 	"github.com/rolandhe/smss/cmd/repair"
+	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/rolandhe/smss/pkg/nets"
 	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store"
-	"log"
 	"net"
 	"time"
 )
@@ -50,14 +50,14 @@ func (r *subRouter) Router(conn net.Conn, commHeader *protocol.CommonHeader, wor
 		return nets.OutputRecoverErr(conn, err.Error(), NetWriteTimeout)
 	}
 	if mqInfo == nil || mqInfo.IsInvalid() {
-		log.Printf("mq not exist:%s\n", header.MQName)
+		logger.Get().Infof("mq not exist:%s", header.MQName)
 		return nets.OutputRecoverErr(conn, "mq not exist", NetWriteTimeout)
 	}
 
 	var fileId, pos int64
 	mqPath := r.fstore.GetMqPath(header.MQName)
 	if fileId, pos, err = getSubPos(info.MessageId, mqPath); err != nil {
-		log.Printf("message id not found:%s, %d\n", header.MQName, info.MessageId)
+		logger.Get().Infof("message id not found:%s, %d", header.MQName, info.MessageId)
 		return nets.OutputRecoverErr(conn, "message id not found", NetWriteTimeout)
 	}
 

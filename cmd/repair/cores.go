@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"github.com/rolandhe/smss/binlog"
 	"github.com/rolandhe/smss/cmd/protocol"
+	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store"
 	"github.com/rolandhe/smss/store/fss"
 	"io"
-	"log"
 	"os"
 	"path"
 )
@@ -161,7 +161,7 @@ func readLastLogBlock[C, T any](startPosition int64, p string, fileSize int64, e
 			return nil, err
 		}
 		if discard != int(startPosition) {
-			log.Printf("invalid start pos of %s, expect:%d, but:%d\n", p, startPosition, discard)
+			logger.Get().Infof("invalid start pos of %s, expect:%d, but:%d", p, startPosition, discard)
 			return nil, errors.New("invalid start pos")
 		}
 	}
@@ -216,7 +216,7 @@ func readLastLogBlock[C, T any](startPosition int64, p string, fileSize int64, e
 				return nil, err
 			}
 			if discard != payloadLen {
-				log.Printf("invalid file:%s, expect:%d,but  discard %d err\n", p, payloadLen, discard)
+				logger.Get().Infof("invalid file:%s, expect:%d,but  discard %d err", p, payloadLen, discard)
 				return nil, errors.New("invalid file")
 			}
 		}

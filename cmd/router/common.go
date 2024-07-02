@@ -3,10 +3,10 @@ package router
 import (
 	"github.com/rolandhe/smss/binlog"
 	"github.com/rolandhe/smss/cmd/protocol"
+	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/rolandhe/smss/pkg/nets"
 	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store"
-	"log"
 	"net"
 	"os"
 	"time"
@@ -23,7 +23,7 @@ var curInsRole store.InstanceRoleEnum
 func InitCommonInfo(id int64, role store.InstanceRoleEnum) {
 	if role == store.Master {
 		nextEventId = id
-		log.Printf("init next event id:%d\n", nextEventId)
+		logger.Get().Infof("init next event id:%d", nextEventId)
 	}
 	curInsRole = role
 }

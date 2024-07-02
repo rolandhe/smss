@@ -3,7 +3,7 @@ package standard
 import (
 	"errors"
 	"fmt"
-	"log"
+	"github.com/rolandhe/smss/pkg/logger"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -119,7 +119,7 @@ func (n *notifier) notifyAll(closed bool) {
 		}
 		if c.Notify() {
 			if n.logCount%100 == 0 {
-				log.Printf("writer of %s notify to %s,count=%d\n", n.subject, k, n.logCount)
+				logger.Get().Infof("writer of %s notify to %s,count=%d", n.subject, k, n.logCount)
 			}
 		}
 	}
@@ -155,7 +155,7 @@ func (fc *logFileCtrl) RegNotify(name string, notify *NotifyDevice) (LogFileInfo
 func (fc *logFileCtrl) UnRegNotify(name string) {
 	fc.notify.Lock()
 	defer fc.notify.Unlock()
-	log.Printf("UnRegNotify %s\n", name)
+	logger.Get().Infof("UnRegNotify %s", name)
 	delete(fc.notify.waiters, name)
 }
 

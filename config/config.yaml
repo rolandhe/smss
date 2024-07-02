@@ -1,4 +1,6 @@
 port: 8083
+log:
+  path: stdout
 store:
   path: mq-data
   maxLogSize: 2147483648

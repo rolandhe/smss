@@ -6,10 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/rolandhe/smss/binlog"
+	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store/fss"
 	"io"
-	"log"
 	"os"
 	"path"
 )
@@ -26,7 +26,7 @@ func FindMqPosByEventId(ppath string, eventId int64) (int64, int64, error) {
 		cmd := &fss.MqMessageCommand{}
 		err := fss.ReadMqMessageCmd(cmdBuf[:len(cmdBuf)-1], cmd)
 		if err != nil {
-			log.Printf("FindMqPosByEventId for %d err:%v\n", eventId, err)
+			logger.Get().Infof("FindMqPosByEventId for %d err:%v", eventId, err)
 			return -1, -1
 		}
 		return cmd.GetId(), cmd.GetPayloadSize()
@@ -126,7 +126,7 @@ func findInFile(p string, eventId int64, extractCmd func(cmdBuf []byte) (int64, 
 			return defaultFound, 0, err
 		}
 		if discard != payloadLen {
-			log.Printf("invalid file:%s, expect:%d,but  discard %d err\n", p, payloadLen, discard)
+			logger.Get().Infof("invalid file:%s, expect:%d,but  discard %d err", p, payloadLen, discard)
 			return defaultFound, 0, errors.New("invalid file")
 		}
 

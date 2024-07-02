@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"github.com/rolandhe/smss/cmd/protocol"
 	"github.com/rolandhe/smss/pkg/dir"
+	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/rolandhe/smss/pkg/nets"
 	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store"
 	"github.com/rolandhe/smss/store/fss"
-	"log"
 	"net"
 )
 
@@ -26,7 +26,7 @@ func (r *validListRouter) Router(conn net.Conn, commHeader *protocol.CommonHeade
 	eventId := int64(binary.LittleEndian.Uint64(buf))
 	infos, err := r.fstore.GetMqInfoReader().GetMQSimpleInfoList()
 	if err != nil {
-		log.Printf("tid=%s,GetMQSimpleInfoList err:%v\n", commHeader.TraceId, err)
+		logger.Get().Infof("tid=%s,GetMQSimpleInfoList err:%v", commHeader.TraceId, err)
 		return dir.NewBizError(err.Error())
 	}
 	var rets []*outMqInfo

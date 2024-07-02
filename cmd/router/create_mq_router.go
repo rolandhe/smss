@@ -4,11 +4,11 @@ import (
 	"encoding/binary"
 	"github.com/rolandhe/smss/cmd/protocol"
 	"github.com/rolandhe/smss/pkg/dir"
+	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/rolandhe/smss/pkg/nets"
 	"github.com/rolandhe/smss/pkg/tc"
 	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store"
-	"log"
 	"net"
 	"os"
 	"strings"
@@ -29,7 +29,7 @@ func (r *createMqRouter) Router(conn net.Conn, header *protocol.CommonHeader, wo
 	if len(header.MQName) > 128 || strings.ContainsFunc(header.MQName, func(r rune) bool {
 		return r == ' ' || r == '\n' || r == '\t'
 	}) {
-		log.Printf("tid=%s,create %s error, mq name MUST be less than 128 char and NOT contains space/enter/tab\n", header.TraceId, header.MQName)
+		logger.Get().Infof("tid=%s,create %s error, mq name MUST be less than 128 char and NOT contains space/enter/tab", header.TraceId, header.MQName)
 		return nets.OutputRecoverErr(conn, "mq name MUST be less than 128 char and NOT contains space/enter/tab", NetWriteTimeout)
 	}
 	if curInsRole != store.Master {
