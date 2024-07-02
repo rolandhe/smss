@@ -2,7 +2,7 @@ package repair
 
 import (
 	"github.com/rolandhe/smss/cmd/protocol"
-	"github.com/rolandhe/smss/pkg"
+	"github.com/rolandhe/smss/pkg/dir"
 	"github.com/rolandhe/smss/store"
 	"log"
 	"path"
@@ -11,7 +11,7 @@ import (
 func RepairLog(root string, meta store.Meta) (int64, error) {
 
 	binlogRoot := path.Join(root, store.BinlogDir)
-	exist, err := pkg.PathExist(binlogRoot)
+	exist, err := dir.PathExist(binlogRoot)
 	if err != nil {
 		return 0, err
 	}
@@ -19,7 +19,7 @@ func RepairLog(root string, meta store.Meta) (int64, error) {
 		return 1, nil
 	}
 	dataRoot := path.Join(root, store.DataDir)
-	exist, err = pkg.PathExist(dataRoot)
+	exist, err = dir.PathExist(dataRoot)
 	if err != nil {
 		return 0, err
 	}

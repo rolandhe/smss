@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/rolandhe/smss/cmd/protocol"
 	"github.com/rolandhe/smss/cmd/repair"
-	"github.com/rolandhe/smss/pkg"
+	"github.com/rolandhe/smss/pkg/dir"
 	"github.com/rolandhe/smss/pkg/nets"
 	"github.com/rolandhe/smss/standard"
 	"log"
@@ -63,7 +63,7 @@ func MasterHandle(conn net.Conn, header *protocol.CommonHeader, walMonitor WalMo
 	lastEventId := int64(binary.LittleEndian.Uint64(buf))
 
 	if lastEventId < 0 {
-		return pkg.NewBizError("invalid replica eventId")
+		return dir.NewBizError("invalid replica eventId")
 	}
 
 	//ackTimeoutDuration := time.Duration(DefaultAckTimeout) * time.Millisecond

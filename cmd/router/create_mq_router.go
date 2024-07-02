@@ -3,7 +3,7 @@ package router
 import (
 	"encoding/binary"
 	"github.com/rolandhe/smss/cmd/protocol"
-	"github.com/rolandhe/smss/pkg"
+	"github.com/rolandhe/smss/pkg/dir"
 	"github.com/rolandhe/smss/pkg/nets"
 	"github.com/rolandhe/smss/pkg/tc"
 	"github.com/rolandhe/smss/standard"
@@ -58,7 +58,7 @@ func (r *createMqRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, 
 			msg.Skip = true
 			return r.doBinlog(f, msg)
 		}
-		return 0, pkg.NewBizError("mq exist")
+		return 0, dir.NewBizError("mq exist")
 	}
 	setupRawMessageEventIdAndWriteTime(msg, 1)
 	return r.doBinlog(f, msg)

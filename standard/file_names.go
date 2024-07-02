@@ -2,7 +2,7 @@ package standard
 
 import (
 	"fmt"
-	"github.com/rolandhe/smss/pkg"
+	"github.com/rolandhe/smss/pkg/dir"
 	"log"
 	"math"
 	"os"
@@ -33,7 +33,7 @@ func ReadMaxFileId(root string) (int64, error) {
 			log.Printf("file %s not valid log file\n", name)
 			continue
 		}
-		num := pkg.ParseNumber(items[0])
+		num := dir.ParseNumber(items[0])
 		if num < 0 {
 			continue
 		}
@@ -62,7 +62,7 @@ func ReadFirstFileId(root string) (int64, error) {
 			log.Printf("file %s not valid log file\n", name)
 			continue
 		}
-		num := pkg.ParseNumber(items[0])
+		num := dir.ParseNumber(items[0])
 		if num < 0 {
 			continue
 		}

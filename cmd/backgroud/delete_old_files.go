@@ -5,7 +5,7 @@ import (
 	"github.com/robfig/cron/v3"
 	"github.com/rolandhe/smss/cmd/protocol"
 	"github.com/rolandhe/smss/conf"
-	"github.com/rolandhe/smss/pkg"
+	"github.com/rolandhe/smss/pkg/dir"
 	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store"
 	"log"
@@ -100,7 +100,7 @@ func deleteInvalidFiles(p string, unLockFunc func(), traceId string) {
 			log.Printf("tid=%s,file %s not valid log file\n", traceId, name)
 			continue
 		}
-		num := pkg.ParseNumber(items[0])
+		num := dir.ParseNumber(items[0])
 		if num > maxId {
 			maxId = num
 		}

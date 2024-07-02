@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"github.com/rolandhe/smss/binlog"
 	"github.com/rolandhe/smss/cmd/protocol"
-	"github.com/rolandhe/smss/pkg"
+	"github.com/rolandhe/smss/pkg/dir"
 	"github.com/rolandhe/smss/pkg/nets"
 	"github.com/rolandhe/smss/pkg/tc"
 	"github.com/rolandhe/smss/standard"
@@ -82,7 +82,7 @@ func (r *delayRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, err
 		if msg.Src == protocol.RawMessageReplica {
 			return 0, nil
 		}
-		return 0, pkg.NewBizError("mq not exist")
+		return 0, dir.NewBizError("mq not exist")
 	}
 
 	setupRawMessageEventIdAndWriteTime(msg, 1)

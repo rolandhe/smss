@@ -3,7 +3,7 @@ package router
 import (
 	"github.com/rolandhe/smss/binlog"
 	"github.com/rolandhe/smss/cmd/protocol"
-	"github.com/rolandhe/smss/pkg"
+	"github.com/rolandhe/smss/pkg/dir"
 	"github.com/rolandhe/smss/pkg/nets"
 	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store"
@@ -57,7 +57,7 @@ func (r *pubRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, error
 			return 0, nil
 		}
 		log.Printf("tid=%s,pubRouter.DoBinlog  %s not exist\n", msg.TraceId, msg.MqName)
-		return 0, pkg.NewBizError("mq not exist")
+		return 0, dir.NewBizError("mq not exist")
 	}
 
 	payload := msg.Body.(*protocol.PubPayload)

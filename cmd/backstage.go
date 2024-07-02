@@ -5,7 +5,7 @@ import (
 	"github.com/rolandhe/smss/cmd/protocol"
 	"github.com/rolandhe/smss/cmd/router"
 	"github.com/rolandhe/smss/conf"
-	"github.com/rolandhe/smss/pkg"
+	"github.com/rolandhe/smss/pkg/dir"
 	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store"
 	"github.com/rolandhe/smss/store/fss"
@@ -23,7 +23,7 @@ type backWorker struct {
 
 func newWriter(root string, meta store.Meta) (*binlog.WalWriter[protocol.RawMessage], store.Store, error) {
 	binlogRoot := path.Join(root, store.BinlogDir)
-	pkg.EnsurePathExist(binlogRoot)
+	dir.EnsurePathExist(binlogRoot)
 
 	fstore, err := fss.NewFileStore(root, conf.MqBufferSize, meta)
 	if err != nil {

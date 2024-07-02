@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/rolandhe/smss/cmd/protocol"
-	"github.com/rolandhe/smss/pkg"
+	"github.com/rolandhe/smss/pkg/dir"
 	"log"
 	"os"
 	"path"
@@ -13,7 +13,7 @@ import (
 
 var WaitNewTimeoutErr = errors.New("wait timeout")
 var PeerClosedErr = errors.New("peer closed error")
-var MqWriterTermiteErr = pkg.NewBizError("mq writer closed,maybe mq deleted")
+var MqWriterTermiteErr = dir.NewBizError("mq writer closed,maybe mq deleted")
 
 const AliveTimeout = time.Second * 30
 
@@ -128,25 +128,25 @@ func (r *StdMsgBlockReader[T]) Close() error {
 
 func (r *StdMsgBlockReader[T]) Init(fileId, pos int64) error {
 	if fileId < 0 || pos < 0 {
-		return pkg.NewBizError("invalid pos")
+		return dir.NewBizError("invalid pos")
 	}
 
 	p := path.Join(r.root, fmt.Sprintf("%d.log", fileId))
 	info, err := os.Stat(p)
 
 	if err != nil && os.IsNotExist(err) && pos > 0 {
-		return pkg.NewBizError("invalid pos")
+		return dir.NewBizError("invalid pos")
 	}
 
 	r.infoGet, err = r.register.RegisterReaderNotify(r.notify)
 	if err != nil {
-		return pkg.NewBizError(err.Error())
+		return dir.NewBizError(err.Error())
 	}
 
 	lastFileId, lastPos := r.infoGet()
 
 	if fileId > lastFileId || (fileId == lastFileId && pos > lastPos) {
-		return pkg.NewBizError("invalid pos")
+		return dir.NewBizError("invalid pos")
 	}
 
 	if lastFileId > fileId && pos == info.Size() {
@@ -160,12 +160,12 @@ func (r *StdMsgBlockReader[T]) Init(fileId, pos int64) error {
 	if err != nil {
 		log.Printf("init reader err:%v\n", err)
 		r.register.UnRegisterReaderNotify()
-		return pkg.NewBizError(err.Error())
+		return dir.NewBizError(err.Error())
 	}
 
 	if pos > r.ctrl.fileSize {
 		r.register.UnRegisterReaderNotify()
-		return pkg.NewBizError("invalid pos")
+		return dir.NewBizError("invalid pos")
 	}
 
 	return nil

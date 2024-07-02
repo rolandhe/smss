@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/rolandhe/smss/cmd/protocol"
-	"github.com/rolandhe/smss/pkg"
+	"github.com/rolandhe/smss/pkg/dir"
 	"github.com/rolandhe/smss/pkg/nets"
 	"github.com/rolandhe/smss/replica/slave"
 	"github.com/rolandhe/smss/store"
@@ -187,7 +187,7 @@ func applyBinlog(body []byte, cmdParse *msgParser, worker slave.DependWorker, co
 	hfunc := bbHandlerMap[cmdLine.GetCmd()]
 	if hfunc == nil {
 		log.Printf("not support cmd:%d\n", cmdLine.GetCmd())
-		return 0, pkg.NewBizError("not support cmd")
+		return 0, dir.NewBizError("not support cmd")
 	}
 	err = hfunc(cmdParse.cmd, payload, worker)
 	if count%100 == 0 {

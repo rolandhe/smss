@@ -2,7 +2,7 @@ package fss
 
 import (
 	"errors"
-	"github.com/rolandhe/smss/pkg"
+	"github.com/rolandhe/smss/pkg/dir"
 	"github.com/rolandhe/smss/store"
 	"hash/fnv"
 	"os"
@@ -28,7 +28,7 @@ func ensureStoreDirectory(root string) error {
 func ensureMqDirectory(root string, mqList []*store.MqInfo) error {
 	for _, info := range mqList {
 		p := MqPath(root, info.Name)
-		if err := pkg.EnsurePathExist(p); err != nil {
+		if err := dir.EnsurePathExist(p); err != nil {
 			return err
 		}
 	}

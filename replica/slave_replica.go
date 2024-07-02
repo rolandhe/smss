@@ -1,7 +1,7 @@
 package replica
 
 import (
-	"github.com/rolandhe/smss/pkg"
+	"github.com/rolandhe/smss/pkg/dir"
 	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store"
 	"log"
@@ -53,7 +53,7 @@ func syncMqInfo(sc *slaveClient, seqId int64, fstore store.Store) error {
 			return err
 		}
 		p := fstore.GetMqPath(info.Name)
-		err = pkg.EnsurePathExist(p)
+		err = dir.EnsurePathExist(p)
 		if err != nil {
 			fstore.GetManagerMeta().DeleteMQ(info.Name, true)
 		}

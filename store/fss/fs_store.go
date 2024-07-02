@@ -2,7 +2,7 @@ package fss
 
 import (
 	"errors"
-	"github.com/rolandhe/smss/pkg"
+	"github.com/rolandhe/smss/pkg/dir"
 	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store"
 	"github.com/rolandhe/smss/store/badger_meta"
@@ -163,7 +163,7 @@ func (fs *fileStore) CreateMq(mqName string, life int64, eventId int64) error {
 	}
 	log.Printf("%v\n", info)
 	p := MqPath(fs.root, mqName)
-	err = pkg.EnsurePathExist(p)
+	err = dir.EnsurePathExist(p)
 	if err != nil {
 		fs.meta.DeleteMQ(mqName, true)
 	}

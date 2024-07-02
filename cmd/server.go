@@ -7,7 +7,7 @@ import (
 	"github.com/rolandhe/smss/cmd/repair"
 	"github.com/rolandhe/smss/cmd/router"
 	"github.com/rolandhe/smss/conf"
-	"github.com/rolandhe/smss/pkg"
+	"github.com/rolandhe/smss/pkg/dir"
 	"github.com/rolandhe/smss/pkg/nets"
 	"github.com/rolandhe/smss/pkg/tc"
 	"github.com/rolandhe/smss/replica"
@@ -128,7 +128,7 @@ func handleConnection(conn net.Conn, worker *backWorker) {
 
 		if header.GetCmd() > protocol.CommandList {
 			err = nets.OutputRecoverErr(conn, "don't support action", router.NetWriteTimeout)
-			if err != nil && !pkg.IsBizErr(err) {
+			if err != nil && !dir.IsBizErr(err) {
 				return
 			}
 			continue
@@ -146,7 +146,7 @@ func handleConnection(conn net.Conn, worker *backWorker) {
 		if handler == nil {
 			log.Printf("tid=%s,don't support action:%d\n", header.TraceId, header.GetCmd())
 			err = nets.OutputRecoverErr(conn, "don't support action", router.NetWriteTimeout)
-			if err != nil && !pkg.IsBizErr(err) {
+			if err != nil && !dir.IsBizErr(err) {
 				return
 			}
 			continue
@@ -155,7 +155,7 @@ func handleConnection(conn net.Conn, worker *backWorker) {
 		if err != nil {
 			log.Printf("tid=%s,cmd=%d,router error:%v\n", header.TraceId, header.GetCmd(), err)
 		}
-		if err != nil && !pkg.IsBizErr(err) {
+		if err != nil && !dir.IsBizErr(err) {
 			return
 		}
 	}
