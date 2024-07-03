@@ -90,6 +90,9 @@ func (sc *slaveClient) getValidMq(seqId int64) ([]*store.MqInfo, error) {
 	}
 
 	payLen := int(binary.LittleEndian.Uint32(hBuf[2:]))
+	if payLen == 0 {
+		return nil, nil
+	}
 	body := make([]byte, payLen)
 
 	err := nets.ReadAll(sc.conn, body, netReadTimeout)
