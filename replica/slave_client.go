@@ -125,7 +125,7 @@ func (sc *slaveClient) replica(seqId int64) error {
 		hBuf := buf[:protocol.RespHeaderSize]
 		err := nets.ReadAll(sc.conn, hBuf, replicaReadNewLogTimeout)
 		if err != nil {
-			if isTimeoutError(err) {
+			if nets.IsTimeoutError(err) {
 				logger.Get().Infof("wait new binlog data timeout,wait...")
 				continue
 			}
@@ -206,11 +206,4 @@ func readPayload(conn net.Conn, lenBuf []byte) ([]byte, error) {
 		return nil, err
 	}
 	return body, nil
-}
-func isTimeoutError(err error) bool {
-	// 检查是否为 net.Error 类型并且是否为超时错误
-	if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-		return true
-	}
-	return false
 }
