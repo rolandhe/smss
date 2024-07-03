@@ -95,7 +95,6 @@ func (r *StdMsgBlockReader[T]) waitFs(endNotify <-chan int) error {
 				break
 			}
 		}
-		//logger.Get().Infof("%s wait file %d to notify %s\n", r.subject, r.ctrl.fileId, r.whoami)
 		waitRet := r.notify.Wait(endNotify)
 		if waitRet == WaitNotifyByInput {
 			logger.Get().Infof("%s waited file %d,notify to %s,ret=WaitNotifyByInput", r.subject, r.ctrl.fileId, r.whoami)
@@ -177,18 +176,17 @@ func (r *StdMsgBlockReader[T]) waitPos(endNotify <-chan int) error {
 		if r.ctrl.pos < r.ctrl.fileSize {
 			break
 		}
-		//logger.Get().Infof("%s wait pos,notify %d/%d %s", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami)
 		waitRet := r.notify.Wait(endNotify)
 		if waitRet == WaitNotifyByInput {
 			logger.Get().Infof("%s waited notify %d.%d %s,but notified by endNotify, ret=WaitNotifyByInput(conn closed)", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami)
 			return PeerClosedErr
 		}
 		if waitRet == WaitNotifyResultTermite {
-			logger.Get().Infof("%s waited pos,notify %d.%d %s\n,ret=WaitNotifyResultTermite", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami)
+			logger.Get().Infof("%s waited pos,notify %d.%d %s,ret=WaitNotifyResultTermite", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami)
 			return MqWriterTermiteErr
 		}
 		if waitRet == WaitNotifyResultTimeout {
-			logger.Get().Infof("%s waited pos,notify %d.%d %s,ret=WaitNotifyResultTimeout\n", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami)
+			logger.Get().Infof("%s waited pos,notify %d.%d %s,ret=WaitNotifyResultTimeout", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami)
 			return WaitNewTimeoutErr
 		}
 		if r.logCount%conf.LogSample == 0 {

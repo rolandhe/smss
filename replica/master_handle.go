@@ -12,6 +12,7 @@ import (
 	"github.com/rolandhe/smss/pkg/nets"
 	"github.com/rolandhe/smss/standard"
 	"net"
+	"runtime"
 	"sync/atomic"
 	"time"
 )
@@ -56,6 +57,7 @@ func getFilePosByEventId(root string, eventId int64) (int64, int64, error) {
 }
 
 func MasterHandle(conn net.Conn, header *protocol.CommonHeader, walMonitor WalMonitorSupport, readTimeout, writeTimeout time.Duration) error {
+	runtime.LockOSThread()
 	buf := make([]byte, 8)
 	err := nets.ReadAll(conn, buf, readTimeout)
 	if err != nil {
@@ -99,6 +101,7 @@ func noAckPush(conn net.Conn, tid string, reader serverBinlogBlockReader) error 
 		endFlag.Store(true)
 	}()
 	count := int64(0)
+	totalCost := int64(0)
 	for {
 		var msgs []*binlogBlock
 		if endFlag.Load() {
@@ -112,12 +115,17 @@ func noAckPush(conn net.Conn, tid string, reader serverBinlogBlockReader) error 
 			binary.LittleEndian.PutUint32(outBuf[protocol.RespHeaderSize:], uint32(msgLen))
 			copy(outBuf[protocol.RespHeaderSize+4:], msgs[0].data)
 
+			start := time.Now().UnixMilli()
+			readDelay := start - msgs[0].rawMsg.WriteTime
+
 			if err = writeAllWithTotalTimeout(conn, outBuf, BinlogOutTimeout, &endFlag); err != nil {
 				logger.Get().Infof("tid=%s, eventId=%d,err:%v", tid, msgs[0].rawMsg.EventId, err)
 				return err
 			}
+			cost := start - time.Now().UnixMilli()
+			totalCost += cost
 			if count%conf.LogSample == 0 {
-				logger.Get().Infof("master to slave:tid=%s, eventId=%d,count=%d, delay time=%dms", tid, msgs[0].rawMsg.EventId, count, msgs[0].rawMsg.GetDelay())
+				logger.Get().Infof("master to slave:tid=%s, eventId=%d,count=%d, delay time=%dms,readDelay=%dms,total cost=%dms", tid, msgs[0].rawMsg.EventId, count, readDelay+cost, readDelay, totalCost)
 			}
 			count++
 			continue

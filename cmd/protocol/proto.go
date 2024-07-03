@@ -177,6 +177,10 @@ func (rm *RawMessage) GetDelay() int64 {
 	return time.Now().UnixMilli() - rm.WriteTime
 }
 
+func (rm *RawMessage) Cost() int64 {
+	return time.Now().UnixMilli() - rm.Timestamp
+}
+
 type DecodedRawMessage struct {
 	RawMessage
 	PayloadLen int

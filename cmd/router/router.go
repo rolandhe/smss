@@ -29,11 +29,13 @@ func (h *noBinlog) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) erro
 }
 
 func Init(fstore store.Store, lc *tc.TimeTriggerControl, delExec protocol.DelMqFileExecutor) {
+	sampleLogger := &sampleLogSupport{}
 	routerMap[protocol.CommandSub] = &subRouter{
 		fstore: fstore,
 	}
 	routerMap[protocol.CommandPub] = &pubRouter{
-		fstore: fstore,
+		fstore:           fstore,
+		sampleLogSupport: sampleLogger,
 	}
 
 	routerMap[protocol.CommandCreateMQ] = &createMqRouter{
@@ -60,7 +62,8 @@ func Init(fstore store.Store, lc *tc.TimeTriggerControl, delExec protocol.DelMqF
 	}
 
 	routerMap[protocol.CommandDelayApply] = &delayApplyRouter{
-		fstore: fstore,
+		fstore:           fstore,
+		sampleLogSupport: sampleLogger,
 	}
 }
 func InitDelay(fstore store.Store, delayCtrl *tc.TimeTriggerControl) {

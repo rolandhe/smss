@@ -182,9 +182,11 @@ func applyBinlog(body []byte, cmdParse *msgParser, worker slave.DependWorker, co
 		logger.Get().Infof("not support cmd:%d", cmdLine.GetCmd())
 		return 0, dir.NewBizError("not support cmd")
 	}
+	st := time.Now().UnixMilli()
 	err = hfunc(cmdParse.cmd, payload, worker)
 	if count%conf.LogSample == 0 {
-		logger.Get().Infof("slave: tid=%s,cmd=%d,eventId=%d,count=%d,delay=%dms,err:%v", cmdParse.cmd.TraceId, cmdParse.cmd.Command, cmdParse.cmd.EventId, count, cmdParse.cmd.GetDelay(), err)
+		rcost := time.Now().UnixMilli() - st
+		logger.Get().Infof("slave: tid=%s,cmd=%d,eventId=%d,count=%d,delay=%dms,rcost=%d,err:%v", cmdParse.cmd.TraceId, cmdParse.cmd.Command, cmdParse.cmd.EventId, count, cmdParse.cmd.GetDelay(), rcost, err)
 	}
 	return cmdParse.cmd.EventId, err
 }

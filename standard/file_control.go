@@ -51,7 +51,6 @@ func (nd *NotifyDevice) Notify() bool {
 	}
 }
 func (nd *NotifyDevice) Wait(endNotify <-chan int) WaitNotifyResult {
-
 	select {
 	case <-endNotify:
 		return WaitNotifyByInput

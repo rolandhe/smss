@@ -3,7 +3,6 @@ package router
 import (
 	"github.com/rolandhe/smss/binlog"
 	"github.com/rolandhe/smss/cmd/protocol"
-	"github.com/rolandhe/smss/conf"
 	"github.com/rolandhe/smss/pkg/dir"
 	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/rolandhe/smss/pkg/nets"
@@ -15,8 +14,8 @@ import (
 )
 
 type pubRouter struct {
-	fstore   store.Store
-	logCount int64
+	fstore store.Store
+	*sampleLogSupport
 }
 
 func (r *pubRouter) Router(conn net.Conn, header *protocol.CommonHeader, worker standard.MessageWorking) error {
@@ -77,10 +76,9 @@ func (r *pubRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) err
 	payload := msg.Body.(*protocol.PubPayload)
 	messages, _ := protocol.ParsePayload(payload.Payload, fileId, pos, msg.EventId)
 	err := r.fstore.Save(msg.MqName, messages)
-	if r.logCount%conf.LogSample == 0 {
-		logger.Get().Infof("tid=%s,pubRouter.AfterBinlog  %s, eventId=%d, finish:%v", msg.TraceId, msg.MqName, msg.EventId, err)
-	}
-	r.logCount++
+
+	r.sampleLog("pubRouter.AfterBinlog", msg, err)
+
 	return err
 }
 

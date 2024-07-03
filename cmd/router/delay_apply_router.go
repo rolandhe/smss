@@ -14,6 +14,7 @@ import (
 
 type delayApplyRouter struct {
 	fstore store.Store
+	*sampleLogSupport
 }
 
 func (r *delayApplyRouter) Router(conn net.Conn, header *protocol.CommonHeader, worker standard.MessageWorking) error {
@@ -42,7 +43,7 @@ func (r *delayApplyRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64
 
 	var n int64
 	n, err = buff.WriteTo(f)
-	logger.Get().Infof("tid=%s,delayApplyRouter.DoBinlog, mq=%s eventId=%d,finish:%v", msg.TraceId, msg.MqName, msg.EventId, err)
+	//logger.Get().Infof("tid=%s,delayApplyRouter.DoBinlog, mq=%s eventId=%d,finish:%v", msg.TraceId, msg.MqName, msg.EventId, err)
 	return n, err
 }
 
@@ -51,6 +52,7 @@ func (r *delayApplyRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int
 	// 去除前面的 delayTime+delayId
 	messages, _ := protocol.ParsePayload(payload.Payload[16:], fileId, pos, msg.EventId)
 	err := r.fstore.Save(msg.MqName, messages)
-	logger.Get().Infof("tid=%s,delayApplyRouter.AfterBinlog  mq=%s,eventId=%d, finish:%v", msg.TraceId, msg.MqName, msg.EventId, err)
+	r.sampleLog("elayApplyRouter.AfterBinlog", msg, err)
+	//logger.Get().Infof("tid=%s,delayApplyRouter.AfterBinlog  mq=%s,eventId=%d, finish:%v", msg.TraceId, msg.MqName, msg.EventId, err)
 	return err
 }
