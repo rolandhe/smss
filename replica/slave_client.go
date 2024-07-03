@@ -79,13 +79,10 @@ func (sc *slaveClient) getValidMq(seqId int64) ([]*store.MqInfo, error) {
 		if errMsgLen == 0 {
 			return nil, errors.New("unknown err")
 		}
-
 		eMsgBuf := make([]byte, errMsgLen)
-
 		if err := nets.ReadAll(sc.conn, eMsgBuf, netReadTimeout); err != nil {
 			return nil, err
 		}
-
 		return nil, errors.New(string(eMsgBuf))
 	}
 
@@ -94,7 +91,6 @@ func (sc *slaveClient) getValidMq(seqId int64) ([]*store.MqInfo, error) {
 		return nil, nil
 	}
 	body := make([]byte, payLen)
-
 	err := nets.ReadAll(sc.conn, body, netReadTimeout)
 	if err != nil {
 		return nil, err
@@ -118,7 +114,6 @@ func (sc *slaveClient) replica(seqId int64) error {
 	}
 
 	cmdParser := &msgParser{}
-
 	count := int64(0)
 
 	for {
@@ -138,7 +133,6 @@ func (sc *slaveClient) replica(seqId int64) error {
 			if err != nil {
 				return err
 			}
-
 			if sc.lastEventId, err = applyBinlog(body, cmdParser, sc.worker, count); err != nil {
 				return err
 			}
@@ -154,12 +148,10 @@ func (sc *slaveClient) replica(seqId int64) error {
 			if errMsgLen == 0 {
 				return errors.New("unknown err")
 			}
-
 			eMsgBuf := make([]byte, errMsgLen)
-			if err := nets.ReadAll(sc.conn, eMsgBuf, netReadTimeout); err != nil {
+			if err = nets.ReadAll(sc.conn, eMsgBuf, netReadTimeout); err != nil {
 				return err
 			}
-
 			return errors.New(string(eMsgBuf))
 		}
 		logger.Get().Infof("invalid response:%d", code)

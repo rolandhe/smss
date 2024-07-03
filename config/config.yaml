@@ -10,9 +10,10 @@ store:
   waitDelLockTimeoutMs: 3000
 worker:
   buffSize: 1000
-  waitTimeoutMs: 500
+  waitMsgTimeout: 1000
+  waitMsgTimeoutLogSample: 30
 net:
-  writeTimeout: 1
+  writeTimeout: 1000
 life:
   defaultScanSec: 7200
 delay:

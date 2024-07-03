@@ -39,51 +39,17 @@ func NewFileStore(root string, meta store.Meta) (store.Store, error) {
 	fstore := &fileStore{
 		root: fsStoreRoot,
 		meta: meta,
-		//c:    make(chan *asyncMsg, writerBuffSize),
 		writerMap: &safeMap{
 			wmap: map[string]*mqWriter{},
 		},
 	}
-	//var wg sync.WaitGroup
-	//wg.Add(1)
-	//go func() {
-	//	wg.Done()
-	//	doWriter(fstore)
-	//}()
-	//wg.Wait()
 
 	return fstore, nil
 }
 
-//func doWriter(fstore *fileStore) {
-//	c := fstore.c
-//	for {
-//		var msg *asyncMsg
-//		select {
-//		case msg = <-c:
-//		case <-time.After(time.Millisecond * 1000):
-//			continue
-//		}
-//		writer, err := fstore.ensureWriter(msg.mqName)
-//		if err != nil {
-//			msg.err = err
-//		} else if writer.IsInvalid() {
-//			msg.err = errors.New("mq not exist")
-//		} else {
-//			writer.WaitGroup.Add(1)
-//			msg.err = writer.Write(msg, nil)
-//			writer.WaitGroup.Done()
-//		}
-//		close(msg.notify)
-//	}
-//}
-
-type asyncMsg struct {
+type wrappedMsges struct {
 	messages []*store.MQMessage
 	saveTime int64
-	//mqName   string
-	//notify   chan struct{}
-	//err      error
 }
 
 type safeMap struct {
@@ -138,9 +104,8 @@ func (sm *safeMap) removeWriter(mqName string) {
 }
 
 type fileStore struct {
-	root string
-	meta store.Meta
-	//c         chan *asyncMsg
+	root      string
+	meta      store.Meta
 	writerMap *safeMap
 }
 
@@ -214,16 +179,7 @@ func (fs *fileStore) GetMqPath(mqName string) string {
 }
 
 func (fs *fileStore) Save(mqName string, messages []*store.MQMessage) error {
-	//wrapMsg := &asyncMsg{
-	//	messages: messages,
-	//	saveTime: time.Now().UnixMilli(),
-	//	notify:   make(chan struct{}),
-	//	mqName:   mqName,
-	//}
-	//fs.c <- wrapMsg
-	//<-wrapMsg.notify
-
-	wrapMsg := &asyncMsg{
+	wrapMsg := &wrappedMsges{
 		messages: messages,
 		saveTime: time.Now().UnixMilli(),
 		//mqName:   mqName,

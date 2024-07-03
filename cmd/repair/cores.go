@@ -226,7 +226,6 @@ func readLastLogBlock[C, T any](startPosition int64, p string, fileSize int64, e
 	}
 
 	last := extractor.extractRet(cmdLine, pos, lastPayload)
-
 	return last, nil
 }
 

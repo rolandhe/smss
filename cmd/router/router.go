@@ -2,6 +2,8 @@ package router
 
 import (
 	"github.com/rolandhe/smss/cmd/protocol"
+	"github.com/rolandhe/smss/conf"
+	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/rolandhe/smss/pkg/tc"
 	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store"
@@ -29,13 +31,15 @@ func (h *noBinlog) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) erro
 }
 
 func Init(fstore store.Store, lc *tc.TimeTriggerControl, delExec protocol.DelMqFileExecutor) {
-	sampleLogger := &sampleLogSupport{}
+	sampleLogger := &routerSampleLogger{
+		SampleLoggerSupport: logger.NewSampleLoggerSupport(conf.LogSample),
+	}
 	routerMap[protocol.CommandSub] = &subRouter{
 		fstore: fstore,
 	}
 	routerMap[protocol.CommandPub] = &pubRouter{
-		fstore:           fstore,
-		sampleLogSupport: sampleLogger,
+		fstore:             fstore,
+		routerSampleLogger: sampleLogger,
 	}
 
 	routerMap[protocol.CommandCreateMQ] = &createMqRouter{
@@ -62,8 +66,8 @@ func Init(fstore store.Store, lc *tc.TimeTriggerControl, delExec protocol.DelMqF
 	}
 
 	routerMap[protocol.CommandDelayApply] = &delayApplyRouter{
-		fstore:           fstore,
-		sampleLogSupport: sampleLogger,
+		fstore:             fstore,
+		routerSampleLogger: sampleLogger,
 	}
 }
 func InitDelay(fstore store.Store, delayCtrl *tc.TimeTriggerControl) {

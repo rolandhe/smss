@@ -47,7 +47,7 @@ func StartServer(root string, insRole *InstanceRole) {
 	}
 
 	var nextSeq int64
-	if nextSeq, err = repair.RepairLog(root, meta); err != nil {
+	if nextSeq, err = repair.CheckLogAndFix(root, meta); err != nil {
 		meta.Close()
 		return
 	}
@@ -82,7 +82,7 @@ func StartServer(root string, insRole *InstanceRole) {
 
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", conf.Port))
 	if err != nil {
-		// handle error
+		logger.Get().Errorf("listen err:%v", err)
 		return
 	}
 	logger.Get().Infof("finish to listen")

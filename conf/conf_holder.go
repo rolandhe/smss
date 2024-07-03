@@ -10,6 +10,7 @@ var Port int
 var DefaultIoWriteTimeout time.Duration
 var WorkerBuffSize int
 var WorkerWaitMsgTimeout time.Duration
+var WorkerWaitMsgTimeoutLogSample int64
 var MainStorePath string
 var MaxLogSize int64
 
@@ -41,12 +42,12 @@ func Init() error {
 	}
 
 	Port = viper.GetInt("port")
-	DefaultIoWriteTimeout = time.Duration(viper.GetInt64("net.writeTimeout")) * time.Second
+	DefaultIoWriteTimeout = time.Duration(viper.GetInt64("net.writeTimeout")) * time.Millisecond
 	WorkerBuffSize = viper.GetInt("worker.buffSize")
-	WorkerWaitMsgTimeout = time.Duration(viper.GetInt64("worker.waitTimeoutMs")) * time.Millisecond
+	WorkerWaitMsgTimeout = time.Duration(viper.GetInt64("worker.waitMsgTimeout")) * time.Millisecond
+	WorkerWaitMsgTimeoutLogSample = viper.GetInt64("worker.waitMsgTimeoutLogSample")
 	MainStorePath = viper.GetString("store.path")
 	MaxLogSize = viper.GetInt64("store.maxLogSize")
-	//MqBufferSize = viper.GetInt("mq.buffSize")
 	StoreMaxDays = viper.GetInt("store.maxDays")
 	StoreClearInterval = viper.GetInt("store.clearInterval")
 	LifeDefaultScanSec = viper.GetInt64("life.defaultScanSec")

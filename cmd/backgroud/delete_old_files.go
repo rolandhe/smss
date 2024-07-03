@@ -90,7 +90,6 @@ func deleteInvalidFiles(p string, unLockFunc func(), traceId string) {
 	var maxId int64
 	var delIds []int64
 	for _, entry := range entries {
-
 		if entry.IsDir() {
 			continue
 		}

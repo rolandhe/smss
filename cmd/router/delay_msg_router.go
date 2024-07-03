@@ -63,7 +63,6 @@ func (r *delayRouter) Router(conn net.Conn, header *protocol.CommonHeader, worke
 		Body: &protocol.DelayPayload{
 			// 原始的带delayTime的数据, 是毫秒，不是一个具体触发的时间戳
 			Payload: buf,
-			//DelayTime: triggerTime,
 		},
 	}
 	err := worker.Work(msg)

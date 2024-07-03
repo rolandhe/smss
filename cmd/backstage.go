@@ -6,6 +6,7 @@ import (
 	"github.com/rolandhe/smss/cmd/router"
 	"github.com/rolandhe/smss/conf"
 	"github.com/rolandhe/smss/pkg/dir"
+	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store"
 	"github.com/rolandhe/smss/store/fss"
@@ -19,6 +20,7 @@ type backWorker struct {
 	c      chan *standard.FutureMsg[protocol.RawMessage]
 	writer *binlog.WalWriter[protocol.RawMessage]
 	store  store.Store
+	logger.SampleLoggerSupport
 }
 
 func newWriter(root string, meta store.Meta) (*binlog.WalWriter[protocol.RawMessage], store.Store, error) {
@@ -45,9 +47,10 @@ func newWriter(root string, meta store.Meta) (*binlog.WalWriter[protocol.RawMess
 
 func startBack(buffSize int, w *binlog.WalWriter[protocol.RawMessage], store store.Store) (*backWorker, error) {
 	worker := &backWorker{
-		c:      make(chan *standard.FutureMsg[protocol.RawMessage], buffSize),
-		writer: w,
-		store:  store,
+		c:                   make(chan *standard.FutureMsg[protocol.RawMessage], buffSize),
+		writer:              w,
+		store:               store,
+		SampleLoggerSupport: logger.NewSampleLoggerSupport(conf.WorkerWaitMsgTimeoutLogSample),
 	}
 
 	var wg sync.WaitGroup
@@ -84,7 +87,9 @@ func (worker *backWorker) waitMsg(timeout time.Duration) *standard.FutureMsg[pro
 	case msg := <-worker.c:
 		return msg
 	case <-time.After(timeout):
-		// log
+		if worker.CanLogger() {
+			logger.Get().Infof("get future task tomeout")
+		}
 		return nil
 	}
 }

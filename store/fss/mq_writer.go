@@ -9,19 +9,19 @@ import (
 )
 
 type mqWriter struct {
-	*standard.StdMsgWriter[asyncMsg]
+	*standard.StdMsgWriter[wrappedMsges]
 	sync.WaitGroup
 }
 
 func newWriter(mqName, mqPath string) *mqWriter {
 	w := &mqWriter{
-		StdMsgWriter: standard.NewMsgWriter[asyncMsg](mqName, mqPath, conf.MaxLogSize, buildWriteFunc()),
+		StdMsgWriter: standard.NewMsgWriter[wrappedMsges](mqName, mqPath, conf.MaxLogSize, buildWriteFunc()),
 	}
 	return w
 }
 
-func buildWriteFunc() standard.OutputMsgFunc[asyncMsg] {
-	return func(f *os.File, amsg *asyncMsg) (int64, error) {
+func buildWriteFunc() standard.OutputMsgFunc[wrappedMsges] {
+	return func(f *os.File, amsg *wrappedMsges) (int64, error) {
 		cmds, size := buildCommandsAndCalcSize(amsg)
 		var buf bytes.Buffer
 		buf.Grow(size)

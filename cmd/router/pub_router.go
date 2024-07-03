@@ -15,7 +15,7 @@ import (
 
 type pubRouter struct {
 	fstore store.Store
-	*sampleLogSupport
+	*routerSampleLogger
 }
 
 func (r *pubRouter) Router(conn net.Conn, header *protocol.CommonHeader, worker standard.MessageWorking) error {
@@ -68,7 +68,6 @@ func (r *pubRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, error
 
 	var n int64
 	n, err = buff.WriteTo(f)
-	//logger.Get().Infof("tid=%s,pubRouter.DoBinlog  %s finish:%v", msg.TraceId, msg.MqName, err)
 	return n, err
 }
 

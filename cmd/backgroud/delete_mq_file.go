@@ -9,10 +9,6 @@ import (
 	"time"
 )
 
-//const (
-//	WaitFileLockTimeout = time.Second * 3
-//)
-
 type task struct {
 	name    string
 	notify  chan bool

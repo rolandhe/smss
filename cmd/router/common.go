@@ -3,7 +3,6 @@ package router
 import (
 	"github.com/rolandhe/smss/binlog"
 	"github.com/rolandhe/smss/cmd/protocol"
-	"github.com/rolandhe/smss/conf"
 	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/rolandhe/smss/pkg/nets"
 	"github.com/rolandhe/smss/standard"
@@ -79,16 +78,15 @@ func (ddl *ddlRouter) doBinlog(f *os.File, msg *protocol.RawMessage) (int64, err
 	return buff.WriteTo(f)
 }
 
-type sampleLogSupport struct {
-	logCount int64
+type routerSampleLogger struct {
+	logger.SampleLoggerSupport
 }
 
-func (sl *sampleLogSupport) sampleLog(scene string, msg *protocol.RawMessage, err error) {
+func (sl *routerSampleLogger) sampleLog(scene string, msg *protocol.RawMessage, err error) {
 	if msg.Src == protocol.RawMessageReplica {
 		return
 	}
-	if sl.logCount%conf.LogSample == 0 {
+	if sl.CanLogger() {
 		logger.Get().Infof("tid=%s,%s %s, eventId=%d,cost=%d ms, finish:%v", msg.TraceId, scene, msg.MqName, msg.EventId, msg.Cost(), err)
 	}
-	sl.logCount++
 }

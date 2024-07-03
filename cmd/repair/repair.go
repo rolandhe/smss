@@ -7,7 +7,7 @@ import (
 	"path"
 )
 
-func RepairLog(root string, meta store.Meta) (int64, error) {
+func CheckLogAndFix(root string, meta store.Meta) (int64, error) {
 
 	binlogRoot := path.Join(root, store.BinlogDir)
 	exist, err := dir.PathExist(binlogRoot)

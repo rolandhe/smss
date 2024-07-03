@@ -37,7 +37,7 @@ func (mc *MqMessageCommand) GetId() int64 {
 	return mc.id
 }
 
-func buildCommandsAndCalcSize(amsg *asyncMsg) ([][]byte, int) {
+func buildCommandsAndCalcSize(amsg *wrappedMsges) ([][]byte, int) {
 	var builder bytes.Buffer
 
 	size := 0

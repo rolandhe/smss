@@ -26,22 +26,6 @@ type WalMonitorSupport interface {
 	standard.LogFileControl
 }
 
-//type replicaLongtimeReader struct {
-//	serverBinlogBlockReader
-//	writeTimeout time.Duration
-//}
-//
-//func (r *replicaLongtimeReader) Output(conn net.Conn, msgs []*binlogBlock) error {
-//	hbuf := make([]byte, protocol.RespHeaderSize+4)
-//	binary.LittleEndian.PutUint16(hbuf, protocol.OkCode)
-//	msgLen := len(msgs[0].data)
-//	binary.LittleEndian.PutUint32(hbuf[protocol.RespHeaderSize:], uint32(msgLen))
-//	if err := nets.WriteAll(conn, hbuf, r.writeTimeout); err != nil {
-//		return err
-//	}
-//	return nets.WriteAll(conn, msgs[0].data, r.writeTimeout)
-//}
-
 func getFilePosByEventId(root string, eventId int64) (int64, int64, error) {
 	var fileId int64
 	var err error

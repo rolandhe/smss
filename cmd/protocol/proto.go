@@ -164,13 +164,10 @@ type RawMessage struct {
 	MqName    string
 	// 服务端收到pub信息时的时间戳
 	Timestamp int64
-
-	EventId int64
-
-	TraceId string
-
-	Body any
-	Skip bool
+	EventId   int64
+	TraceId   string
+	Body      any
+	Skip      bool
 }
 
 func (rm *RawMessage) GetDelay() int64 {

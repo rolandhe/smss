@@ -11,10 +11,6 @@ import (
 	"time"
 )
 
-//const (
-//	DefaultScanLifeTime int64 = 120 * 60 * 1000
-//)
-
 func StartLife(fstore store.Store, worker standard.MessageWorking) *tc.TimeTriggerControl {
 	lc := tc.NewTimeTriggerControl(fstore, "life", conf.LifeDefaultScanSec*1000, func(fstore store.Store) int64 {
 		traceId := fmt.Sprintf("life-%d", time.Now().UnixMilli())

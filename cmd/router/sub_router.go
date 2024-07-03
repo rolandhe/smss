@@ -84,14 +84,7 @@ func getSubPos(messageId int64, mqPath string) (int64, int64, error) {
 		}
 		return fileId, 0, nil
 	}
-	//if messageId == -1 {
-	//	fileId, err = standard.ReadMaxFileId(mqPath)
-	//	if err != nil {
-	//		return 0, 0, err
-	//	}
-	//	// todo
-	//	return fileId - 1, 0, nil
-	//}
+
 
 	return repair.FindMqPosByEventId(mqPath, messageId)
 }
