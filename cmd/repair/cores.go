@@ -22,7 +22,7 @@ func init() {
 	repairHandlers[protocol.CommandPub] = repairPub
 	repairHandlers[protocol.CommandCreateMQ] = repairCreate
 	repairHandlers[protocol.CommandDeleteMQ] = repairDelete
-	repairHandlers[protocol.CommandChangeLf] = repairChangLf
+	//repairHandlers[protocol.CommandChangeLf] = repairChangLf
 	repairHandlers[protocol.CommandDelay] = repairDelay
 	repairHandlers[protocol.CommandDelayApply] = repairDelayApply
 }

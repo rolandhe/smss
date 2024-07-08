@@ -13,13 +13,13 @@ const (
 )
 
 type MqInfo struct {
-	Name                  string      `json:"name" :"name"`
-	CreateEventId         int64       `json:"createEventId"`
-	CreateTimeStamp       int64       `json:"createTimeStamp" :"createTimeStamp"`
-	ExpireAt              int64       `json:"expireAt" :"expireAt"`
-	ChangeExpireAtEventId int64       `json:"changeExpireAtEventId"`
-	State                 MqStateEnum `json:"state" :"state"`
-	StateChange           int64       `json:"stateChange" :"stateChange"`
+	Name               string      `json:"name" :"name"`
+	CreateTimeStamp    int64       `json:"createTimeStamp"`
+	ExpireAt           int64       `json:"expireAt"`
+	CreateEventId      int64       `json:"createEventId"`
+	StateChangeTime    int64       `json:"stateChangeTime"`
+	StateChangeEventId int64       `json:"stateChangeEventId"`
+	State              MqStateEnum `json:"state"`
 }
 
 func (info *MqInfo) IsTemp() bool {
@@ -72,13 +72,13 @@ const (
 
 const (
 	BinlogDir = "binlog"
-	DataDir   = "data"
+	MQDir     = "mq"
 	MetaDir   = "meta"
 )
 
 type Meta interface {
 	CreateMQ(mqName string, defaultLifetime int64, eventId int64) (*MqInfo, error)
-	ChangeMQLife(mqName string, life int64, eventId int64) error
+	//ChangeMQLife(mqName string, life int64, eventId int64) error
 
 	SaveDelay(mqName string, payload []byte) error
 
@@ -110,7 +110,7 @@ type Store interface {
 
 	SaveDelayMsg(mqName string, payload []byte) error
 
-	ChangeMqLife(mqName string, life int64, eventId int64) error
+	//ChangeMqLife(mqName string, life int64, eventId int64) error
 
 	GetManagerMeta() ManagerMeta
 

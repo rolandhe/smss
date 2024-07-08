@@ -14,8 +14,6 @@ var WorkerWaitMsgTimeoutLogSample int64
 var MainStorePath string
 var MaxLogSize int64
 
-//var MqBufferSize int
-
 var StoreMaxDays int
 
 var StoreClearInterval int
@@ -25,6 +23,8 @@ var LifeDefaultScanSec int64
 var FistExecDelay int64
 
 var WaitFileDeleteLockerTimeout time.Duration
+
+var ServerAliveTimeout time.Duration
 
 var LogPath string
 
@@ -42,7 +42,9 @@ func Init() error {
 	}
 
 	Port = viper.GetInt("port")
-	DefaultIoWriteTimeout = time.Duration(viper.GetInt64("net.writeTimeout")) * time.Millisecond
+	DefaultIoWriteTimeout = time.Duration(viper.GetInt64("timeout.net.write")) * time.Millisecond
+	ServerAliveTimeout = time.Duration(viper.GetInt64("timeout.server.alive")) * time.Millisecond
+
 	WorkerBuffSize = viper.GetInt("worker.buffSize")
 	WorkerWaitMsgTimeout = time.Duration(viper.GetInt64("worker.waitMsgTimeout")) * time.Millisecond
 	WorkerWaitMsgTimeoutLogSample = viper.GetInt64("worker.waitMsgTimeoutLogSample")
@@ -50,9 +52,9 @@ func Init() error {
 	MaxLogSize = viper.GetInt64("store.maxLogSize")
 	StoreMaxDays = viper.GetInt("store.maxDays")
 	StoreClearInterval = viper.GetInt("store.clearInterval")
-	LifeDefaultScanSec = viper.GetInt64("life.defaultScanSec")
+	LifeDefaultScanSec = viper.GetInt64("background.life.defaultScanSec")
 
-	FistExecDelay = viper.GetInt64("delay.firstExec")
+	FistExecDelay = viper.GetInt64("background.delay.firstExec")
 	WaitFileDeleteLockerTimeout = time.Duration(viper.GetInt64("store.waitDelLockTimeoutMs")) * time.Millisecond
 
 	LogPath = viper.GetString("log.path")

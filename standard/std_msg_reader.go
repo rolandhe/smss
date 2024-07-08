@@ -9,14 +9,11 @@ import (
 	"github.com/rolandhe/smss/pkg/logger"
 	"os"
 	"path"
-	"time"
 )
 
 var WaitNewTimeoutErr = errors.New("wait timeout")
 var PeerClosedErr = errors.New("peer closed error")
 var MqWriterTermiteErr = dir.NewBizError("mq writer closed,maybe mq deleted")
-
-const AliveTimeout = time.Second * 30
 
 type CmdLine interface {
 	GetPayloadSize() int

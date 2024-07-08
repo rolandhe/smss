@@ -17,11 +17,8 @@ func NewMeta(root string) (store.Meta, error) {
 	return badger_meta.NewMeta(metaRoot)
 }
 
-// writerBuffSize int,
-
 func NewFileStore(root string, meta store.Meta) (store.Store, error) {
-
-	fsStoreRoot := path.Join(root, store.DataDir)
+	fsStoreRoot := path.Join(root, store.MQDir)
 	if err := ensureStoreDirectory(fsStoreRoot); err != nil {
 		meta.Close()
 		return nil, err
@@ -128,7 +125,7 @@ func (fs *fileStore) CreateMq(mqName string, life int64, eventId int64) error {
 	if err != nil {
 		return err
 	}
-	logger.Get().Infof("%v", info)
+	logger.Get().Infof("%+v", info)
 	p := MqPath(fs.root, mqName)
 	err = dir.EnsurePathExist(p)
 	if err != nil {
@@ -158,9 +155,9 @@ func (fs *fileStore) ForceDeleteMQ(mqName string, cb func() error) error {
 	return err
 }
 
-func (fs *fileStore) ChangeMqLife(mqName string, life int64, eventId int64) error {
-	return fs.meta.ChangeMQLife(mqName, life, eventId)
-}
+//func (fs *fileStore) ChangeMqLife(mqName string, life int64, eventId int64) error {
+//	return fs.meta.ChangeMQLife(mqName, life, eventId)
+//}
 
 func (fs *fileStore) GetManagerMeta() store.ManagerMeta {
 	return fs.meta

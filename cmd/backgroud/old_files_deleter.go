@@ -65,7 +65,7 @@ func deleteOldFiles(fstore store.Store, worker standard.MessageWorking, delMqFil
 			continue
 		}
 		if store.MqStateDeleted == info.State {
-			if info.StateChange+DeleteFileAfterStateChangeTimeout <= time.Now().UnixMilli() {
+			if info.StateChangeTime+DeleteFileAfterStateChangeTimeout <= time.Now().UnixMilli() {
 				err = removeMq(worker, info.Name, traceId)
 				logger.Get().Infof("tid=%s,deleteOldFiles to delete expired mq %s err:%v", traceId, info.Name, err)
 			}

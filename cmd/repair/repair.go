@@ -8,7 +8,6 @@ import (
 )
 
 func CheckLogAndFix(root string, meta store.Meta) (int64, error) {
-
 	binlogRoot := path.Join(root, store.BinlogDir)
 	exist, err := dir.PathExist(binlogRoot)
 	if err != nil {
@@ -17,7 +16,7 @@ func CheckLogAndFix(root string, meta store.Meta) (int64, error) {
 	if !exist {
 		return 1, nil
 	}
-	dataRoot := path.Join(root, store.DataDir)
+	dataRoot := path.Join(root, store.MQDir)
 	exist, err = dir.PathExist(dataRoot)
 	if err != nil {
 		return 0, err

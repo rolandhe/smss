@@ -11,7 +11,7 @@ import (
 var (
 	role  = flag.String("role", "master", "实例角色, master or slave")
 	host  = flag.String("host", "", "master host")
-	port  = flag.Int("port", 8080, "master port")
+	port  = flag.Int("port", 12301, "master port")
 	seqId = flag.Int64("event", 0, "replica event id")
 )
 

@@ -39,7 +39,8 @@ func (r *deleteMqRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, 
 	}
 	if info == nil {
 		if msg.Src == protocol.RawMessageReplica {
-			return 0, nil
+			msg.Skip = true
+			return r.doBinlog(f, msg)
 		}
 		return 0, dir.NewBizError("mq not exist")
 	}
@@ -47,6 +48,9 @@ func (r *deleteMqRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, 
 	return r.doBinlog(f, msg)
 }
 func (r *deleteMqRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) error {
+	if msg.Src == protocol.RawMessageReplica && msg.Skip {
+		return nil
+	}
 	err := deleteMqRoot(msg.MqName, "deleteMqRouter", r.fstore, r.delExecutor, msg.TraceId)
 	logger.Get().Infof("tid=%s,deleteMqRouter.AfterBinlog, mq=%s,eventId=%d, err:%v", msg.TraceId, msg.MqName, msg.EventId, err)
 	return err
@@ -55,7 +59,7 @@ func (r *deleteMqRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64
 func deleteMqRoot(mqName, who string, fstore store.Store, delExecutor protocol.DelMqFileExecutor, traceId string) error {
 	return fstore.ForceDeleteMQ(mqName, func() error {
 		waiter := delExecutor.Submit(mqName, who, traceId)
-		if !waiter(0) {
+		if !waiter(time.Second * 2) {
 			logger.Get().Infof("tid=%s,delete %s mq file failed", traceId, mqName)
 			return errors.New("delete mq file failed")
 		}

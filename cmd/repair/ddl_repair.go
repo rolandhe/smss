@@ -1,7 +1,6 @@
 package repair
 
 import (
-	"encoding/binary"
 	"github.com/rolandhe/smss/store"
 	"github.com/rolandhe/smss/store/fss"
 	"os"
@@ -45,15 +44,15 @@ func repairDelete(lBinlog *lastBinlog, binlogFile, dataRoot string, meta store.M
 	return err
 }
 
-func repairChangLf(lBinlog *lastBinlog, binlogFile, dataRoot string, meta store.Meta) error {
-	lf := int64(binary.LittleEndian.Uint64(lBinlog.payload))
-	info, err := meta.GetMQInfo(lBinlog.mqName)
-	if err != nil {
-		return err
-	}
-	if info == nil || info.ExpireAt != lf {
-		err = os.Truncate(binlogFile, lBinlog.pos)
-		return err
-	}
-	return nil
-}
+//func repairChangLf(lBinlog *lastBinlog, binlogFile, dataRoot string, meta store.Meta) error {
+//	lf := int64(binary.LittleEndian.Uint64(lBinlog.payload))
+//	info, err := meta.GetMQInfo(lBinlog.mqName)
+//	if err != nil {
+//		return err
+//	}
+//	if info == nil || info.ExpireAt != lf {
+//		err = os.Truncate(binlogFile, lBinlog.pos)
+//		return err
+//	}
+//	return nil
+//}

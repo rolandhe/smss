@@ -59,7 +59,8 @@ func doDelay(fstore store.Store, worker standard.MessageWorking) int64 {
 		isDefault = true
 		ret = time.Now().UnixMilli() + DefaultDelayTimeout
 	}
-	logger.Get().Infof("tid=%s,doDelay ok,next time is %d, isDefualt %v", tid, ret, isDefault)
+
+	logger.Get().Infof("tid=%s,doDelay ok,next time is %d(%v), isDefualt %v", tid, ret, time.UnixMilli(ret).Local(), isDefault)
 	return ret
 }
 

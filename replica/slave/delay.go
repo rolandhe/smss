@@ -6,9 +6,10 @@ import (
 )
 
 func DelayHandler(cmd *protocol.DecodedRawMessage, payload []byte, worker DependWorker) error {
-	daPayload := &protocol.DelayApplyPayload{
+	daPayload := &protocol.DelayPayload{
 		Payload: payload,
 	}
+
 	msg := &protocol.RawMessage{
 		Src:       protocol.RawMessageReplica,
 		WriteTime: cmd.WriteTime,

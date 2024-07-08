@@ -1,10 +1,10 @@
-port: 8083
+port: 12302
 log:
   path: stdout
   sample: 1000
 store:
-  path: mq-data
-  maxLogSize: 2147483648
+  path: data
+  maxLogSize: 1073741824
   maxDays: 7
   clearInterval: 10
   waitDelLockTimeoutMs: 3000
@@ -12,11 +12,15 @@ worker:
   buffSize: 1000
   waitMsgTimeout: 1000
   waitMsgTimeoutLogSample: 30
-net:
-  writeTimeout: 1000
-life:
-  defaultScanSec: 7200
-delay:
-  firstExec: 1
+timeout:
+  net:
+    write: 1000
+  server:
+    alive: 30000
+background:
+  life:
+     defaultScanSec: 7200
+  delay:
+     firstExec: 1
 
 

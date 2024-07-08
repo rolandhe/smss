@@ -34,7 +34,7 @@ const (
 	CommandPub      CommandEnum = 1
 	CommandCreateMQ CommandEnum = 2
 	CommandDeleteMQ CommandEnum = 3
-	CommandChangeLf CommandEnum = 4
+	//CommandChangeLf CommandEnum = 4
 
 	CommandDelay CommandEnum = 16
 	CommandAlive CommandEnum = 17

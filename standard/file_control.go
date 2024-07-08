@@ -59,7 +59,7 @@ func (nd *NotifyDevice) Wait(endNotify <-chan int) WaitNotifyResult {
 			return WaitNotifyResultTermite
 		}
 		return WaitNotifyResultOK
-	case <-time.After(AliveTimeout):
+	case <-time.After(conf.ServerAliveTimeout):
 		return WaitNotifyResultTimeout
 	}
 }

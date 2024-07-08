@@ -34,7 +34,7 @@ func (r *validListRouter) Router(conn net.Conn, commHeader *protocol.CommonHeade
 		if info.State == store.MqStateDeleted {
 			continue
 		}
-		ok := eventId == 0 || (info.CreateEventId <= eventId && (info.CreateEventId == info.ChangeExpireAtEventId || eventId < info.ChangeExpireAtEventId))
+		ok := eventId == 0 || (info.CreateEventId <= eventId && info.State == store.MqStateNormal)
 		if ok {
 			rets = append(rets, &outMqInfo{
 				MqInfo: info,

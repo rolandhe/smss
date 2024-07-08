@@ -35,12 +35,20 @@ func (r *createMqRouter) Router(conn net.Conn, header *protocol.CommonHeader, wo
 	if curInsRole != store.Master {
 		return nets.OutputRecoverErr(conn, "just master can manage mq", NetWriteTimeout)
 	}
+
+	expireAt := int64(binary.LittleEndian.Uint64(buf))
+
+	if expireAt < 0 || (expireAt > 0 && expireAt-time.Now().UnixMilli() < 10000) {
+		return nets.OutputRecoverErr(conn, "expire MUST more than 10s", NetWriteTimeout)
+	}
+
 	msg := &protocol.RawMessage{
 		Command:   header.GetCmd(),
 		MqName:    header.MQName,
 		Timestamp: time.Now().UnixMilli(),
 		TraceId:   header.TraceId,
 		Body: &protocol.DDLPayload{
+			// 生命周期，unix时间戳，即在什么时候过期
 			Payload: buf,
 		},
 	}
@@ -60,6 +68,16 @@ func (r *createMqRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, 
 		}
 		return 0, dir.NewBizError("mq exist")
 	}
+
+	if msg.Src == protocol.RawMessageReplica {
+		payload := msg.Body.(*protocol.DDLPayload)
+		expireAt := int64(binary.LittleEndian.Uint64(payload.Payload))
+		if expireAt != 0 && expireAt <= time.Now().UnixMilli() {
+			msg.Skip = true
+			return r.doBinlog(f, msg)
+		}
+	}
+
 	setupRawMessageEventIdAndWriteTime(msg, 1)
 	return r.doBinlog(f, msg)
 }
@@ -67,13 +85,13 @@ func (r *createMqRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64
 	if msg.Src == protocol.RawMessageReplica && msg.Skip {
 		return nil
 	}
-
 	payload := msg.Body.(*protocol.DDLPayload)
 	buf := payload.Payload
 	lf := binary.LittleEndian.Uint64(buf)
 	err := r.fstore.CreateMq(msg.MqName, int64(lf), msg.EventId)
-	if err == nil && lf > 0 {
+	if err == nil && msg.Src != protocol.RawMessageReplica && lf > 0 {
 		r.lc.Set(int64(lf), true)
 	}
+
 	return err
 }

@@ -79,11 +79,16 @@ func (r *delayRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, err
 	}
 	if info == nil || info.IsInvalid() {
 		if msg.Src == protocol.RawMessageReplica {
-			return 0, nil
+			msg.Skip = true
+			return r.outBinlog(f, msg)
 		}
 		return 0, dir.NewBizError("mq not exist")
 	}
 
+	return r.outBinlog(f, msg)
+}
+
+func (r *delayRouter) outBinlog(f *os.File, msg *protocol.RawMessage) (int64, error) {
 	setupRawMessageEventIdAndWriteTime(msg, 1)
 	if msg.Src != protocol.RawMessageReplica {
 		storeMsg := msg.Body.(*protocol.DelayPayload)
@@ -103,6 +108,9 @@ func (r *delayRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, err
 }
 
 func (r *delayRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) error {
+	if msg.Src == protocol.RawMessageReplica && msg.Skip {
+		return nil
+	}
 	storeMsg := msg.Body.(*protocol.DelayPayload)
 
 	err := r.fstore.SaveDelayMsg(msg.MqName, storeMsg.Payload)

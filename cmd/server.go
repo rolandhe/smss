@@ -85,7 +85,7 @@ func StartServer(root string, insRole *InstanceRole) {
 		logger.Get().Errorf("listen err:%v", err)
 		return
 	}
-	logger.Get().Infof("finish to listen")
+	logger.Get().Infof("started server:%d", conf.Port)
 	for {
 		var conn net.Conn
 		conn, err = ln.Accept()
@@ -99,13 +99,15 @@ func StartServer(root string, insRole *InstanceRole) {
 }
 
 func startBgAndInitRouter(fstore store.Store, worker standard.MessageWorking, role store.InstanceRoleEnum) {
-	delExec := backgroud.StartMqFileDelete(fstore, role)
+	delExec := backgroud.StartMqFileDelete(fstore)
 	backgroud.StartClearOldFiles(fstore, worker, delExec)
 	var lc *tc.TimeTriggerControl
 	if role == store.Master {
 		delayCtrl := backgroud.StartDelay(fstore, worker)
 		router.InitDelay(fstore, delayCtrl)
 		lc = backgroud.StartLife(fstore, worker)
+	} else {
+		router.InitDelay(fstore, nil)
 	}
 
 	router.Init(fstore, lc, delExec)

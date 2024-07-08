@@ -55,23 +55,29 @@ func (r *pubRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, error
 	}
 	if info == nil || info.IsInvalid() {
 		if msg.Src == protocol.RawMessageReplica {
-			return 0, nil
+			msg.Skip = true
+			return r.outputBinlog(f, msg)
 		}
 		logger.Get().Infof("tid=%s,pubRouter.DoBinlog %s not exist", msg.TraceId, msg.MqName)
 		return 0, dir.NewBizError("mq not exist")
 	}
 
+	return r.outputBinlog(f, msg)
+}
+
+func (r *pubRouter) outputBinlog(f *os.File, msg *protocol.RawMessage) (int64, error) {
 	payload := msg.Body.(*protocol.PubPayload)
 
 	setupRawMessageEventIdAndWriteTime(msg, payload.BatchSize)
 	buff := binlog.PubEncoder(msg)
 
-	var n int64
-	n, err = buff.WriteTo(f)
-	return n, err
+	return buff.WriteTo(f)
 }
 
 func (r *pubRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) error {
+	if msg.Src == protocol.RawMessageReplica && msg.Skip {
+		return nil
+	}
 	payload := msg.Body.(*protocol.PubPayload)
 	messages, _ := protocol.ParsePayload(payload.Payload, fileId, pos, msg.EventId)
 	err := r.fstore.Save(msg.MqName, messages)
