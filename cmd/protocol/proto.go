@@ -198,7 +198,7 @@ type DelayPayload struct {
 }
 
 type DelayApplyPayload struct {
-	// delay id + delay time + pub message
+	// delay time + eventId  + pub message
 	Payload []byte
 }
 
@@ -213,30 +213,28 @@ type lockerHolder struct {
 }
 
 func (l *DelFileLock) Lock(name, who string, traceId string) (func(), func(d time.Duration) bool) {
-	ch := make(chan struct{})
-
 	holder := &lockerHolder{
 		ch:      make(chan struct{}),
 		who:     who,
 		traceId: traceId,
 	}
 
-	old, loaded := l.Map.LoadOrStore(name, holder)
-	oldHolder := old.(*lockerHolder)
+	elem, loaded := l.Map.LoadOrStore(name, holder)
 	if loaded {
+		oldHolder := elem.(*lockerHolder)
 		return nil, func(d time.Duration) bool {
 			select {
 			case <-oldHolder.ch:
 				return true
 			case <-time.After(d):
-				logger.Get().Infof("tid=%s,wait lock timeout, by %s(src-tid=%s) locked", traceId, oldHolder.who, oldHolder.traceId)
+				logger.Get().Infof("tid=%s,wait lock %s timeout,i am %s, by %s(src-tid=%s) locked", traceId, name, who, oldHolder.who, oldHolder.traceId)
 				return false
 			}
 		}
 	}
 	return func() {
 		l.Map.Delete(name)
-		close(ch)
+		close(holder.ch)
 	}, nil
 }
 

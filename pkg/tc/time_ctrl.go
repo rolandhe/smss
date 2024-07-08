@@ -86,7 +86,8 @@ func (lc *TimeTriggerControl) Process() {
 		select {
 		case <-lc.quickAlive:
 			d = lc.since()
-			logger.Get().Infof("delay message notify for %s of %d", lc.name, d.Milliseconds())
+			nextTime := time.Now().Add(d)
+			logger.Get().Infof("delay message notify for %s of %d(%v)", lc.name, d.Milliseconds(), nextTime)
 		case <-time.After(d):
 			logger.Get().Infof("wakeup for %s of %dms", lc.name, d.Milliseconds())
 			next := lc.doBiz(lc.fstore)

@@ -61,6 +61,14 @@ func getNextSeq(lBinlog *lastBinlog) int64 {
 		return lBinlog.messageSeqId + 1
 	}
 	payload := lBinlog.payload
-	_, count := protocol.CheckPayload(payload[:len(payload)-1])
+	if lBinlog.cmd == protocol.CommandDelayApply {
+		payload = payload[16:]
+	}
+
+	ok, count := protocol.CheckPayload(payload[:len(payload)-1])
+	if !ok {
+		panic("invalid payload")
+	}
+
 	return lBinlog.messageSeqId + int64(count)
 }

@@ -29,15 +29,18 @@ func SlaveReplica(masterHost string, masterPort int, seqId int64, needSync bool,
 		for {
 			newSeqId = run(client, newSeqId)
 			time.Sleep(time.Millisecond * 2000)
-			client, err = newSlaveReplicaClient(masterHost, masterPort, &dependWorker{
-				MessageWorking: worker,
-				ManagerMeta:    fstore.GetManagerMeta(),
-			})
-			if err != nil {
+			for {
+				client, err = newSlaveReplicaClient(masterHost, masterPort, &dependWorker{
+					MessageWorking: worker,
+					ManagerMeta:    fstore.GetManagerMeta(),
+				})
+				if err == nil {
+					break
+				}
 				logger.Get().Infof("new sc err:%v", err)
 				time.Sleep(time.Millisecond * 5000)
-				continue
 			}
+
 		}
 	}()
 	return nil
