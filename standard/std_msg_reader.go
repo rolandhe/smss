@@ -218,6 +218,8 @@ func (r *StdMsgBlockReader[T]) readCore(endNotify <-chan int) ([]*T, error) {
 		fd:  r.ctrl.curFs.Fd(),
 	}
 
+	defer rctx.clearMmapData()
+
 	var readMsgs []*T
 	step := 0
 	var cmdStep commandStep
@@ -277,6 +279,7 @@ func (r *StdMsgBlockReader[T]) readCore(endNotify <-chan int) ([]*T, error) {
 			r.parser.ChangeMessagePos(last, r.ctrl.fileId, r.ctrl.pos)
 		}
 	}
+
 	return readMsgs, nil
 }
 

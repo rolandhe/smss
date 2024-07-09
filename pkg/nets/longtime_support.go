@@ -82,7 +82,7 @@ func LongTimeRun[T any](conn net.Conn, biz, tid string, ackTimeout, writeTimeout
 			}
 			continue
 		}
-		if err == standard.WaitNewTimeoutErr {
+		if errors.Is(err, standard.WaitNewTimeoutErr) {
 			err = OutAlive(conn, writeTimeout)
 			logger.Get().Infof("tid=%s,sub wait new data timeout, send alive:%v", tid, err)
 			if err != nil {
@@ -90,14 +90,15 @@ func LongTimeRun[T any](conn net.Conn, biz, tid string, ackTimeout, writeTimeout
 			}
 			continue
 		}
-		if err == standard.PeerClosedErr {
+		if errors.Is(err, standard.PeerClosedErr) {
 			logger.Get().Infof("tid=%s,PeerClosedErr:%v", tid, err)
 			return err
 		}
-		if err == standard.MqWriterTermiteErr {
+		if errors.Is(err, standard.MqWriterTermiteErr) {
 			logger.Get().Infof("tid=%s,MqWriterTermiteErr:%v", tid, err)
 			return OutSubEnd(conn, writeTimeout)
 		}
+
 		return OutputRecoverErr(conn, err.Error(), writeTimeout)
 	}
 }

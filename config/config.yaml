@@ -1,4 +1,4 @@
-port: 12302
+port: 12301
 log:
   path: stdout
   sample: 1000

@@ -3,6 +3,7 @@ package standard
 import (
 	"encoding/binary"
 	"errors"
+	"github.com/rolandhe/smss/pkg/logger"
 	"syscall"
 )
 
@@ -90,6 +91,8 @@ type readContext struct {
 	fd   uintptr
 	pos  int64
 	data []byte
+
+	rawPointer []byte
 }
 
 func (ctx *readContext) consumeData(size int) {
@@ -113,10 +116,25 @@ func (ctx *readContext) next(fileSize int64) error {
 	if (fileSize - start) < winSize {
 		winSize = fileSize - start
 	}
+	ctx.clearMmapData()
 	data, err := syscall.Mmap(int(ctx.fd), start, int(winSize), syscall.PROT_READ, syscall.MAP_SHARED)
 	if err != nil {
 		return err
 	}
+	ctx.rawPointer = data
 	ctx.data = data[offset:]
 	return nil
+}
+
+func (ctx *readContext) clearMmapData() {
+	if ctx.rawPointer == nil {
+		return
+	}
+
+	err := syscall.Munmap(ctx.rawPointer)
+	ctx.rawPointer = nil
+	if err != nil {
+		logger.Get().Error("failed to clear mmap data,err:%v", err)
+		panic("failed to clear mmap data")
+	}
 }
