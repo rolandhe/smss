@@ -87,9 +87,9 @@ func (lc *TimeTriggerControl) Process() {
 		case <-lc.quickAlive:
 			d = lc.since()
 			nextTime := time.Now().Add(d)
-			logger.Get().Infof("delay message notify for %s of %d(%v)", lc.name, d.Milliseconds(), nextTime)
+			logger.Get().Infof(" %s notify, next time is %d(%v)", lc.name, d.Milliseconds(), nextTime)
 		case <-time.After(d):
-			logger.Get().Infof("wakeup for %s of %dms", lc.name, d.Milliseconds())
+			logger.Get().Infof("%s wakeup, after %dms", lc.name, d.Milliseconds())
 			next := lc.doBiz(lc.fstore)
 			if next <= 0 {
 				next = time.Now().Add(time.Millisecond * DefaultWaitTimeoutMills).UnixMilli()
