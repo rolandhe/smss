@@ -16,6 +16,11 @@ import (
 	"path"
 )
 
+const (
+	ioBufferSize  = 64 * 1024
+	cmdCommonSize = 512
+)
+
 var repairHandlers = map[protocol.CommandEnum]func(lBinlog *lastBinlog, binlogFile, dataRoot string, meta store.Meta) error{}
 
 func init() {
@@ -45,35 +50,6 @@ func ensureLogFile(ppath string) (string, int64, int64, error) {
 
 	return p, maxLogFileId, fileSize, nil
 }
-
-//func readAllBuf(buf []byte, r *bufio.Reader) error {
-//	needLen := len(buf)
-//
-//	count := 0
-//	for {
-//		n, err := r.Read(buf)
-//		if err != nil {
-//			return err
-//		}
-//		needLen -= n
-//		//if count > 0 {
-//		//	log.Println(1)
-//		//}
-//		if needLen == 0 {
-//			break
-//		}
-//		count++
-//		buf = buf[n:]
-//	}
-//	//n, err := r.Read(buf)
-//	//if err != nil {
-//	//	return err
-//	//}
-//	//if n != len(buf) {
-//	//	return errors.New("bad file, no enough")
-//	//}
-//	return nil
-//}
 
 type extractLog[C, T any] interface {
 	extractCmd(cmdBuf []byte) (*C, int)
@@ -147,9 +123,7 @@ func readLastLogBlock[C, T any](startPosition int64, p string, fileSize int64, e
 		return nil, err
 	}
 	defer f.Close()
-	r := bufio.NewReader(f)
-
-	cmdCommonSize := 512
+	r := bufio.NewReaderSize(f, ioBufferSize)
 
 	buf := make([]byte, cmdCommonSize)
 	if startPosition >= fileSize {
