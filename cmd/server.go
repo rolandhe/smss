@@ -125,12 +125,12 @@ func handleConnection(conn net.Conn, worker *backWorker) {
 		header, err := router.ReadHeader(conn)
 		if err != nil {
 			if nets.IsTimeoutError(err) {
+				continuesTimeoutCount++
 				if continuesTimeoutCount == 360 {
 					logger.Get().Infof("handleConnection no cmd more than 30 mins:%v", err)
 					return
 				}
-				logger.Get().Infof("handleConnection read header err:%v", err)
-				continuesTimeoutCount++
+				logger.Get().Infof("handleConnection times=%d, read header err:%v", continuesTimeoutCount, err)
 				continue
 			}
 			logger.Get().Infof("handleConnection read header err:%v", err)
