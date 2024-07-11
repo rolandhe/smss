@@ -114,7 +114,7 @@ func noAckPush(conn net.Conn, tid string, reader serverBinlogBlockReader) error 
 			count++
 			continue
 		}
-		if err == standard.WaitNewTimeoutErr {
+		if errors.Is(err, standard.WaitNewTimeoutErr) {
 			err = nets.OutAlive(conn, BinlogOutTimeout)
 			logger.Get().Infof("tid=%s,sub wait new data timeout, send alive:%v", tid, err)
 			if err != nil {

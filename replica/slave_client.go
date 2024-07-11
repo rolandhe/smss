@@ -172,16 +172,16 @@ func applyBinlog(body []byte, cmdParse *msgParser, worker slave.DependWorker, co
 		payload = next[:cmdLine.GetPayloadSize()-1]
 	}
 
-	hfunc := bbHandlerMap[cmdLine.GetCmd()]
-	if hfunc == nil {
+	hFunc := bbHandlerMap[cmdLine.GetCmd()]
+	if hFunc == nil {
 		logger.Get().Infof("not support cmd:%d", cmdLine.GetCmd())
 		return 0, dir.NewBizError("not support cmd")
 	}
 	st := time.Now().UnixMilli()
-	err = hfunc(cmdParse.cmd, payload, worker)
+	err = hFunc(cmdParse.cmd, payload, worker)
 	if count%conf.LogSample == 0 {
-		rcost := time.Now().UnixMilli() - st
-		logger.Get().Infof("slave: tid=%s,cmd=%d,eventId=%d,count=%d,delay=%dms,rcost=%d,err:%v", cmdParse.cmd.TraceId, cmdParse.cmd.Command, cmdParse.cmd.EventId, count, cmdParse.cmd.GetDelay(), rcost, err)
+		rCost := time.Now().UnixMilli() - st
+		logger.Get().Infof("slave: tid=%s,cmd=%d,eventId=%d,count=%d,delay=%dms,rCost=%d,err:%v", cmdParse.cmd.TraceId, cmdParse.cmd.Command, cmdParse.cmd.EventId, count, cmdParse.cmd.GetDelay(), rCost, err)
 	}
 	return cmdParse.cmd.EventId, err
 }
