@@ -1,6 +1,6 @@
 port: 12301
 log:
-  path: stdout
+  path: logs
   sample: 1000
 store:
   path: data

@@ -12,9 +12,9 @@ import (
 	"time"
 )
 
-const NetReadTimeout = time.Millisecond * 2000
+const NetReadTimeout = time.Millisecond * 5000
 const NetHeaderTimeout = time.Millisecond * 5000
-const NetWriteTimeout = time.Millisecond * 2000
+const NetWriteTimeout = time.Millisecond * 5000
 
 var nextEventId int64
 var curInsRole store.InstanceRoleEnum
