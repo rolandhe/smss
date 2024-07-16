@@ -106,7 +106,7 @@ func noAckPush(conn net.Conn, tid string, reader serverBinlogBlockReader) error 
 			}
 			cost := start - time.Now().UnixMilli()
 			totalCost += cost
-			if count%conf.LogSample == 0 {
+			if conf.LogSample > 0 && count%conf.LogSample == 0 {
 				logger.Get().Infof("master to slave:tid=%s, eventId=%d,count=%d, delay time=%dms,readDelay=%dms,total cost=%dms", tid, msgs[0].rawMsg.EventId, count, readDelay+cost, readDelay, totalCost)
 			}
 			count++

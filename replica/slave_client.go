@@ -179,7 +179,7 @@ func applyBinlog(body []byte, cmdParse *msgParser, worker slave.DependWorker, co
 	}
 	st := time.Now().UnixMilli()
 	err = hFunc(cmdParse.cmd, payload, worker)
-	if count%conf.LogSample == 0 {
+	if conf.LogSample > 0 && count%conf.LogSample == 0 {
 		rCost := time.Now().UnixMilli() - st
 		logger.Get().Infof("slave: tid=%s,cmd=%d,eventId=%d,count=%d,delay=%dms,rCost=%d,err:%v", cmdParse.cmd.TraceId, cmdParse.cmd.Command, cmdParse.cmd.EventId, count, cmdParse.cmd.GetDelay(), rCost, err)
 	}

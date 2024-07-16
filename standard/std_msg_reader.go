@@ -105,7 +105,7 @@ func (r *StdMsgBlockReader[T]) waitFs(endNotify <-chan int) error {
 			logger.Get().Infof("%s waited file %d,notify to %s, ret=WaitNotifyResultTimeout", r.subject, r.ctrl.fileId, r.whoami)
 			return WaitNewTimeoutErr
 		}
-		if r.logCount%conf.LogSample == 0 {
+		if conf.LogSample > 0 && r.logCount%conf.LogSample == 0 {
 			logger.Get().Infof("%s waited file %d ok,notify to %s,count=%d", r.subject, r.ctrl.fileId, r.whoami, r.logCount)
 		}
 		r.logCount++
@@ -186,7 +186,7 @@ func (r *StdMsgBlockReader[T]) waitPos(endNotify <-chan int) error {
 			logger.Get().Infof("%s waited pos,notify %d.%d %s,ret=WaitNotifyResultTimeout", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami)
 			return WaitNewTimeoutErr
 		}
-		if r.logCount%conf.LogSample == 0 {
+		if conf.LogSample > 0 && r.logCount%conf.LogSample == 0 {
 			logger.Get().Infof("%s waited pos ok,notify %d.%d %s,count=%d", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami, r.logCount)
 		}
 		r.logCount++

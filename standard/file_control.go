@@ -118,7 +118,7 @@ func (n *notifier) notifyAll(closed bool) {
 			return
 		}
 		if c.Notify() {
-			if n.logCount%conf.LogSample == 0 {
+			if conf.LogSample > 0 && n.logCount%conf.LogSample == 0 {
 				logger.Get().Infof("writer of %s notify to %s,count=%d", n.subject, k, n.logCount)
 			}
 		}
