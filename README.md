@@ -51,6 +51,98 @@ role,表示以什么角色来启动实例，角色包括master和slave
 ./smss -role slave -host 127.0.0.1 -port 12301 -event 0
 ``
 
-event, smss的设计里，每一个写操作（包括发布消息、创建、删除mq，）都有一个eventId，eventId是唯一且递增的，根据这个eventId可以定位到哪个数据文件的哪个位置。
+event, smss的设计里，每一个写操作（包括发布消息、创建、删除mq）都有一个eventId，eventId是唯一且递增的，根据这个eventId可以定位到哪个数据文件的哪个位置。
 event参数表示slave已经复制完的事件，master需要发送下一个事件的数据，当event设置为0时，表示master需要从它的第一个文件的、第0个字节开始发送数据。
 
+# 设计
+## 总体架构
+![架构图](./doc/arch.png)
+
+### 命令集
+
+| 命令  | 数值  |                                                说明 |
+|:----|:----|--------------------------------------------------:|
+|CommandSub| 0   |                                              订阅消息 |
+|CommandPub| 1   |                                              发布消息 |
+|CommandCreateMQ| 2   |                                           创建topic |
+|CommandDeleteMQ| 3   |                                           删除topic |
+|CommandDelay| 16  |                                            发布延迟消息 |
+|CommandAlive| 17  |                连接探活，类似于mysql的ping/pong,用于判断连接是否存活 |
+|CommandReplica| 64  |                                        复制binlog指令 |
+|CommandValidList| 99  |             读取当前有效的topic，处于标记删除或者超过生命周期的topic都不展示 |
+|CommandList| 100 |                         读取所有的topic，包括标记删除和超过生命周期的 |
+|CommandDelayApply| 101 | 延迟的消息真正发布，延迟消息到时触发后，真正把消息发布出去，内部使用，超过100的指令都是内部使用 |
+
+### header定义
+#### request header
+由固定20个字节组成，有3个段是固定的，其他根据不同的cmd有所不同。  
+
+|1 byte， cmd| 2个字节，topic名称的长度 | ...,不同的cmd，有所不同 |1个字节，traceId的长度|
+|----|-----------------|-----------------|-----|
+
+如果topic名称的长度不为0，那么header后面跟的就是topic的名字；   
+如果traceId的长度不为0，那么name后面跟的就是traceId；   
+再后面跟的就是每种不同的cmd要求的payload的数据。   
+
+#### response header
+
+由固定10个字节组成，前2个字节表示状态吗，后面根据不同的状态码有所不同。   
+
+|状态码|数值|说明|
+|---|---|---|
+|OkCode|200|正确|
+|ErrCode|400|出现错误，header后面跟错误信息|
+|AliveCode|201|订阅场景使用，smss等待一段时间没有发现新消息进入，会给订阅端发送AliveCode，表示smss还活着|
+|SubEndCode|255|订阅结束，通知订阅端，当前topic已经删除，不能再订阅，用于topic被删除或者生命周期结束被触发|
+
+## 存储设计
+
+smss要存储的数据包括：
+* topic的元数据，比如topic的名称、创建时间、状态、生命周期等
+* 消息数据，包括binlog数据，以及topic中的消息数据
+* 延迟消息数据
+
+元数据和延迟消息数据我们使用kv存储，我们选用了badger数据库存储，它是dgraph底层的存储引擎，
+实现原理与rocksdb类似，采用lsm技术实现，但它是纯golang开发，可以更好的嵌入golang应用中，而按照官方说法，性能不亚于纯c的rocksdb。
+
+而消息数据，包括binlog和topic数据采用纯文件系统存储，消息队列的存储与rdbms相比简单的多，它并不需要支持acid，对于已经存储过的
+每条消息都是只读的，因此可以直接采用顺序写就可以完成任务，还保持了高效的性能。
+
+### 元数据存储
+
+badger是一个kv数据库，与所有的其他kv数据库相同，它是以key为主键，且按照key的顺序存储的，badger内部所有的可以都是有序存储的，排序是按照key的二进制进行的。   
+
+利用badger的key有序性，我们可以对不同的元数据进行分组：
+
+* topic的基础信息的key以“norm@"作为前缀，可以使用前缀扫描迅速的找出所有的topic
+* 带生命周期的topic还会有一个以"lf@"作为前缀的key，其格式是 lf@ + topic失效时间戳 + topic name，利用key的有序性可以快速扫描出所有失效的topic
+* 延迟消息存储，虽然延迟消息不是元数据，但我们可以使用badger存储，它的前缀是 "delay@", 其完整格式是 delay@ + 消息触发时间戳 + 产生延迟消息的eventId + topic name， 使用eventId，是为了保证key的唯一性
+
+### 消息数据
+
+消息数据都是以文件存储的，每个文件的名称是顺序递增的数字，每个文件的大小默认是1G，可配，当超过1G是马上开启下一个文件。
+
+#### binlog
+
+binlog存储在${store.path}/binlog目录下，每个文件有多个数据块组成，每个数据块由 cmd和payload数据组成，cmd中会包含后续payload数据的大小，cmd由cmd大小+cmd信息组成，为了更好的可视化，cmd以字符串的形式存在，且cmd和payload都以\n结束，
+这样就可以使用文本工具来浏览数据。
+
+#### topic
+
+为避免所有的topic落在一个目录下，每个topic是一个三级目录，一、二级目录个100个（总共10000），目录名是0-99，topic名称作为三级目录，多个1G大小的文件用于存储消息，
+每个topic会按照名字和不同的salt产出hash值，均匀的散落在一、二级目录下。topic的消息数据格式与binlog类似，也是可视的。
+
+#### 双写及事务
+
+smss设计为双写，binlog和topic数据各写一份，这点类似mysql，但与rocketmq不同，rocketmq的topic不存储具体数据仅仅存消息在commitlog中的索引，这样可以减小io和磁盘占用，但订阅消息时需要使用fseek在commitlog中不断跳跃（没有具体细究，可能会理解错误），smss希望避免跳跃，
+且职责分离，binlog用于复制和smss崩溃后恢复，topic用于客户端订阅，由于smss定位是小场景，数据不会多，这么设计会非常简单。   
+
+双写自然就会涉及事务，smss采用3个手段来避免数据不一致：
+
+* 单线程写
+* 数据先在内存内处理好，然后一次性写入文件，先写binlog，后写topic，topic写失败后，使用Truncate回滚binlog
+* topic文件中记录binlog文件id、文件中位置以及eventId，当smss崩溃重启后，检查最后一个binlog文件的最后一个数据块，与topic或者元数据比对，如果不能对齐则回滚binlog
+
+## 多线程写控制
+smss会并发的从多个producer接收指令，这些指令可能是发布消息、发布延迟消息、创建topic、删除topic等，这些指令需要并发写数据，这些数据可能是
+要写到元数据
