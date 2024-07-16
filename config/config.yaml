@@ -1,7 +1,7 @@
 port: 12301
 log:
-  path: logs
-  sample: 1000
+  path: stdout
+  sample: 20000
 store:
   path: data
   maxLogSize: 1073741824

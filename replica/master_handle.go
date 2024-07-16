@@ -17,8 +17,6 @@ import (
 	"time"
 )
 
-const DefaultAckTimeout = 10 * 1000
-
 const BinlogOutTimeout = time.Second * 120
 
 type WalMonitorSupport interface {

@@ -58,9 +58,6 @@ func findPosByEventId(ppath string, eventId int64, cmdExtractFunc func(cmdBuf []
 			return 0, 0, err
 		}
 		if found == okFound {
-			//if findPos == info.Size() {
-			//	return curFileId + 1, 0, nil
-			//}
 			return curFileId, findPos, nil
 		}
 		curFileId--
@@ -83,8 +80,6 @@ func findInFile(p string, eventId int64, extractCmd func(cmdBuf []byte) (int64, 
 	}
 	defer f.Close()
 	r := bufio.NewReader(f)
-
-	cmdCommonSize := 512
 
 	buf := make([]byte, cmdCommonSize)
 

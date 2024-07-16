@@ -15,5 +15,4 @@ func init() {
 	bbHandlerMap[protocol.CommandDelay] = slave.DelayHandler
 	bbHandlerMap[protocol.CommandCreateMQ] = slave.DDLMQHandle
 	bbHandlerMap[protocol.CommandDeleteMQ] = slave.DDLMQHandle
-	//bbHandlerMap[protocol.CommandChangeLf] = slave.DDLMQHandle
 }
