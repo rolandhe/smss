@@ -60,17 +60,17 @@ event参数表示slave已经复制完的事件，master需要发送下一个事�
 
 ### 命令集
 
-| 命令  | 数值  |                                                说明 |
-|:----|:----|--------------------------------------------------:|
-|CommandSub| 0   |                                              订阅消息 |
-|CommandPub| 1   |                                              发布消息 |
-|CommandCreateMQ| 2   |                                           创建topic |
-|CommandDeleteMQ| 3   |                                           删除topic |
-|CommandDelay| 16  |                                            发布延迟消息 |
-|CommandAlive| 17  |                连接探活，类似于mysql的ping/pong,用于判断连接是否存活 |
-|CommandReplica| 64  |                                        复制binlog指令 |
-|CommandValidList| 99  |             读取当前有效的topic，处于标记删除或者超过生命周期的topic都不展示 |
-|CommandList| 100 |                         读取所有的topic，包括标记删除和超过生命周期的 |
+| 命令  | 数值  | 说明                                                |
+|:----|:----|:--------|
+|CommandSub| 0   | 订阅消息  |
+|CommandPub| 1   | 发布消息|
+|CommandCreateMQ| 2   | 创建topic|
+|CommandDeleteMQ| 3   | 删除topic|
+|CommandDelay| 16  | 发布延迟消息|
+|CommandAlive| 17  | 连接探活，类似于mysql的ping/pong,用于判断连接是否存活|
+|CommandReplica| 64  | 复制binlog指令|
+|CommandValidList| 99  | 读取当前有效的topic，处于标记删除或者超过生命周期的topic都不展示|
+|CommandList| 100 | 读取所有的topic，包括标记删除和超过生命周期的|
 |CommandDelayApply| 101 | 延迟的消息真正发布，延迟消息到时触发后，真正把消息发布出去，内部使用，超过100的指令都是内部使用 |
 
 ### header定义
