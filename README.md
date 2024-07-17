@@ -174,3 +174,137 @@ socket读取新的数据块，由于master即使在没有新数据的情况下�
 与mysql不同的是，smss slave没有启用两个线程完成复制，mysql会先存储binlog，另外一个线程在从binlog读取数据写回到数据，smss简化了复制流程，读取数据后直接写库，写库流程
 也复用了master的写流程，但复制毕竟与master的写不同，smss在发送复制消息时会给消息打标，表示该消息是复制消息，写线程会根据复制场景做一些兼容，比如，topic不存在会跳过，而不会报错。
 
+# 客户端sdk
+
+当前只提供[golang版本](https://github.com/rolandhe/smss-client)
+
+## 示例
+### 创建topic
+
+```go
+
+  pc, err := client.NewPubClient("localhost", 12301, time.Second*5)
+  if err != nil {
+  log.Printf("%v\n", err)
+  return
+  }
+  defer pc.Close()
+  
+  //mqName := "audience-audience-audience-audience-audience-audience-audience-audience-audience-audience-audience-audience-123abcdefg-00900000008"
+  mqName := "order"
+  
+  //expireAt := time.Now().Add(time.Minute * 2).UnixMilli()
+  err = pc.CreateMQ(mqName, 0, "tid-2209991")
+  
+  log.Println(err)
+
+```
+
+### 删除topic
+
+```go
+    pc, err := client.NewPubClient("localhost", 12301, time.Second*500)
+	if err != nil {
+		log.Printf("%v\n", err)
+		return
+	}
+	defer pc.Close()
+
+	err = pc.DeleteMQ("temp_mq", "tid-9999del33")
+
+	log.Println(err)
+
+```
+
+### 读取所有topic信息
+
+```go
+    pc, err := client.NewPubClient("localhost", 12301, time.Second*5)
+	if err != nil {
+		log.Printf("%v\n", err)
+		return
+	}
+	defer pc.Close()
+
+	var j string
+	j, err = pc.GetMqList("tid-99yymm009")
+
+	log.Println(j, err)
+
+```
+
+### 发布消息
+
+```go
+    pc, err := client.NewPubClient("localhost", 12301, time.Second*5000)
+	if err != nil {
+		log.Printf("%v\n", err)
+		return
+	}
+	
+	base := "ggppmm-hello world,haha."
+	for i := 0; i < 100; i++ {
+		buf := []byte(base + strconv.Itoa(i))
+		msg := client.NewMessage(buf)
+		msg.AddHeader("traceId", fmt.Sprintf("tid-%d", i))
+		err = pc.Publish("life1", msg, "tid-999pxxfdb11")
+		if err != nil {
+			log.Printf("%v\n", err)
+			break
+		}
+		if i%50 == 0 {
+			log.Printf("finish %d\n", i)
+		}
+	}
+```
+
+### 发布延迟消息
+
+```go
+    pc, err := client.NewPubClient("localhost", 12301, time.Second*50000)
+	if err != nil {
+		log.Printf("%v\n", err)
+		return
+	}
+
+	i := 11
+
+	msg := client.NewMessage([]byte("delay-test 99999-" + strconv.Itoa(i)))
+	msg.AddHeader("traceId", fmt.Sprintf("tid-%d", i))
+	err = pc.PublishDelay("order", msg, 10*60*1000, "tid-777777")
+	log.Printf("%v\n", err)
+
+```
+
+### 订阅消息
+
+```go
+
+    func sub(who string, eventId int64) {
+      sc, err := client.NewSubClient("order", who, "localhost", 12301, time.Second*5)
+      if err != nil {
+          log.Printf("%v\n", err)
+          return
+      }
+      
+  
+      defer sc.Close()
+  
+      count := int64(0)
+      // 311041
+      err = sc.Sub(eventId, 5, time.Second*10, func(messages []*client.SubMessage) client.AckEnum {
+          for _, msg := range messages {
+			  body := string(msg.GetPayload())
+			  log.Printf("ts=%d, eventId=%d, fileId=%d, pos=%d, body is: %s\n", msg.Ts, msg.EventId, msg.FileId, msg.Pos, body)
+              count++
+          }
+          return client.Ack
+      })
+      if err != nil {
+          log.Printf("%v\n", err)
+          return
+      }
+      sc.Close()
+    }
+
+```
