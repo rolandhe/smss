@@ -22,7 +22,7 @@ type InstanceRole struct {
 	Role     store.InstanceRoleEnum
 	FromHost string
 	FromPort int
-	SeqId    int64
+	EventId  int64
 }
 
 func StartServer(root string, insRole *InstanceRole) {
@@ -46,12 +46,12 @@ func StartServer(root string, insRole *InstanceRole) {
 		}
 	}
 
-	var nextSeq int64
-	if nextSeq, err = repair.CheckLogAndFix(root, meta); err != nil {
+	var nextEventId int64
+	if nextEventId, err = repair.CheckLogAndFix(root, meta); err != nil {
 		meta.Close()
 		return
 	}
-	router.InitCommonInfo(nextSeq, insRole.Role)
+	router.InitCommonInfo(nextEventId, insRole.Role)
 	w, fstore, err := newWriter(root, meta)
 	if err != nil {
 		meta.Close()
@@ -68,13 +68,13 @@ func StartServer(root string, insRole *InstanceRole) {
 	if insRole.Role == store.Master {
 		router.InitReplica(w.StdMsgWriter)
 	} else {
-		seqId := insRole.SeqId
+		eventId := insRole.EventId
 		needSync := true
-		if nextSeq-1 > seqId {
-			seqId = nextSeq - 1
+		if nextEventId-1 > eventId {
+			eventId = nextEventId - 1
 			needSync = false
 		}
-		if err = replica.SlaveReplica(insRole.FromHost, insRole.FromPort, seqId, needSync, worker, fstore); err != nil {
+		if err = replica.SlaveReplica(insRole.FromHost, insRole.FromPort, eventId, needSync, worker, fstore); err != nil {
 			logger.Get().Infof("SlaveReplica err:%v", err)
 			return
 		}

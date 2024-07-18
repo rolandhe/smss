@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func SlaveReplica(masterHost string, masterPort int, seqId int64, needSync bool, worker standard.MessageWorking, fstore store.Store) error {
+func SlaveReplica(masterHost string, masterPort int, eventId int64, needSync bool, worker standard.MessageWorking, fstore store.Store) error {
 	sc, err := newSlaveReplicaClient(masterHost, masterPort, &dependWorker{
 		MessageWorking: worker,
 		ManagerMeta:    fstore.GetManagerMeta(),
@@ -17,7 +17,7 @@ func SlaveReplica(masterHost string, masterPort int, seqId int64, needSync bool,
 		return err
 	}
 	if needSync {
-		err = syncTopicInfo(sc, seqId, fstore)
+		err = syncTopicInfo(sc, eventId, fstore)
 		if err != nil {
 			return err
 		}
@@ -25,9 +25,9 @@ func SlaveReplica(masterHost string, masterPort int, seqId int64, needSync bool,
 
 	go func() {
 		client := sc
-		newSeqId := seqId
+		newEventId := eventId
 		for {
-			newSeqId = run(client, newSeqId)
+			newEventId = run(client, newEventId)
 			time.Sleep(time.Millisecond * 2000)
 			for {
 				client, err = newSlaveReplicaClient(masterHost, masterPort, &dependWorker{
@@ -46,8 +46,8 @@ func SlaveReplica(masterHost string, masterPort int, seqId int64, needSync bool,
 	return nil
 }
 
-func syncTopicInfo(sc *slaveClient, seqId int64, fstore store.Store) error {
-	infos, err := sc.getValidTopic(seqId)
+func syncTopicInfo(sc *slaveClient, eventId int64, fstore store.Store) error {
+	infos, err := sc.getValidTopic(eventId)
 	if err != nil {
 		return err
 	}
@@ -64,9 +64,9 @@ func syncTopicInfo(sc *slaveClient, seqId int64, fstore store.Store) error {
 	return nil
 }
 
-func run(sc *slaveClient, seqId int64) int64 {
+func run(sc *slaveClient, eventId int64) int64 {
 	defer sc.Close()
-	err := sc.replica(seqId)
+	err := sc.replica(eventId)
 	logger.Get().Infof("slave,last eventId=%d, run err:%v", sc.lastEventId, err)
 	return sc.lastEventId
 }

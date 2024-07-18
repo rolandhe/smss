@@ -37,6 +37,6 @@ func main() {
 		Role:     roleValue,
 		FromHost: *host,
 		FromPort: *port,
-		SeqId:    *eventId,
+		EventId:  *eventId,
 	})
 }

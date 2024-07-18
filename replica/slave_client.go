@@ -103,12 +103,12 @@ func (sc *slaveClient) getValidTopic(eventId int64) ([]*store.TopicInfo, error) 
 	return rets, nil
 }
 
-func (sc *slaveClient) replica(seqId int64) error {
-	logger.Get().Infof("slave begin to replica,eventId=%d", seqId)
-	sc.lastEventId = seqId
+func (sc *slaveClient) replica(eventId int64) error {
+	logger.Get().Infof("slave begin to replica,eventId=%d", eventId)
+	sc.lastEventId = eventId
 	buf := make([]byte, 28)
 	buf[0] = byte(protocol.CommandReplica)
-	binary.LittleEndian.PutUint64(buf[protocol.HeaderSize:], uint64(seqId))
+	binary.LittleEndian.PutUint64(buf[protocol.HeaderSize:], uint64(eventId))
 	if err := nets.WriteAll(sc.conn, buf, netWriteTimeout); err != nil {
 		return err
 	}

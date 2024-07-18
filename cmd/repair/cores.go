@@ -58,9 +58,9 @@ type extractLog[C, T any] interface {
 type lastBinlog struct {
 	fileId       int64
 	pos          int64
-	cmd          protocol.CommandEnum
-	messageSeqId int64
-	topicName    string
+	cmd            protocol.CommandEnum
+	messageEventId int64
+	topicName      string
 	payload      []byte
 }
 
@@ -74,12 +74,12 @@ func (ext *extractBinlog) extractCmd(cmdBuf []byte) (*protocol.DecodedRawMessage
 }
 func (ext *extractBinlog) extractRet(cmd *protocol.DecodedRawMessage, pos int64, payload []byte) *lastBinlog {
 	last := &lastBinlog{
-		fileId:       ext.fileId,
-		pos:          pos,
-		topicName:    cmd.TopicName,
-		cmd:          cmd.Command,
-		messageSeqId: cmd.EventId,
-		payload:      payload,
+		fileId:         ext.fileId,
+		pos:            pos,
+		topicName:      cmd.TopicName,
+		cmd:            cmd.Command,
+		messageEventId: cmd.EventId,
+		payload:        payload,
 	}
 	return last
 }

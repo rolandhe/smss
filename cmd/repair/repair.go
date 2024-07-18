@@ -53,12 +53,12 @@ func CheckLogAndFix(root string, meta store.Meta) (int64, error) {
 	if err = maybeRemove(p); err != nil {
 		return 0, err
 	}
-	return getNextSeq(lBinlog), nil
+	return getNextEventId(lBinlog), nil
 }
 
-func getNextSeq(lBinlog *lastBinlog) int64 {
+func getNextEventId(lBinlog *lastBinlog) int64 {
 	if lBinlog.cmd != protocol.CommandPub && lBinlog.cmd != protocol.CommandDelayApply {
-		return lBinlog.messageSeqId + 1
+		return lBinlog.messageEventId + 1
 	}
 	payload := lBinlog.payload
 	if lBinlog.cmd == protocol.CommandDelayApply {
@@ -70,5 +70,5 @@ func getNextSeq(lBinlog *lastBinlog) int64 {
 		panic("invalid payload")
 	}
 
-	return lBinlog.messageSeqId + int64(count)
+	return lBinlog.messageEventId + int64(count)
 }
