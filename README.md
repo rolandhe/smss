@@ -193,7 +193,7 @@ socket读取新的数据块，由于master即使在没有新数据的情况下�
   mqName := "order"
   
   //expireAt := time.Now().Add(time.Minute * 2).UnixMilli()
-  err = pc.CreateMQ(mqName, 0, "tid-2209991")
+  err = pc.CreateTopic(mqName, 0, "tid-2209991")
   
   log.Println(err)
 
@@ -209,7 +209,7 @@ socket读取新的数据块，由于master即使在没有新数据的情况下�
 	}
 	defer pc.Close()
 
-	err = pc.DeleteMQ("temp_mq", "tid-9999del33")
+	err = pc.DeleteTopic("temp_mq", "tid-9999del33")
 
 	log.Println(err)
 
@@ -226,7 +226,7 @@ socket读取新的数据块，由于master即使在没有新数据的情况下�
 	defer pc.Close()
 
 	var j string
-	j, err = pc.GetMqList("tid-99yymm009")
+	j, err = pc.GetTopicList("tid-99yymm009")
 
 	log.Println(j, err)
 
@@ -246,7 +246,7 @@ socket读取新的数据块，由于master即使在没有新数据的情况下�
 		buf := []byte(base + strconv.Itoa(i))
 		msg := client.NewMessage(buf)
 		msg.AddHeader("traceId", fmt.Sprintf("tid-%d", i))
-		err = pc.Publish("life1", msg, "tid-999pxxfdb11")
+		err = pc.Publish("order", msg, "tid-999pxxfdb11")
 		if err != nil {
 			log.Printf("%v\n", err)
 			break
