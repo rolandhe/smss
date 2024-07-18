@@ -22,9 +22,9 @@ func (r *delayApplyRouter) Router(conn net.Conn, header *protocol.CommonHeader, 
 }
 
 func (r *delayApplyRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, error) {
-	info, err := r.fstore.GetMqInfoReader().GetMQInfo(msg.MqName)
+	info, err := r.fstore.GetTopicInfoReader().GetTopicInfo(msg.TopicName)
 	if err != nil {
-		logger.Get().Infof("tid=%s,delayApplyRouter.DoBinlog call mq %s info error:%v", msg.TraceId, msg.MqName, err)
+		logger.Get().Infof("tid=%s,delayApplyRouter.DoBinlog call topic %s info error:%v", msg.TraceId, msg.TopicName, err)
 		return 0, err
 	}
 	if info == nil || info.IsInvalid() {
@@ -32,8 +32,8 @@ func (r *delayApplyRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64
 			msg.Skip = true
 			return r.outBinlog(f, msg)
 		}
-		logger.Get().Infof("tid=%s,delayApplyRouter.DoBinlog  %s not exist", msg.TraceId, msg.MqName)
-		return 0, dir.NewBizError("mq not exist")
+		logger.Get().Infof("tid=%s,delayApplyRouter.DoBinlog  %s not exist", msg.TraceId, msg.TopicName)
+		return 0, dir.NewBizError("topic not exist")
 	}
 
 	return r.outBinlog(f, msg)
@@ -57,7 +57,7 @@ func (r *delayApplyRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int
 	payload := msg.Body.(*protocol.DelayApplyPayload)
 	// 去除前面的 delayTime+delayId
 	messages, _ := protocol.ParsePayload(payload.Payload[16:], fileId, pos, msg.EventId)
-	err := r.fstore.Save(msg.MqName, messages)
+	err := r.fstore.Save(msg.TopicName, messages)
 	r.sampleLog("delayApplyRouter.AfterBinlog", msg, err)
 	return err
 }

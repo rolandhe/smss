@@ -16,7 +16,7 @@ func PubHandler(cmd *protocol.DecodedRawMessage, payload []byte, worker DependWo
 		WriteTime: cmd.WriteTime,
 		Command:   cmd.Command,
 		EventId:   cmd.EventId,
-		MqName:    cmd.MqName,
+		TopicName: cmd.TopicName,
 		TraceId:   uuid.NewString(),
 		Timestamp: cmd.Timestamp,
 		Body:      pubPayload,

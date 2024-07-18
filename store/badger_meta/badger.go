@@ -23,35 +23,35 @@ func NewMeta(path string) (store.Meta, error) {
 	}, nil
 }
 
-func (bm *badgerMeta) CreateMQ(mqName string, expireAt int64, eventId int64) (*store.MqInfo, error) {
-	norMqName := normalMqName(mqName)
+func (bm *badgerMeta) CreateTopic(topicName string, expireAt int64, eventId int64) (*store.TopicInfo, error) {
+	norMqName := normalMqName(topicName)
 	exist, err := bm.existMq(norMqName)
 	if err != nil {
 		return nil, err
 	}
 	if exist {
-		return nil, errors.New("mq exists")
+		return nil, errors.New("topic exists")
 	}
 
-	info := &store.MqInfo{
-		Name:            mqName,
+	info := &store.TopicInfo{
+		Name:            topicName,
 		CreateTimeStamp: time.Now().UnixMilli(),
 		ExpireAt:        expireAt,
 	}
-	valMeta := mqMetaValue{
+	valMeta := topicMetaValue{
 		createTime:         info.CreateTimeStamp,
 		expireAtTime:       expireAt,
 		createEventId:      eventId,
 		stateChangeTime:    info.CreateTimeStamp,
 		stateChangeEventId: eventId,
-		state:              store.MqStateNormal,
+		state:              store.TopicStateNormal,
 	}
 	err = bm.db.Update(func(txn *badger.Txn) error {
 		if e := txn.Set(norMqName, valMeta.toBytes()); e != nil {
 			return e
 		}
 		if info.IsTemp() {
-			if e := txn.Set(mqLifetimeName(mqName, expireAt), lifeValueHolder); e != nil {
+			if e := txn.Set(topicLifetimeName(topicName, expireAt), lifeValueHolder); e != nil {
 				return e
 			}
 		}
@@ -65,7 +65,7 @@ func (bm *badgerMeta) CreateMQ(mqName string, expireAt int64, eventId int64) (*s
 	return info, nil
 }
 
-func (bm *badgerMeta) CopyCreateMq(info *store.MqInfo) error {
+func (bm *badgerMeta) CopyCreateTopic(info *store.TopicInfo) error {
 	norMqName := normalMqName(info.Name)
 	exist, err := bm.existMq(norMqName)
 	if err != nil {
@@ -75,7 +75,7 @@ func (bm *badgerMeta) CopyCreateMq(info *store.MqInfo) error {
 		return nil
 	}
 
-	var valMeta mqMetaValue
+	var valMeta topicMetaValue
 
 	valMeta.fromMqInfo(info)
 
@@ -84,7 +84,7 @@ func (bm *badgerMeta) CopyCreateMq(info *store.MqInfo) error {
 			return e
 		}
 		if info.IsTemp() {
-			if e := txn.Set(mqLifetimeName(info.Name, info.ExpireAt), lifeValueHolder); e != nil {
+			if e := txn.Set(topicLifetimeName(info.Name, info.ExpireAt), lifeValueHolder); e != nil {
 				return e
 			}
 		}
@@ -98,11 +98,11 @@ func (bm *badgerMeta) CopyCreateMq(info *store.MqInfo) error {
 	return nil
 }
 
-func (bm *badgerMeta) DeleteMQ(mqName string, force bool) (bool, error) {
+func (bm *badgerMeta) DeleteTopic(topicName string, force bool) (bool, error) {
 	exist := true
-	var valMeta mqMetaValue
+	var valMeta topicMetaValue
 	err := bm.db.Update(func(txn *badger.Txn) error {
-		k := normalMqName(mqName)
+		k := normalMqName(topicName)
 		item, err := txn.Get(k)
 		if errors.Is(err, badger.ErrKeyNotFound) {
 			exist = false
@@ -119,14 +119,14 @@ func (bm *badgerMeta) DeleteMQ(mqName string, force bool) (bool, error) {
 			return err
 		}
 		if valMeta.expireAtTime > 0 {
-			if err = txn.Delete(mqLifetimeName(mqName, valMeta.expireAtTime)); err != nil {
+			if err = txn.Delete(topicLifetimeName(topicName, valMeta.expireAtTime)); err != nil {
 				if !errors.Is(err, badger.ErrKeyNotFound) {
 					return err
 				}
 			}
 		}
 		if !force {
-			valMeta.state = store.MqStateDeleted
+			valMeta.state = store.TopicStateDeleted
 			if err = txn.Set(k, valMeta.toBytes()); err != nil {
 				return err
 			}
@@ -142,7 +142,7 @@ func (bm *badgerMeta) DeleteMQ(mqName string, force bool) (bool, error) {
 func (bm *badgerMeta) ScanExpireMqs() ([]string, int64, error) {
 	now := time.Now().UnixMilli()
 	var next int64
-	var mqs []string
+	var topicList []string
 
 	preLen := len(lifePrefix)
 	err := bm.db.View(func(txn *badger.Txn) error {
@@ -163,13 +163,13 @@ func (bm *badgerMeta) ScanExpireMqs() ([]string, int64, error) {
 				next = expireAt
 				break
 			}
-			mqs = append(mqs, string(key[8:]))
+			topicList = append(topicList, string(key[8:]))
 		}
 
 		return nil
 	})
 	logger.Get().Infof("ScanExpireMqs,next scan time from db:%d", next)
-	return mqs, next, err
+	return topicList, next, err
 }
 
 func (bm *badgerMeta) ScanDelays(batchSize int) ([]*store.DelayItem, int64, error) {
@@ -224,71 +224,26 @@ func (bm *badgerMeta) RemoveDelay(key []byte) error {
 	}
 	return err
 }
-func (bm *badgerMeta) RemoveDelayByName(data []byte, mqName string) error {
+func (bm *badgerMeta) RemoveDelayByName(data []byte, topicName string) error {
 	preLen := len(delayPrefix)
-	key := make([]byte, preLen+16+len(mqName))
+	key := make([]byte, preLen+16+len(topicName))
 	copy(key, delayPrefix)
 
 	buf := key[preLen:]
 	// copy 时间戳
 	copy(buf, data)
 	buf = buf[16:]
-	copy(buf, mqName)
+	copy(buf, topicName)
 	return bm.RemoveDelay(key)
 }
 
-//func (bm *badgerMeta) ChangeMQLife(mqName string, life int64, eventId int64) error {
-//	info, err := bm.GetMQInfo(mqName)
-//	if err != nil {
-//		return err
-//	}
-//	if info == nil || info.State == store.MqStateDeleted {
-//		return errors.New("mq not exist")
-//	}
-//
-//	if life == 0 && !info.IsTemp() {
-//		return nil
-//	}
-//
-//	normMqName := normalMqName(mqName)
-//
-//	err = bm.db.Update(func(txn *badger.Txn) error {
-//		item, e := txn.Get(normMqName)
-//		if e != nil {
-//			return e
-//		}
-//		var mValue []byte
-//		if mValue, e = item.ValueCopy(nil); e != nil {
-//			return e
-//		}
-//		binary.LittleEndian.PutUint64(mValue[8:], uint64(life))
-//		binary.LittleEndian.PutUint64(mValue[33:], uint64(eventId))
-//		if e = txn.Set(normMqName, mValue); e != nil {
-//			return e
-//		}
-//		if info.IsTemp() {
-//			if e = txn.Delete(mqLifetimeName(mqName, info.ExpireAt)); e != nil {
-//				return e
-//			}
-//		}
-//		info.ExpireAt = life
-//		if info.IsTemp() {
-//			if e = txn.Set(mqLifetimeName(mqName, life), lifeValueHolder); e != nil {
-//				return e
-//			}
-//		}
-//		return nil
-//	})
-//	return nil
-//}
-
-func (bm *badgerMeta) GetMQInfo(mqName string) (*store.MqInfo, error) {
-	var valMeta mqMetaValue
+func (bm *badgerMeta) GetTopicInfo(topicName string) (*store.TopicInfo, error) {
+	var valMeta topicMetaValue
 
 	err := bm.db.View(func(txn *badger.Txn) error {
 		var e error
 		var rawValue []byte
-		if rawValue, e = getRawValue(normalMqName(mqName), txn); e != nil {
+		if rawValue, e = getRawValue(normalMqName(topicName), txn); e != nil {
 			return e
 		}
 		valMeta.fromBytes(rawValue)
@@ -300,12 +255,12 @@ func (bm *badgerMeta) GetMQInfo(mqName string) (*store.MqInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	return valMeta.toMqInfo(mqName), nil
+	return valMeta.toMqInfo(topicName), nil
 }
 
-func (bm *badgerMeta) GetMQSimpleInfoList() ([]*store.MqInfo, error) {
-	var infoList []*store.MqInfo
-	var valMeta mqMetaValue
+func (bm *badgerMeta) GetTopicSimpleInfoList() ([]*store.TopicInfo, error) {
+	var infoList []*store.TopicInfo
+	var valMeta topicMetaValue
 	err := bm.db.View(func(txn *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
 		opts.Prefix = normalPrefix
@@ -314,7 +269,7 @@ func (bm *badgerMeta) GetMQSimpleInfoList() ([]*store.MqInfo, error) {
 		defer it.Close()
 		for it.Seek(opts.Prefix); it.ValidForPrefix(opts.Prefix); it.Next() {
 			item := it.Item()
-			mqName := string(item.Key()[len(normalPrefix):])
+			topicName := string(item.Key()[len(normalPrefix):])
 
 			if e := item.Value(func(val []byte) error {
 				valMeta.fromBytes(val)
@@ -322,7 +277,7 @@ func (bm *badgerMeta) GetMQSimpleInfoList() ([]*store.MqInfo, error) {
 			}); e != nil {
 				return e
 			}
-			infoList = append(infoList, valMeta.toMqInfo(mqName))
+			infoList = append(infoList, valMeta.toMqInfo(topicName))
 		}
 		return nil
 	})
@@ -330,15 +285,15 @@ func (bm *badgerMeta) GetMQSimpleInfoList() ([]*store.MqInfo, error) {
 	return infoList, err
 }
 
-func (bm *badgerMeta) SaveDelay(mqName string, payload []byte) error {
+func (bm *badgerMeta) SaveDelay(topicName string, payload []byte) error {
 	preLen := len(delayPrefix)
-	key := make([]byte, preLen+16+len(mqName))
+	key := make([]byte, preLen+16+len(topicName))
 	copy(key, delayPrefix)
 
 	buf := key[preLen:]
 	// copy 时间戳+eventId
 	copy(buf[:16], payload)
-	copy(buf[16:], mqName)
+	copy(buf[16:], topicName)
 
 	return bm.db.Update(func(txn *badger.Txn) error {
 		return txn.Set(key, payload)
@@ -477,10 +432,10 @@ func getRawValue(key []byte, txn *badger.Txn) ([]byte, error) {
 	return ret, nil
 }
 
-func normalMqName(mqName string) []byte {
+func normalMqName(topicName string) []byte {
 	pl := len(normalPrefix)
-	buf := make([]byte, pl+len(mqName))
+	buf := make([]byte, pl+len(topicName))
 	copy(buf, normalPrefix)
-	copy(buf[pl:], mqName)
+	copy(buf[pl:], topicName)
 	return buf
 }

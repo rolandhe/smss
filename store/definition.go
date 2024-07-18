@@ -5,29 +5,29 @@ import (
 	"time"
 )
 
-type MqStateEnum int8
+type TopicStateEnum int8
 
 const (
-	MqStateNormal  MqStateEnum = 0
-	MqStateDeleted MqStateEnum = 1
+	TopicStateNormal  TopicStateEnum = 0
+	TopicStateDeleted TopicStateEnum = 1
 )
 
-type MqInfo struct {
-	Name               string      `json:"name" :"name"`
-	CreateTimeStamp    int64       `json:"createTimeStamp"`
-	ExpireAt           int64       `json:"expireAt"`
-	CreateEventId      int64       `json:"createEventId"`
-	StateChangeTime    int64       `json:"stateChangeTime"`
-	StateChangeEventId int64       `json:"stateChangeEventId"`
-	State              MqStateEnum `json:"state"`
+type TopicInfo struct {
+	Name               string         `json:"name" :"name"`
+	CreateTimeStamp    int64          `json:"createTimeStamp"`
+	ExpireAt           int64          `json:"expireAt"`
+	CreateEventId      int64          `json:"createEventId"`
+	StateChangeTime    int64          `json:"stateChangeTime"`
+	StateChangeEventId int64          `json:"stateChangeEventId"`
+	State              TopicStateEnum `json:"state"`
 }
 
-func (info *MqInfo) IsTemp() bool {
+func (info *TopicInfo) IsTemp() bool {
 	return info.ExpireAt > 0
 }
 
-func (info *MqInfo) IsInvalid() bool {
-	return info.State == MqStateDeleted || (info.IsTemp() && time.Now().UnixMilli() >= info.ExpireAt)
+func (info *TopicInfo) IsInvalid() bool {
+	return info.State == TopicStateDeleted || (info.IsTemp() && time.Now().UnixMilli() >= info.ExpireAt)
 }
 
 type DelayItem struct {
@@ -41,16 +41,16 @@ type ManagerMeta interface {
 	GetInstanceRole() (InstanceRoleEnum, error)
 
 	RemoveDelay(key []byte) error
-	RemoveDelayByName(data []byte, mqName string) error
+	RemoveDelayByName(data []byte, topicName string) error
 	ExistDelay(key []byte) (bool, error)
 
-	CopyCreateMq(info *MqInfo) error
-	DeleteMQ(mqName string, force bool) (bool, error)
+	CopyCreateTopic(info *TopicInfo) error
+	DeleteTopic(topicName string, force bool) (bool, error)
 }
 
-type MqInfoReader interface {
-	GetMQSimpleInfoList() ([]*MqInfo, error)
-	GetMQInfo(mqName string) (*MqInfo, error)
+type TopicInfoReader interface {
+	GetTopicSimpleInfoList() ([]*TopicInfo, error)
+	GetTopicInfo(topicName string) (*TopicInfo, error)
 }
 
 type Scanner interface {
@@ -72,19 +72,18 @@ const (
 
 const (
 	BinlogDir = "binlog"
-	MQDir     = "mq"
+	TopicDir  = "topic"
 	MetaDir   = "meta"
 )
 
 type Meta interface {
-	CreateMQ(mqName string, defaultLifetime int64, eventId int64) (*MqInfo, error)
-	//ChangeMQLife(mqName string, life int64, eventId int64) error
+	CreateTopic(topicName string, defaultLifetime int64, eventId int64) (*TopicInfo, error)
 
-	SaveDelay(mqName string, payload []byte) error
+	SaveDelay(topicName string, payload []byte) error
 
 	io.Closer
 	ManagerMeta
-	MqInfoReader
+	TopicInfoReader
 	Scanner
 }
 
@@ -94,31 +93,29 @@ type BlockReader[T any] interface {
 	io.Closer
 }
 
-type MqBlockReader interface {
+type TopicBlockReader interface {
 	BlockReader[ReadMessage]
 }
 
 type Store interface {
 	io.Closer
-	Save(mqName string, messages []*MQMessage) error
+	Save(topicName string, messages []*MQMessage) error
 
-	GetReader(mqName, who string, fileId, pos int64, batchSize int) (MqBlockReader, error)
+	GetReader(topicName, who string, fileId, pos int64, batchSize int) (TopicBlockReader, error)
 
-	CreateMq(mqName string, life int64, eventId int64) error
+	CreateTopic(topicName string, life int64, eventId int64) error
 
-	ForceDeleteMQ(mqName string, cb func() error) error
+	ForceDeleteTopic(topicName string, cb func() error) error
 
-	SaveDelayMsg(mqName string, payload []byte) error
-
-	//ChangeMqLife(mqName string, life int64, eventId int64) error
+	SaveDelayMsg(topicName string, payload []byte) error
 
 	GetManagerMeta() ManagerMeta
 
-	GetMqInfoReader() MqInfoReader
+	GetTopicInfoReader() TopicInfoReader
 
 	GetScanner() Scanner
 
-	GetMqPath(mqName string) string
+	GetTopicPath(topicName string) string
 }
 
 type MsgHeader struct {

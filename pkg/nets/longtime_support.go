@@ -94,8 +94,8 @@ func LongTimeRun[T any](conn net.Conn, biz, tid string, ackTimeout, writeTimeout
 			logger.Get().Infof("tid=%s,PeerClosedErr:%v", tid, err)
 			return err
 		}
-		if errors.Is(err, standard.MqWriterTermiteErr) {
-			logger.Get().Infof("tid=%s,MqWriterTermiteErr:%v", tid, err)
+		if errors.Is(err, standard.TopicWriterTermiteErr) {
+			logger.Get().Infof("tid=%s,TopicWriterTermiteErr:%v", tid, err)
 			return OutSubEnd(conn, writeTimeout)
 		}
 

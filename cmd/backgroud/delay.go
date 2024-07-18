@@ -65,13 +65,13 @@ func doDelay(fstore store.Store, worker standard.MessageWorking) int64 {
 }
 
 func procOneDelayMsg(fstore store.Store, worker standard.MessageWorking, item *store.DelayItem, tid string) error {
-	info, err := fstore.GetMqInfoReader().GetMQInfo(item.MqName)
+	info, err := fstore.GetTopicInfoReader().GetTopicInfo(item.MqName)
 	if err != nil {
-		logger.Get().Infof("tid=%s,procOneDelayMsg get mq info %s  error:%v", tid, item.MqName, err)
+		logger.Get().Infof("tid=%s,procOneDelayMsg get topic info %s  error:%v", tid, item.MqName, err)
 		return err
 	}
 	if info == nil || info.IsInvalid() {
-		logger.Get().Infof("tid=%s,procOneDelayMsg,mq is ivalid %s", tid, item.MqName)
+		logger.Get().Infof("tid=%s,procOneDelayMsg,topic is ivalid %s", tid, item.MqName)
 		return fstore.GetManagerMeta().RemoveDelay(item.Key)
 	}
 	pp := &protocol.DelayApplyPayload{
@@ -79,7 +79,7 @@ func procOneDelayMsg(fstore store.Store, worker standard.MessageWorking, item *s
 	}
 	msg := &protocol.RawMessage{
 		Command:   protocol.CommandDelayApply,
-		MqName:    item.MqName,
+		TopicName: item.MqName,
 		Timestamp: time.Now().UnixMilli(),
 		Body:      pp,
 		TraceId:   tid,

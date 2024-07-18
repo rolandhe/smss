@@ -42,7 +42,7 @@ func StopClear() {
 
 func deleteOldFiles(fstore store.Store, worker standard.MessageWorking, delMqFileExecutor protocol.DelMqFileExecutor) {
 	traceId := fmt.Sprintf("delOldFile-%d", time.Now().UnixMilli())
-	infoList, err := fstore.GetMqInfoReader().GetMQSimpleInfoList()
+	infoList, err := fstore.GetTopicInfoReader().GetTopicSimpleInfoList()
 	if err != nil {
 		logger.Get().Infof("deleteOldFiles err:%v", err)
 	}
@@ -50,8 +50,8 @@ func deleteOldFiles(fstore store.Store, worker standard.MessageWorking, delMqFil
 	locker := delMqFileExecutor.GetDeleteFileLocker()
 
 	for _, info := range infoList {
-		p := fstore.GetMqPath(info.Name)
-		if store.MqStateNormal == info.State {
+		p := fstore.GetTopicPath(info.Name)
+		if store.TopicStateNormal == info.State {
 			for {
 				unLockFunc, waiter := locker.Lock(info.Name, "ClearOldFiles", traceId)
 				if unLockFunc != nil {
@@ -64,10 +64,10 @@ func deleteOldFiles(fstore store.Store, worker standard.MessageWorking, delMqFil
 			}
 			continue
 		}
-		if store.MqStateDeleted == info.State {
+		if store.TopicStateDeleted == info.State {
 			if info.StateChangeTime+DeleteFileAfterStateChangeTimeout <= time.Now().UnixMilli() {
-				err = removeMq(worker, info.Name, traceId)
-				logger.Get().Infof("tid=%s,deleteOldFiles to delete expired mq %s err:%v", traceId, info.Name, err)
+				err = removeTopic(worker, info.Name, traceId)
+				logger.Get().Infof("tid=%s,deleteOldFiles to delete expired topic %s err:%v", traceId, info.Name, err)
 			}
 			continue
 		}

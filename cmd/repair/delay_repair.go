@@ -6,9 +6,9 @@ import (
 )
 
 func repairDelay(lBinlog *lastBinlog, binlogFile, dataRoot string, meta store.Meta) error {
-	key := make([]byte, 16+len(lBinlog.mqName))
+	key := make([]byte, 16+len(lBinlog.topicName))
 	copy(key, lBinlog.payload[:16])
-	copy(key[8:], lBinlog.mqName)
+	copy(key[8:], lBinlog.topicName)
 	exist, err := meta.ExistDelay(key)
 	if err != nil {
 		return err

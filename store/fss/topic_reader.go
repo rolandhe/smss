@@ -7,7 +7,7 @@ import (
 )
 
 type blockReader struct {
-	mq string
+	topic string
 	*standard.StdMsgBlockReader[store.ReadMessage]
 }
 
@@ -49,23 +49,23 @@ func (p *msgParser) ChangeMessagePos(ins *store.ReadMessage, fileId, pos int64) 
 	ins.NextPos.Pos = pos
 }
 
-type MqNotifyRegister struct {
-	fs     *fileStore
-	mqName string
-	whoami string
+type TopicNotifyRegister struct {
+	fs        *fileStore
+	topicName string
+	whoami    string
 }
 
-func (reg *MqNotifyRegister) RegisterReaderNotify(notify *standard.NotifyDevice) (standard.LogFileInfoGet, error) {
-	return reg.fs.registerReaderNotify(reg.mqName, reg.whoami, notify)
+func (reg *TopicNotifyRegister) RegisterReaderNotify(notify *standard.NotifyDevice) (standard.LogFileInfoGet, error) {
+	return reg.fs.registerReaderNotify(reg.topicName, reg.whoami, notify)
 }
-func (reg *MqNotifyRegister) UnRegisterReaderNotify() {
-	reg.fs.unRegisterReaderNotify(reg.mqName, reg.whoami)
+func (reg *TopicNotifyRegister) UnRegisterReaderNotify() {
+	reg.fs.unRegisterReaderNotify(reg.topicName, reg.whoami)
 }
 
-func newBlockReader(root string, whoami string, mq string, maxBatch int, register standard.NotifyRegister) store.MqBlockReader {
-	r := standard.NewStdMsgBlockReader[store.ReadMessage](mq, root, whoami, maxBatch, conf.MaxLogSize, register, &msgParser{})
+func newBlockReader(root string, whoami string, topic string, maxBatch int, register standard.NotifyRegister) store.TopicBlockReader {
+	r := standard.NewStdMsgBlockReader[store.ReadMessage](topic, root, whoami, maxBatch, conf.MaxLogSize, register, &msgParser{})
 	return &blockReader{
-		mq:                mq,
+		topic:             topic,
 		StdMsgBlockReader: r,
 	}
 }

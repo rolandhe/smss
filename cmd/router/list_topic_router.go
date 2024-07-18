@@ -13,42 +13,35 @@ import (
 	"net"
 )
 
-type validListRouter struct {
+type topicListRouter struct {
 	fstore store.Store
 	noBinlog
 }
 
-func (r *validListRouter) Router(conn net.Conn, commHeader *protocol.CommonHeader, worker standard.MessageWorking) error {
-	buf := make([]byte, 8)
-	if err := nets.ReadAll(conn, buf, NetReadTimeout); err != nil {
-		return err
-	}
-	eventId := int64(binary.LittleEndian.Uint64(buf))
-	infos, err := r.fstore.GetMqInfoReader().GetMQSimpleInfoList()
+type outTopicInfo struct {
+	*store.TopicInfo
+	TopicRoot string `json:"topicRoot"`
+}
+
+func (r *topicListRouter) Router(conn net.Conn, commHeader *protocol.CommonHeader, worker standard.MessageWorking) error {
+	infos, err := r.fstore.GetTopicInfoReader().GetTopicSimpleInfoList()
 	if err != nil {
-		logger.Get().Infof("tid=%s,GetMQSimpleInfoList err:%v", commHeader.TraceId, err)
+		logger.Get().Infof("tid=%s,GetTopicSimpleInfoList err:%v", commHeader.TraceId, err)
 		return dir.NewBizError(err.Error())
 	}
-	var rets []*outMqInfo
-	for _, info := range infos {
-		if info.State == store.MqStateDeleted {
-			continue
-		}
-		ok := eventId == 0 || (info.CreateEventId <= eventId && info.State == store.MqStateNormal)
-		if ok {
-			rets = append(rets, &outMqInfo{
-				MqInfo: info,
-				MqRoot: fss.MqPath("/", info.Name),
-			})
-		}
-	}
-	if len(rets) == 0 {
+	if len(infos) == 0 {
 		outBuff := make([]byte, protocol.RespHeaderSize)
 		binary.LittleEndian.PutUint16(outBuff, protocol.OkCode)
 		binary.LittleEndian.PutUint32(outBuff[2:], uint32(0))
 		return nets.WriteAll(conn, outBuff, NetWriteTimeout)
 	}
-
+	rets := make([]*outTopicInfo, 0, len(infos))
+	for _, info := range infos {
+		rets = append(rets, &outTopicInfo{
+			TopicInfo: info,
+			TopicRoot: fss.TopicPath("/", info.Name),
+		})
+	}
 	jBuff, _ := json.Marshal(rets)
 	outBuff := make([]byte, len(jBuff)+protocol.RespHeaderSize)
 	binary.LittleEndian.PutUint16(outBuff, protocol.OkCode)

@@ -7,7 +7,7 @@ import (
 )
 
 func repairCreate(lBinlog *lastBinlog, binlogFile, dataRoot string, meta store.Meta) error {
-	info, err := meta.GetMQInfo(lBinlog.mqName)
+	info, err := meta.GetTopicInfo(lBinlog.topicName)
 	if err != nil {
 		return err
 	}
@@ -18,28 +18,28 @@ func repairCreate(lBinlog *lastBinlog, binlogFile, dataRoot string, meta store.M
 	return nil
 }
 func repairDelete(lBinlog *lastBinlog, binlogFile, dataRoot string, meta store.Meta) error {
-	info, err := meta.GetMQInfo(lBinlog.mqName)
+	info, err := meta.GetTopicInfo(lBinlog.topicName)
 	if err != nil {
 		return err
 	}
 	if info == nil {
 		return nil
 	}
-	if info.State == store.MqStateNormal {
+	if info.State == store.TopicStateNormal {
 		err = os.Truncate(binlogFile, lBinlog.pos)
 		return err
 	}
 
-	mqRoot := fss.MqPath(dataRoot, info.Name)
-	_, err = os.Stat(mqRoot)
+	topicRoot := fss.TopicPath(dataRoot, info.Name)
+	_, err = os.Stat(topicRoot)
 	if err == nil {
-		if err = os.RemoveAll(mqRoot); err != nil {
+		if err = os.RemoveAll(topicRoot); err != nil {
 			return err
 		}
 	} else if !os.IsNotExist(err) {
 		return err
 	}
 
-	_, err = meta.DeleteMQ(info.Name, true)
+	_, err = meta.DeleteTopic(info.Name, true)
 	return err
 }

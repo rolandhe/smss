@@ -13,7 +13,7 @@ import (
 
 var WaitNewTimeoutErr = errors.New("wait timeout")
 var PeerClosedErr = errors.New("peer closed error")
-var MqWriterTermiteErr = dir.NewBizError("mq writer closed,maybe mq deleted")
+var TopicWriterTermiteErr = dir.NewBizError("topic writer closed,maybe topic deleted")
 
 type CmdLine interface {
 	GetPayloadSize() int
@@ -65,7 +65,7 @@ type StdMsgBlockReader[T any] struct {
 
 func (r *StdMsgBlockReader[T]) Read(endNotify <-chan int) ([]*T, error) {
 	if r.notify.IsTermite() {
-		return nil, errors.New("mq not exist")
+		return nil, errors.New("topic not exist")
 	}
 	if err := r.waitFs(endNotify); err != nil {
 		return nil, err
@@ -99,7 +99,7 @@ func (r *StdMsgBlockReader[T]) waitFs(endNotify <-chan int) error {
 		}
 		if waitRet == WaitNotifyResultTermite {
 			logger.Get().Infof("%s waited file %d,notify to %s, ret=WaitNotifyResultTermite", r.subject, r.ctrl.fileId, r.whoami)
-			return MqWriterTermiteErr
+			return TopicWriterTermiteErr
 		}
 		if waitRet == WaitNotifyResultTimeout {
 			logger.Get().Infof("%s waited file %d,notify to %s, ret=WaitNotifyResultTimeout", r.subject, r.ctrl.fileId, r.whoami)
@@ -180,7 +180,7 @@ func (r *StdMsgBlockReader[T]) waitPos(endNotify <-chan int) error {
 		}
 		if waitRet == WaitNotifyResultTermite {
 			logger.Get().Infof("%s waited pos,notify %d.%d %s,ret=WaitNotifyResultTermite", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami)
-			return MqWriterTermiteErr
+			return TopicWriterTermiteErr
 		}
 		if waitRet == WaitNotifyResultTimeout {
 			logger.Get().Infof("%s waited pos,notify %d.%d %s,ret=WaitNotifyResultTimeout", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami)

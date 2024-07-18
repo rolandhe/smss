@@ -25,9 +25,9 @@ func ensureStoreDirectory(root string) error {
 	return checkAndCreateInitDir(root, true)
 }
 
-func ensureMqDirectory(root string, mqList []*store.MqInfo) error {
-	for _, info := range mqList {
-		p := MqPath(root, info.Name)
+func ensureMqDirectory(root string, topicInfoList []*store.TopicInfo) error {
+	for _, info := range topicInfoList {
+		p := TopicPath(root, info.Name)
 		if err := dir.EnsurePathExist(p); err != nil {
 			return err
 		}
@@ -35,14 +35,14 @@ func ensureMqDirectory(root string, mqList []*store.MqInfo) error {
 	return nil
 }
 
-func MqPath(root string, mqName string) string {
-	h := hashString(mqName + "talk is cheap, show me your code")
+func TopicPath(root string, topicName string) string {
+	h := hashString(topicName + "talk is cheap, show me your code")
 	p1 := int(h % 100)
-	h = hashString(mqName + "The world is beautiful")
+	h = hashString(topicName + "The world is beautiful")
 
 	p2 := int(h % 100)
 
-	return path.Join(root, strconv.Itoa(p1), strconv.Itoa(p2), mqName)
+	return path.Join(root, strconv.Itoa(p1), strconv.Itoa(p2), topicName)
 }
 
 func hashString(s string) uint64 {

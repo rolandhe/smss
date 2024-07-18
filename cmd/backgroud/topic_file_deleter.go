@@ -16,16 +16,16 @@ type task struct {
 	who     string
 }
 
-type mqDelExecutor struct {
+type topicDelExecutor struct {
 	deleteList chan *task
 	locker     *protocol.DelFileLock
 	fstore     store.Store
 }
 
-func (de *mqDelExecutor) Submit(mqName, who string, traceId string) func(d time.Duration) bool {
+func (de *topicDelExecutor) Submit(topicName, who string, traceId string) func(d time.Duration) bool {
 	ch := make(chan bool, 1)
 	t := &task{
-		name:    mqName,
+		name:    topicName,
 		notify:  ch,
 		traceId: traceId,
 		who:     who,
@@ -44,17 +44,17 @@ func (de *mqDelExecutor) Submit(mqName, who string, traceId string) func(d time.
 	}
 }
 
-func (de *mqDelExecutor) GetDeleteFileLocker() *protocol.DelFileLock {
+func (de *topicDelExecutor) GetDeleteFileLocker() *protocol.DelFileLock {
 	return de.locker
 }
 
-func (de *mqDelExecutor) run() {
+func (de *topicDelExecutor) run() {
 	for {
 		t := <-de.deleteList
 		unlocker, waiter := de.locker.Lock(t.name, t.who, t.traceId)
 		if waiter != nil {
 			if !waiter(conf.WaitFileDeleteLockerTimeout) {
-				logger.Get().Infof("waiter delete mq %s file locker failed", t.name)
+				logger.Get().Infof("waiter delete topic %s file locker failed", t.name)
 				t.notify <- false
 				continue
 			}
@@ -64,7 +64,7 @@ func (de *mqDelExecutor) run() {
 			t.notify <- false
 			continue
 		}
-		p := de.fstore.GetMqPath(t.name)
+		p := de.fstore.GetTopicPath(t.name)
 		if err := removeMqPath(p, unlocker, t.traceId); err != nil {
 			t.notify <- false
 			continue
@@ -74,7 +74,7 @@ func (de *mqDelExecutor) run() {
 }
 
 func StartMqFileDelete(fstore store.Store) protocol.DelMqFileExecutor {
-	exec := &mqDelExecutor{
+	exec := &topicDelExecutor{
 		deleteList: make(chan *task, 128),
 		fstore:     fstore,
 		locker:     &protocol.DelFileLock{},

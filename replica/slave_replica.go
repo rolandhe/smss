@@ -52,13 +52,13 @@ func syncMqInfo(sc *slaveClient, seqId int64, fstore store.Store) error {
 		return err
 	}
 	for _, info := range infos {
-		if err = fstore.GetManagerMeta().CopyCreateMq(info); err != nil {
+		if err = fstore.GetManagerMeta().CopyCreateTopic(info); err != nil {
 			return err
 		}
-		p := fstore.GetMqPath(info.Name)
+		p := fstore.GetTopicPath(info.Name)
 		err = dir.EnsurePathExist(p)
 		if err != nil {
-			fstore.GetManagerMeta().DeleteMQ(info.Name, true)
+			fstore.GetManagerMeta().DeleteTopic(info.Name, true)
 		}
 	}
 	return nil

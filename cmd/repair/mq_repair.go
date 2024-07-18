@@ -7,8 +7,8 @@ import (
 )
 
 func repairPub(lBinlog *lastBinlog, binlogFile, dataRoot string, meta store.Meta) error {
-	mqPath := fss.MqPath(dataRoot, lBinlog.mqName)
-	p, _, fileSize, err := ensureLogFile(mqPath)
+	topicPath := fss.TopicPath(dataRoot, lBinlog.topicName)
+	p, _, fileSize, err := ensureLogFile(topicPath)
 	if err != nil {
 		return err
 	}
@@ -29,9 +29,9 @@ func repairPub(lBinlog *lastBinlog, binlogFile, dataRoot string, meta store.Meta
 }
 
 func repairDelayApply(lBinlog *lastBinlog, binlogFile, dataRoot string, meta store.Meta) error {
-	delayKey := make([]byte, 16+len(lBinlog.mqName))
+	delayKey := make([]byte, 16+len(lBinlog.topicName))
 	copy(delayKey, lBinlog.payload[:16])
-	copy(delayKey[16:], lBinlog.mqName)
+	copy(delayKey[16:], lBinlog.topicName)
 	exist, err := meta.ExistDelay(delayKey)
 	if err != nil {
 		return err
@@ -40,7 +40,7 @@ func repairDelayApply(lBinlog *lastBinlog, binlogFile, dataRoot string, meta sto
 		return nil
 	}
 
-	info, err := meta.GetMQInfo(lBinlog.mqName)
+	info, err := meta.GetTopicInfo(lBinlog.topicName)
 	if err != nil {
 		return err
 	}
@@ -51,8 +51,8 @@ func repairDelayApply(lBinlog *lastBinlog, binlogFile, dataRoot string, meta sto
 		return meta.RemoveDelay(delayKey)
 	}
 
-	mqPath := fss.MqPath(dataRoot, lBinlog.mqName)
-	p, _, fileSize, err := ensureLogFile(mqPath)
+	topicPath := fss.TopicPath(dataRoot, lBinlog.topicName)
+	p, _, fileSize, err := ensureLogFile(topicPath)
 	if err != nil {
 		return err
 	}

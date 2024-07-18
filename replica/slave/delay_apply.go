@@ -10,7 +10,7 @@ func DelayApplyHandler(cmd *protocol.DecodedRawMessage, payload []byte, worker D
 		Payload: payload,
 	}
 
-	if err := worker.RemoveDelayByName(payload[:16], cmd.MqName); err != nil {
+	if err := worker.RemoveDelayByName(payload[:16], cmd.TopicName); err != nil {
 		return err
 	}
 
@@ -19,7 +19,7 @@ func DelayApplyHandler(cmd *protocol.DecodedRawMessage, payload []byte, worker D
 		WriteTime: cmd.WriteTime,
 		Command:   cmd.Command,
 		EventId:   cmd.EventId,
-		MqName:    cmd.MqName,
+		TopicName: cmd.TopicName,
 		TraceId:   uuid.NewString(),
 		Timestamp: cmd.Timestamp,
 		Body:      daPayload,

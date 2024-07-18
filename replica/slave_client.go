@@ -62,7 +62,7 @@ func (sc *slaveClient) Close() error {
 	return nil
 }
 
-func (sc *slaveClient) getValidMq(seqId int64) ([]*store.MqInfo, error) {
+func (sc *slaveClient) getValidMq(seqId int64) ([]*store.TopicInfo, error) {
 	buf := make([]byte, 28)
 	buf[0] = byte(protocol.CommandValidList)
 	binary.LittleEndian.PutUint64(buf[protocol.HeaderSize:], uint64(seqId))
@@ -95,7 +95,7 @@ func (sc *slaveClient) getValidMq(seqId int64) ([]*store.MqInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	var rets []*store.MqInfo
+	var rets []*store.TopicInfo
 	err = json.Unmarshal(body, &rets)
 	if err != nil {
 		return nil, err

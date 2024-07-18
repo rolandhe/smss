@@ -54,7 +54,7 @@ func ReadHeader(conn net.Conn) (*protocol.CommonHeader, error) {
 		return nil, err
 	}
 	if nameLen > 0 {
-		header.MQName = string(nextBuf[:nameLen])
+		header.TopicName = string(nextBuf[:nameLen])
 	}
 	if traceLen > 0 {
 		header.TraceId = string(nextBuf[nameLen:])
@@ -87,6 +87,6 @@ func (sl *routerSampleLogger) sampleLog(scene string, msg *protocol.RawMessage, 
 		return
 	}
 	if sl.CanLogger() {
-		logger.Get().Infof("tid=%s,%s %s, eventId=%d,cost=%d ms, finish:%v", msg.TraceId, scene, msg.MqName, msg.EventId, msg.Cost(), err)
+		logger.Get().Infof("tid=%s,%s %s, eventId=%d,cost=%d ms, finish:%v", msg.TraceId, scene, msg.TopicName, msg.EventId, msg.Cost(), err)
 	}
 }

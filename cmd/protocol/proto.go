@@ -52,9 +52,9 @@ const (
 
 type CommonHeader struct {
 	buf []byte
-	// mq name
-	MQName  string
-	TraceId string
+	// topic name
+	TopicName string
+	TraceId   string
 }
 
 func NewCommonHeader(buf []byte) *CommonHeader {
@@ -78,7 +78,7 @@ func (h *CommonHeader) GetTraceIdLen() int {
 type PubProtoHeader struct {
 	// 20字节
 	// cmd 1 byte
-	// mq name len, 2
+	// topic name len, 2
 	// payloadSize 4
 	// reserve 12
 	// traceId len 1
@@ -93,7 +93,7 @@ func (ph *PubProtoHeader) GetPayloadSize() int {
 type SubHeader struct {
 	// 20字节
 	// pub/sub 1 byte
-	// mq name len, 2
+	// topic name len, 2
 	// batchSize 1
 	// ack timeout flag 1
 	// reserve 14
@@ -119,7 +119,7 @@ func (sh *SubHeader) HasAckTimeoutFlag() bool {
 
 type SubInfo struct {
 	Who        string
-	MessageId  int64
+	EventId    int64
 	BatchSize  int
 	AckTimeout time.Duration
 }
@@ -147,7 +147,7 @@ func (ce RawMessageSourceEnum) Byte() byte {
 type ReplicaHeader struct {
 	// 20字节
 	// pub/sub 1 byte
-	// mq name len, 2
+	// topic name len, 2
 	// reserve 17
 
 	// next:
@@ -160,7 +160,7 @@ type RawMessage struct {
 	Src       RawMessageSourceEnum
 	WriteTime int64
 	Command   CommandEnum
-	MqName    string
+	TopicName string
 	// 服务端收到pub信息时的时间戳
 	Timestamp int64
 	EventId   int64
@@ -193,7 +193,6 @@ type DDLPayload struct {
 
 type DelayPayload struct {
 	Payload []byte
-	//DelayTime int64
 }
 
 type DelayApplyPayload struct {
@@ -238,6 +237,6 @@ func (l *DelFileLock) Lock(name, who string, traceId string) (func(), func(d tim
 }
 
 type DelMqFileExecutor interface {
-	Submit(mqName, who string, traceId string) func(d time.Duration) bool
+	Submit(topicName, who string, traceId string) func(d time.Duration) bool
 	GetDeleteFileLocker() *DelFileLock
 }

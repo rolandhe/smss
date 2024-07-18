@@ -16,7 +16,7 @@ func CheckLogAndFix(root string, meta store.Meta) (int64, error) {
 	if !exist {
 		return 1, nil
 	}
-	dataRoot := path.Join(root, store.MQDir)
+	dataRoot := path.Join(root, store.TopicDir)
 	exist, err = dir.PathExist(dataRoot)
 	if err != nil {
 		return 0, err

@@ -52,7 +52,7 @@ func Init(fstore store.Store, lc *tc.TimeTriggerControl, delExec protocol.DelMqF
 		delExecutor: delExec,
 	}
 
-	routerMap[protocol.CommandList] = &mqListRouter{
+	routerMap[protocol.CommandList] = &topicListRouter{
 		fstore: fstore,
 	}
 

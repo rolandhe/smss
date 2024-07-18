@@ -25,7 +25,7 @@ func PubEncoder(msg *protocol.RawMessage) *bytes.Buffer {
 	buff.WriteString(fmt.Sprintf("%d", msg.Timestamp))
 	buff.WriteRune('\t')
 
-	buff.WriteString(msg.MqName)
+	buff.WriteString(msg.TopicName)
 	buff.WriteRune('\t')
 
 	storeMsg := msg.Body.(*protocol.PubPayload)
@@ -53,7 +53,7 @@ func DelayApplyEncoder(msg *protocol.RawMessage) *bytes.Buffer {
 
 	buff.WriteString(fmt.Sprintf("%d", msg.Timestamp))
 	buff.WriteRune('\t')
-	buff.WriteString(msg.MqName)
+	buff.WriteString(msg.TopicName)
 	buff.WriteRune('\t')
 
 	storeMsg := msg.Body.(*protocol.DelayApplyPayload)
@@ -81,7 +81,7 @@ func DDLEncoder(msg *protocol.RawMessage) *bytes.Buffer {
 
 	buff.WriteString(fmt.Sprintf("%d", msg.Timestamp))
 	buff.WriteRune('\t')
-	buff.WriteString(msg.MqName)
+	buff.WriteString(msg.TopicName)
 
 	buff.WriteRune('\t')
 	var payloadBuf []byte
@@ -122,7 +122,7 @@ func DelayEncode(msg *protocol.RawMessage) *bytes.Buffer {
 
 	buff.WriteString(fmt.Sprintf("%d", msg.Timestamp))
 	buff.WriteRune('\t')
-	buff.WriteString(msg.MqName)
+	buff.WriteString(msg.TopicName)
 	buff.WriteRune('\t')
 
 	storeMsg := msg.Body.(*protocol.DelayPayload)
@@ -151,7 +151,7 @@ func CmdDecoder(buf []byte) *protocol.DecodedRawMessage {
 
 	msg.Timestamp, _ = strconv.ParseInt(items[3], 10, 64)
 
-	msg.MqName = items[4]
+	msg.TopicName = items[4]
 	msg.PayloadLen, _ = strconv.Atoi(items[5])
 
 	return &msg

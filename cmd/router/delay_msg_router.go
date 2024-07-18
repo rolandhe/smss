@@ -57,7 +57,7 @@ func (r *delayRouter) Router(conn net.Conn, header *protocol.CommonHeader, worke
 	binary.LittleEndian.PutUint64(buf, uint64(triggerTime))
 	msg := &protocol.RawMessage{
 		Command:   header.GetCmd(),
-		MqName:    header.MQName,
+		TopicName: header.TopicName,
 		Timestamp: time.Now().UnixMilli(),
 		TraceId:   header.TraceId,
 		Body: &protocol.DelayPayload{
@@ -73,7 +73,7 @@ func (r *delayRouter) Router(conn net.Conn, header *protocol.CommonHeader, worke
 }
 
 func (r *delayRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, error) {
-	info, err := r.fstore.GetMqInfoReader().GetMQInfo(msg.MqName)
+	info, err := r.fstore.GetTopicInfoReader().GetTopicInfo(msg.TopicName)
 	if err != nil {
 		return 0, err
 	}
@@ -82,7 +82,7 @@ func (r *delayRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, err
 			msg.Skip = true
 			return r.outBinlog(f, msg)
 		}
-		return 0, dir.NewBizError("mq not exist")
+		return 0, dir.NewBizError("topic not exist")
 	}
 
 	return r.outBinlog(f, msg)
@@ -113,7 +113,7 @@ func (r *delayRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) e
 	}
 	storeMsg := msg.Body.(*protocol.DelayPayload)
 
-	err := r.fstore.SaveDelayMsg(msg.MqName, storeMsg.Payload)
+	err := r.fstore.SaveDelayMsg(msg.TopicName, storeMsg.Payload)
 	if err != nil {
 		return err
 	}

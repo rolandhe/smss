@@ -10,7 +10,7 @@ func DDLMQHandle(cmd *protocol.DecodedRawMessage, payload []byte, worker DependW
 		Src:       protocol.RawMessageReplica,
 		WriteTime: cmd.WriteTime,
 		Command:   cmd.Command,
-		MqName:    cmd.MqName,
+		TopicName: cmd.TopicName,
 		EventId:   cmd.EventId,
 		Timestamp: cmd.Timestamp,
 		TraceId:   uuid.NewString(),

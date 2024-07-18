@@ -21,11 +21,11 @@ type deleteMqRouter struct {
 
 func (r *deleteMqRouter) Router(conn net.Conn, header *protocol.CommonHeader, worker standard.MessageWorking) error {
 	if curInsRole != store.Master {
-		return nets.OutputRecoverErr(conn, "just master can manage mq", NetWriteTimeout)
+		return nets.OutputRecoverErr(conn, "just master can manage topic", NetWriteTimeout)
 	}
 	msg := &protocol.RawMessage{
 		Command:   header.GetCmd(),
-		MqName:    header.MQName,
+		TopicName: header.TopicName,
 		TraceId:   header.TraceId,
 		Timestamp: time.Now().UnixMilli(),
 	}
@@ -33,7 +33,7 @@ func (r *deleteMqRouter) Router(conn net.Conn, header *protocol.CommonHeader, wo
 }
 
 func (r *deleteMqRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, error) {
-	info, err := r.fstore.GetMqInfoReader().GetMQInfo(msg.MqName)
+	info, err := r.fstore.GetTopicInfoReader().GetTopicInfo(msg.TopicName)
 	if err != nil {
 		return 0, err
 	}
@@ -42,7 +42,7 @@ func (r *deleteMqRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, 
 			msg.Skip = true
 			return r.doBinlog(f, msg)
 		}
-		return 0, dir.NewBizError("mq not exist")
+		return 0, dir.NewBizError("topic not exist")
 	}
 	setupRawMessageEventIdAndWriteTime(msg, 1)
 	return r.doBinlog(f, msg)
@@ -51,20 +51,20 @@ func (r *deleteMqRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64
 	if msg.Src == protocol.RawMessageReplica && msg.Skip {
 		return nil
 	}
-	err := deleteMqRoot(msg.MqName, "deleteMqRouter", r.fstore, r.delExecutor, msg.TraceId)
-	logger.Get().Infof("tid=%s,deleteMqRouter.AfterBinlog, mq=%s,eventId=%d, err:%v", msg.TraceId, msg.MqName, msg.EventId, err)
+	err := deleteTopicRoot(msg.TopicName, "deleteMqRouter", r.fstore, r.delExecutor, msg.TraceId)
+	logger.Get().Infof("tid=%s,deleteMqRouter.AfterBinlog, topic=%s,eventId=%d, err:%v", msg.TraceId, msg.TopicName, msg.EventId, err)
 	return err
 }
 
-func deleteMqRoot(mqName, who string, fstore store.Store, delExecutor protocol.DelMqFileExecutor, traceId string) error {
-	return fstore.ForceDeleteMQ(mqName, func() error {
-		waiter := delExecutor.Submit(mqName, who, traceId)
+func deleteTopicRoot(topicName, who string, fstore store.Store, delExecutor protocol.DelMqFileExecutor, traceId string) error {
+	return fstore.ForceDeleteTopic(topicName, func() error {
+		waiter := delExecutor.Submit(topicName, who, traceId)
 		if !waiter(time.Second * 2) {
-			logger.Get().Infof("tid=%s,delete %s mq file failed", traceId, mqName)
-			return errors.New("delete mq file failed")
+			logger.Get().Infof("tid=%s,delete %s topic file failed", traceId, topicName)
+			return errors.New("delete topic file failed")
 		}
 
-		logger.Get().Infof("tid=%s,DeleteMqRoot %s ok", traceId, mqName)
+		logger.Get().Infof("tid=%s,deleteTopicRoot %s ok", traceId, topicName)
 
 		return nil
 	})

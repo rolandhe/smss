@@ -15,7 +15,7 @@ func DelayHandler(cmd *protocol.DecodedRawMessage, payload []byte, worker Depend
 		WriteTime: cmd.WriteTime,
 		Command:   cmd.Command,
 		EventId:   cmd.EventId,
-		MqName:    cmd.MqName,
+		TopicName: cmd.TopicName,
 		TraceId:   uuid.NewString(),
 		Timestamp: cmd.Timestamp,
 		Body:      daPayload,

@@ -24,7 +24,7 @@ type subRouter struct {
 }
 
 type subLongtimeReader struct {
-	store.MqBlockReader
+	store.TopicBlockReader
 }
 
 func (lr *subLongtimeReader) Output(conn net.Conn, msgs []*store.ReadMessage) error {
@@ -44,49 +44,48 @@ func (r *subRouter) Router(conn net.Conn, commHeader *protocol.CommonHeader, wor
 		info.BatchSize = protocol.DefaultSubBatchSize
 	}
 
-	var mqInfo *store.MqInfo
-	mqInfo, err = r.fstore.GetMqInfoReader().GetMQInfo(header.MQName)
+	var topicInfo *store.TopicInfo
+	topicInfo, err = r.fstore.GetTopicInfoReader().GetTopicInfo(header.TopicName)
 	if err != nil {
 		return nets.OutputRecoverErr(conn, err.Error(), NetWriteTimeout)
 	}
-	if mqInfo == nil || mqInfo.IsInvalid() {
-		logger.Get().Infof("mq not exist:%s", header.MQName)
-		return nets.OutputRecoverErr(conn, "mq not exist", NetWriteTimeout)
+	if topicInfo == nil || topicInfo.IsInvalid() {
+		logger.Get().Infof("topic not exist:%s", header.TopicName)
+		return nets.OutputRecoverErr(conn, "topic not exist", NetWriteTimeout)
 	}
 
 	var fileId, pos int64
-	mqPath := r.fstore.GetMqPath(header.MQName)
-	if fileId, pos, err = getSubPos(info.MessageId, mqPath); err != nil {
-		logger.Get().Infof("message id not found:%s, %d", header.MQName, info.MessageId)
-		return nets.OutputRecoverErr(conn, "message id not found", NetWriteTimeout)
+	topicPath := r.fstore.GetTopicPath(header.TopicName)
+	if fileId, pos, err = getSubPos(info.EventId, topicPath); err != nil {
+		logger.Get().Infof("event id not found:%s, %d", header.TopicName, info.EventId)
+		return nets.OutputRecoverErr(conn, "event id not found", NetWriteTimeout)
 	}
 
-	reader, err := r.fstore.GetReader(header.MQName, info.Who, fileId, pos, info.BatchSize)
+	reader, err := r.fstore.GetReader(header.TopicName, info.Who, fileId, pos, info.BatchSize)
 	if err != nil {
 		return nets.OutputRecoverErr(conn, err.Error(), NetWriteTimeout)
 	}
 
-	tid := fmt.Sprintf("%s-%s", header.MQName, info.Who)
+	tid := fmt.Sprintf("%s-%s", header.TopicName, info.Who)
 
 	return nets.LongTimeRun[store.ReadMessage](conn, "sub", tid, info.AckTimeout, NetWriteTimeout, &subLongtimeReader{
-		MqBlockReader: reader,
+		TopicBlockReader: reader,
 	})
 }
 
-func getSubPos(messageId int64, mqPath string) (int64, int64, error) {
+func getSubPos(eventId int64, topicPath string) (int64, int64, error) {
 	var fileId int64
 	var err error
 
-	if messageId == 0 {
-		fileId, err = standard.ReadFirstFileId(mqPath)
+	if eventId == 0 {
+		fileId, err = standard.ReadFirstFileId(topicPath)
 		if err != nil {
 			return 0, 0, err
 		}
 		return fileId, 0, nil
 	}
 
-
-	return repair.FindMqPosByEventId(mqPath, messageId)
+	return repair.FindMqPosByEventId(topicPath, eventId)
 }
 
 // readSubInfo, sub 格式
@@ -104,7 +103,7 @@ func readSubInfo(conn net.Conn, header *protocol.SubHeader) (*protocol.SubInfo, 
 		return nil, err
 	}
 
-	messageId := int64(binary.LittleEndian.Uint64(buf))
+	eventId := int64(binary.LittleEndian.Uint64(buf))
 
 	n = 8
 	ackTimeout := protocol.AckDefaultTimeout
@@ -123,7 +122,7 @@ func readSubInfo(conn net.Conn, header *protocol.SubHeader) (*protocol.SubInfo, 
 
 	return &protocol.SubInfo{
 		Who:        string(whoBuff),
-		MessageId:  messageId,
+		EventId:    eventId,
 		BatchSize:  header.GetBatchSize(),
 		AckTimeout: ackTimeout,
 	}, nil

@@ -60,7 +60,7 @@ type lastBinlog struct {
 	pos          int64
 	cmd          protocol.CommandEnum
 	messageSeqId int64
-	mqName       string
+	topicName    string
 	payload      []byte
 }
 
@@ -76,7 +76,7 @@ func (ext *extractBinlog) extractRet(cmd *protocol.DecodedRawMessage, pos int64,
 	last := &lastBinlog{
 		fileId:       ext.fileId,
 		pos:          pos,
-		mqName:       cmd.MqName,
+		topicName:    cmd.TopicName,
 		cmd:          cmd.Command,
 		messageSeqId: cmd.EventId,
 		payload:      payload,

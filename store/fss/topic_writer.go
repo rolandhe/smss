@@ -8,14 +8,14 @@ import (
 	"sync"
 )
 
-type mqWriter struct {
+type topicWriter struct {
 	*standard.StdMsgWriter[wrappedMsges]
 	sync.WaitGroup
 }
 
-func newWriter(mqName, mqPath string) *mqWriter {
-	w := &mqWriter{
-		StdMsgWriter: standard.NewMsgWriter[wrappedMsges](mqName, mqPath, conf.MaxLogSize, buildWriteFunc()),
+func newWriter(topicName, topicPath string) *topicWriter {
+	w := &topicWriter{
+		StdMsgWriter: standard.NewMsgWriter[wrappedMsges](topicName, topicPath, conf.MaxLogSize, buildWriteFunc()),
 	}
 	return w
 }

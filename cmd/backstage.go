@@ -37,11 +37,11 @@ func newWriter(root string, meta store.Meta) (*binlog.WalWriter[protocol.RawMess
 		return handler.DoBinlog(f, msg)
 	})
 
-	mqWriterFunc := func(msg *protocol.RawMessage, fileId, pos int64) error {
+	topicWriterFunc := func(msg *protocol.RawMessage, fileId, pos int64) error {
 		handler := router.GetRouter(msg.Command)
 		return handler.AfterBinlog(msg, fileId, pos)
 	}
-	return binlog.NewWalWriter[protocol.RawMessage](binlogWriter, mqWriterFunc), fstore, nil
+	return binlog.NewWalWriter[protocol.RawMessage](binlogWriter, topicWriterFunc), fstore, nil
 
 }
 
