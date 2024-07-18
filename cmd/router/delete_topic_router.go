@@ -13,13 +13,13 @@ import (
 	"time"
 )
 
-type deleteMqRouter struct {
+type deleteTopicRouter struct {
 	fstore store.Store
 	ddlRouter
-	delExecutor protocol.DelMqFileExecutor
+	delExecutor protocol.DelTopicFileExecutor
 }
 
-func (r *deleteMqRouter) Router(conn net.Conn, header *protocol.CommonHeader, worker standard.MessageWorking) error {
+func (r *deleteTopicRouter) Router(conn net.Conn, header *protocol.CommonHeader, worker standard.MessageWorking) error {
 	if curInsRole != store.Master {
 		return nets.OutputRecoverErr(conn, "just master can manage topic", NetWriteTimeout)
 	}
@@ -32,7 +32,7 @@ func (r *deleteMqRouter) Router(conn net.Conn, header *protocol.CommonHeader, wo
 	return r.router(conn, msg, worker)
 }
 
-func (r *deleteMqRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, error) {
+func (r *deleteTopicRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, error) {
 	info, err := r.fstore.GetTopicInfoReader().GetTopicInfo(msg.TopicName)
 	if err != nil {
 		return 0, err
@@ -47,16 +47,16 @@ func (r *deleteMqRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, 
 	setupRawMessageEventIdAndWriteTime(msg, 1)
 	return r.doBinlog(f, msg)
 }
-func (r *deleteMqRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) error {
+func (r *deleteTopicRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) error {
 	if msg.Src == protocol.RawMessageReplica && msg.Skip {
 		return nil
 	}
-	err := deleteTopicRoot(msg.TopicName, "deleteMqRouter", r.fstore, r.delExecutor, msg.TraceId)
-	logger.Get().Infof("tid=%s,deleteMqRouter.AfterBinlog, topic=%s,eventId=%d, err:%v", msg.TraceId, msg.TopicName, msg.EventId, err)
+	err := deleteTopicRoot(msg.TopicName, "deleteTopicRouter", r.fstore, r.delExecutor, msg.TraceId)
+	logger.Get().Infof("tid=%s,deleteTopicRouter.AfterBinlog, topic=%s,eventId=%d, err:%v", msg.TraceId, msg.TopicName, msg.EventId, err)
 	return err
 }
 
-func deleteTopicRoot(topicName, who string, fstore store.Store, delExecutor protocol.DelMqFileExecutor, traceId string) error {
+func deleteTopicRoot(topicName, who string, fstore store.Store, delExecutor protocol.DelTopicFileExecutor, traceId string) error {
 	return fstore.ForceDeleteTopic(topicName, func() error {
 		waiter := delExecutor.Submit(topicName, who, traceId)
 		if !waiter(time.Second * 2) {

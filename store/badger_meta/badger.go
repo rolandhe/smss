@@ -24,8 +24,8 @@ func NewMeta(path string) (store.Meta, error) {
 }
 
 func (bm *badgerMeta) CreateTopic(topicName string, expireAt int64, eventId int64) (*store.TopicInfo, error) {
-	norMqName := normalMqName(topicName)
-	exist, err := bm.existMq(norMqName)
+	norTopicName := normalTopicName(topicName)
+	exist, err := bm.existTopic(norTopicName)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +47,7 @@ func (bm *badgerMeta) CreateTopic(topicName string, expireAt int64, eventId int6
 		state:              store.TopicStateNormal,
 	}
 	err = bm.db.Update(func(txn *badger.Txn) error {
-		if e := txn.Set(norMqName, valMeta.toBytes()); e != nil {
+		if e := txn.Set(norTopicName, valMeta.toBytes()); e != nil {
 			return e
 		}
 		if info.IsTemp() {
@@ -66,8 +66,8 @@ func (bm *badgerMeta) CreateTopic(topicName string, expireAt int64, eventId int6
 }
 
 func (bm *badgerMeta) CopyCreateTopic(info *store.TopicInfo) error {
-	norMqName := normalMqName(info.Name)
-	exist, err := bm.existMq(norMqName)
+	norTopicName := normalTopicName(info.Name)
+	exist, err := bm.existTopic(norTopicName)
 	if err != nil {
 		return err
 	}
@@ -77,10 +77,10 @@ func (bm *badgerMeta) CopyCreateTopic(info *store.TopicInfo) error {
 
 	var valMeta topicMetaValue
 
-	valMeta.fromMqInfo(info)
+	valMeta.fromTopicInfo(info)
 
 	err = bm.db.Update(func(txn *badger.Txn) error {
-		if e := txn.Set(norMqName, valMeta.toBytes()); e != nil {
+		if e := txn.Set(norTopicName, valMeta.toBytes()); e != nil {
 			return e
 		}
 		if info.IsTemp() {
@@ -102,7 +102,7 @@ func (bm *badgerMeta) DeleteTopic(topicName string, force bool) (bool, error) {
 	exist := true
 	var valMeta topicMetaValue
 	err := bm.db.Update(func(txn *badger.Txn) error {
-		k := normalMqName(topicName)
+		k := normalTopicName(topicName)
 		item, err := txn.Get(k)
 		if errors.Is(err, badger.ErrKeyNotFound) {
 			exist = false
@@ -139,7 +139,7 @@ func (bm *badgerMeta) DeleteTopic(topicName string, force bool) (bool, error) {
 	return exist, err
 }
 
-func (bm *badgerMeta) ScanExpireMqs() ([]string, int64, error) {
+func (bm *badgerMeta) ScanExpireTopics() ([]string, int64, error) {
 	now := time.Now().UnixMilli()
 	var next int64
 	var topicList []string
@@ -168,7 +168,7 @@ func (bm *badgerMeta) ScanExpireMqs() ([]string, int64, error) {
 
 		return nil
 	})
-	logger.Get().Infof("ScanExpireMqs,next scan time from db:%d", next)
+	logger.Get().Infof("ScanExpireTopics,next scan time from db:%d", next)
 	return topicList, next, err
 }
 
@@ -201,9 +201,9 @@ func (bm *badgerMeta) ScanDelays(batchSize int) ([]*store.DelayItem, int64, erro
 				return e
 			}
 			delay := &store.DelayItem{
-				Key:     key,
-				Payload: valueBuf,
-				MqName:  string(buf[16:]),
+				Key:       key,
+				Payload:   valueBuf,
+				TopicName: string(buf[16:]),
 			}
 			ret = append(ret, delay)
 			if len(ret) == batchSize {
@@ -243,7 +243,7 @@ func (bm *badgerMeta) GetTopicInfo(topicName string) (*store.TopicInfo, error) {
 	err := bm.db.View(func(txn *badger.Txn) error {
 		var e error
 		var rawValue []byte
-		if rawValue, e = getRawValue(normalMqName(topicName), txn); e != nil {
+		if rawValue, e = getRawValue(normalTopicName(topicName), txn); e != nil {
 			return e
 		}
 		valMeta.fromBytes(rawValue)
@@ -255,7 +255,7 @@ func (bm *badgerMeta) GetTopicInfo(topicName string) (*store.TopicInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	return valMeta.toMqInfo(topicName), nil
+	return valMeta.toTopicInfo(topicName), nil
 }
 
 func (bm *badgerMeta) GetTopicSimpleInfoList() ([]*store.TopicInfo, error) {
@@ -277,7 +277,7 @@ func (bm *badgerMeta) GetTopicSimpleInfoList() ([]*store.TopicInfo, error) {
 			}); e != nil {
 				return e
 			}
-			infoList = append(infoList, valMeta.toMqInfo(topicName))
+			infoList = append(infoList, valMeta.toTopicInfo(topicName))
 		}
 		return nil
 	})
@@ -391,11 +391,11 @@ func (bm *badgerMeta) Close() error {
 	return nil
 }
 
-func (bm *badgerMeta) existMq(normalMqName []byte) (bool, error) {
+func (bm *badgerMeta) existTopic(normalTopicName []byte) (bool, error) {
 	exist := false
 	err := bm.db.View(func(txn *badger.Txn) error {
 		var e error
-		if exist, e = existKey(normalMqName, txn); e != nil {
+		if exist, e = existKey(normalTopicName, txn); e != nil {
 			return e
 		}
 		return nil
@@ -432,7 +432,7 @@ func getRawValue(key []byte, txn *badger.Txn) ([]byte, error) {
 	return ret, nil
 }
 
-func normalMqName(topicName string) []byte {
+func normalTopicName(topicName string) []byte {
 	pl := len(normalPrefix)
 	buf := make([]byte, pl+len(topicName))
 	copy(buf, normalPrefix)

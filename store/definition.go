@@ -31,9 +31,9 @@ func (info *TopicInfo) IsInvalid() bool {
 }
 
 type DelayItem struct {
-	Payload []byte
-	Key     []byte
-	MqName  string
+	Payload   []byte
+	Key       []byte
+	TopicName string
 }
 
 type ManagerMeta interface {
@@ -54,7 +54,7 @@ type TopicInfoReader interface {
 }
 
 type Scanner interface {
-	ScanExpireMqs() ([]string, int64, error)
+	ScanExpireTopics() ([]string, int64, error)
 	ScanDelays(batchSize int) ([]*DelayItem, int64, error)
 }
 

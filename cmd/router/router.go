@@ -30,7 +30,7 @@ func (h *noBinlog) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) erro
 	return nil
 }
 
-func Init(fstore store.Store, lc *tc.TimeTriggerControl, delExec protocol.DelMqFileExecutor) {
+func Init(fstore store.Store, lc *tc.TimeTriggerControl, delExec protocol.DelTopicFileExecutor) {
 	sampleLogger := &routerSampleLogger{
 		SampleLoggerSupport: logger.NewSampleLoggerSupport(conf.LogSample),
 	}
@@ -42,12 +42,12 @@ func Init(fstore store.Store, lc *tc.TimeTriggerControl, delExec protocol.DelMqF
 		routerSampleLogger: sampleLogger,
 	}
 
-	routerMap[protocol.CommandCreateTopic] = &createMqRouter{
+	routerMap[protocol.CommandCreateTopic] = &createTopicRouter{
 		fstore: fstore,
 		lc:     lc,
 	}
 
-	routerMap[protocol.CommandDeleteTopic] = &deleteMqRouter{
+	routerMap[protocol.CommandDeleteTopic] = &deleteTopicRouter{
 		fstore:      fstore,
 		delExecutor: delExec,
 	}

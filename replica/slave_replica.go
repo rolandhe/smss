@@ -17,7 +17,7 @@ func SlaveReplica(masterHost string, masterPort int, seqId int64, needSync bool,
 		return err
 	}
 	if needSync {
-		err = syncMqInfo(sc, seqId, fstore)
+		err = syncTopicInfo(sc, seqId, fstore)
 		if err != nil {
 			return err
 		}
@@ -46,8 +46,8 @@ func SlaveReplica(masterHost string, masterPort int, seqId int64, needSync bool,
 	return nil
 }
 
-func syncMqInfo(sc *slaveClient, seqId int64, fstore store.Store) error {
-	infos, err := sc.getValidMq(seqId)
+func syncTopicInfo(sc *slaveClient, seqId int64, fstore store.Store) error {
+	infos, err := sc.getValidTopic(seqId)
 	if err != nil {
 		return err
 	}

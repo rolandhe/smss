@@ -20,12 +20,12 @@ const (
 
 var cronIns *cron.Cron
 
-func StartClearOldFiles(store store.Store, worker standard.MessageWorking, delMqFileExecutor protocol.DelMqFileExecutor) {
+func StartClearOldFiles(store store.Store, worker standard.MessageWorking, delTopicFileExecutor protocol.DelTopicFileExecutor) {
 	cronIns = cron.New()
 
 	// 添加定时任务
 	cronIns.AddFunc(fmt.Sprintf("@every %ds", conf.StoreClearInterval), func() {
-		deleteOldFiles(store, worker, delMqFileExecutor)
+		deleteOldFiles(store, worker, delTopicFileExecutor)
 	})
 
 	// 启动 cron 调度器
@@ -40,14 +40,14 @@ func StopClear() {
 	cronIns = nil
 }
 
-func deleteOldFiles(fstore store.Store, worker standard.MessageWorking, delMqFileExecutor protocol.DelMqFileExecutor) {
+func deleteOldFiles(fstore store.Store, worker standard.MessageWorking, delTopicFileExecutor protocol.DelTopicFileExecutor) {
 	traceId := fmt.Sprintf("delOldFile-%d", time.Now().UnixMilli())
 	infoList, err := fstore.GetTopicInfoReader().GetTopicSimpleInfoList()
 	if err != nil {
 		logger.Get().Infof("deleteOldFiles err:%v", err)
 	}
 
-	locker := delMqFileExecutor.GetDeleteFileLocker()
+	locker := delTopicFileExecutor.GetDeleteFileLocker()
 
 	for _, info := range infoList {
 		p := fstore.GetTopicPath(info.Name)

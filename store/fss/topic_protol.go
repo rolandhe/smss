@@ -15,7 +15,7 @@ var (
 	lenHolder = []byte{0, 0, 0, 0}
 )
 
-type MqMessageCommand struct {
+type TopicMessageCommand struct {
 	ts           int64
 	id           int64
 	sendTime     int64
@@ -27,13 +27,13 @@ type MqMessageCommand struct {
 	CmdLen    int
 }
 
-func (mc *MqMessageCommand) GetPayloadSize() int {
+func (mc *TopicMessageCommand) GetPayloadSize() int {
 	return mc.payLoadSize
 }
-func (mc *MqMessageCommand) GetCmd() protocol.CommandEnum {
+func (mc *TopicMessageCommand) GetCmd() protocol.CommandEnum {
 	return protocol.CommandPub
 }
-func (mc *MqMessageCommand) GetId() int64 {
+func (mc *TopicMessageCommand) GetId() int64 {
 	return mc.id
 }
 
@@ -80,7 +80,7 @@ func buildCommandsAndCalcSize(amsg *wrappedMsges) ([][]byte, int) {
 	return ret, size
 }
 
-func ReadMqMessageCmd(buf []byte, msg *MqMessageCommand) error {
+func ReadTopicMessageCmd(buf []byte, msg *TopicMessageCommand) error {
 	var err error
 	cmd := string(buf)
 	items := strings.Split(cmd, "\t")

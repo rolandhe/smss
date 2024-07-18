@@ -28,7 +28,7 @@ func NewFileStore(root string, meta store.Meta) (store.Store, error) {
 		meta.Close()
 		return nil, err
 	}
-	if err = ensureMqDirectory(fsStoreRoot, topicList); err != nil {
+	if err = ensureTopicDirectory(fsStoreRoot, topicList); err != nil {
 		meta.Close()
 		return nil, err
 	}

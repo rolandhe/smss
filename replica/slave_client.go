@@ -62,10 +62,10 @@ func (sc *slaveClient) Close() error {
 	return nil
 }
 
-func (sc *slaveClient) getValidMq(seqId int64) ([]*store.TopicInfo, error) {
+func (sc *slaveClient) getValidTopic(eventId int64) ([]*store.TopicInfo, error) {
 	buf := make([]byte, 28)
 	buf[0] = byte(protocol.CommandValidList)
-	binary.LittleEndian.PutUint64(buf[protocol.HeaderSize:], uint64(seqId))
+	binary.LittleEndian.PutUint64(buf[protocol.HeaderSize:], uint64(eventId))
 	if err := nets.WriteAll(sc.conn, buf, netWriteTimeout); err != nil {
 		return nil, err
 	}

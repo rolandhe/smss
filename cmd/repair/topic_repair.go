@@ -16,12 +16,12 @@ func repairPub(lBinlog *lastBinlog, binlogFile, dataRoot string, meta store.Meta
 		return os.Truncate(binlogFile, lBinlog.pos)
 	}
 
-	extractor := &extractMqLog{}
-	lMqLog, err := readLastLogBlock[fss.MqMessageCommand, lastMqLog](0, p, fileSize, extractor)
+	extractor := &extractTopicLog{}
+	lTopicLog, err := readLastLogBlock[fss.TopicMessageCommand, lastTopicLog](0, p, fileSize, extractor)
 	if err != nil {
 		return err
 	}
-	if lMqLog.srcFileId != lBinlog.fileId || lMqLog.srcPos != lBinlog.pos {
+	if lTopicLog.srcFileId != lBinlog.fileId || lTopicLog.srcPos != lBinlog.pos {
 		return os.Truncate(binlogFile, lBinlog.pos)
 	}
 
@@ -60,12 +60,12 @@ func repairDelayApply(lBinlog *lastBinlog, binlogFile, dataRoot string, meta sto
 		return os.Truncate(binlogFile, lBinlog.pos)
 	}
 
-	extractor := &extractMqLog{}
-	lMqLog, err := readLastLogBlock[fss.MqMessageCommand, lastMqLog](0, p, fileSize, extractor)
+	extractor := &extractTopicLog{}
+	lTopicLog, err := readLastLogBlock[fss.TopicMessageCommand, lastTopicLog](0, p, fileSize, extractor)
 	if err != nil {
 		return err
 	}
-	if lMqLog.srcFileId != lBinlog.fileId || lMqLog.srcPos != lBinlog.pos {
+	if lTopicLog.srcFileId != lBinlog.fileId || lTopicLog.srcPos != lBinlog.pos {
 		if err = os.Truncate(binlogFile, lBinlog.pos); err != nil {
 			return err
 		}

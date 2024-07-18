@@ -99,7 +99,7 @@ func StartServer(root string, insRole *InstanceRole) {
 }
 
 func startBgAndInitRouter(fstore store.Store, worker standard.MessageWorking, role store.InstanceRoleEnum) {
-	delExec := backgroud.StartMqFileDelete(fstore)
+	delExec := backgroud.StartTopicFileDelete(fstore)
 	backgroud.StartClearOldFiles(fstore, worker, delExec)
 	var lc *tc.TimeTriggerControl
 	if role == store.Master {

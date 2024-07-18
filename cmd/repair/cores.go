@@ -84,7 +84,7 @@ func (ext *extractBinlog) extractRet(cmd *protocol.DecodedRawMessage, pos int64,
 	return last
 }
 
-type lastMqLog struct {
+type lastTopicLog struct {
 	id           int64
 	cmdLen       int
 	pos          int64
@@ -93,19 +93,19 @@ type lastMqLog struct {
 	srcPos       int64
 }
 
-type extractMqLog struct {
+type extractTopicLog struct {
 }
 
-func (ext *extractMqLog) extractCmd(cmdBuf []byte) (*fss.MqMessageCommand, int) {
-	cmd := &fss.MqMessageCommand{}
-	err := fss.ReadMqMessageCmd(cmdBuf[:len(cmdBuf)-1], cmd)
+func (ext *extractTopicLog) extractCmd(cmdBuf []byte) (*fss.TopicMessageCommand, int) {
+	cmd := &fss.TopicMessageCommand{}
+	err := fss.ReadTopicMessageCmd(cmdBuf[:len(cmdBuf)-1], cmd)
 	if err != nil {
 		return nil, 0
 	}
 	return cmd, cmd.GetPayloadSize()
 }
-func (ext *extractMqLog) extractRet(cmd *fss.MqMessageCommand, pos int64, payload []byte) *lastMqLog {
-	last := &lastMqLog{
+func (ext *extractTopicLog) extractRet(cmd *fss.TopicMessageCommand, pos int64, payload []byte) *lastTopicLog {
+	last := &lastTopicLog{
 		id:           cmd.GetId(),
 		cmdLen:       cmd.CmdLen,
 		pos:          pos,

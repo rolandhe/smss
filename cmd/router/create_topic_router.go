@@ -15,13 +15,13 @@ import (
 	"time"
 )
 
-type createMqRouter struct {
+type createTopicRouter struct {
 	fstore store.Store
 	lc     *tc.TimeTriggerControl
 	ddlRouter
 }
 
-func (r *createMqRouter) Router(conn net.Conn, header *protocol.CommonHeader, worker standard.MessageWorking) error {
+func (r *createTopicRouter) Router(conn net.Conn, header *protocol.CommonHeader, worker standard.MessageWorking) error {
 	buf := make([]byte, 8)
 	if err := nets.ReadAll(conn, buf, NetReadTimeout); err != nil {
 		return err
@@ -55,7 +55,7 @@ func (r *createMqRouter) Router(conn net.Conn, header *protocol.CommonHeader, wo
 	return r.router(conn, msg, worker)
 }
 
-func (r *createMqRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, error) {
+func (r *createTopicRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, error) {
 	info, err := r.fstore.GetTopicInfoReader().GetTopicInfo(msg.TopicName)
 	if err != nil {
 		return 0, err
@@ -81,7 +81,7 @@ func (r *createMqRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, 
 	setupRawMessageEventIdAndWriteTime(msg, 1)
 	return r.doBinlog(f, msg)
 }
-func (r *createMqRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) error {
+func (r *createTopicRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) error {
 	if msg.Src == protocol.RawMessageReplica && msg.Skip {
 		return nil
 	}

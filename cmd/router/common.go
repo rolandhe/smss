@@ -43,7 +43,7 @@ func ReadHeader(conn net.Conn) (*protocol.CommonHeader, error) {
 		return nil, err
 	}
 	header := protocol.NewCommonHeader(buff)
-	nameLen := header.GetMqNameLen()
+	nameLen := header.GetTopicNameLen()
 	traceLen := header.GetTraceIdLen()
 	if nameLen+traceLen == 0 {
 		return header, nil

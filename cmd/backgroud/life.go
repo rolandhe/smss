@@ -22,7 +22,7 @@ func StartLife(fstore store.Store, worker standard.MessageWorking) *tc.TimeTrigg
 }
 
 func doLife(fstore store.Store, worker standard.MessageWorking, traceId string) int64 {
-	topicList, next, err := fstore.GetScanner().ScanExpireMqs()
+	topicList, next, err := fstore.GetScanner().ScanExpireTopics()
 	if err != nil {
 		logger.Get().Infof("tid=%s,doLife err:%v", traceId, err)
 		return 0

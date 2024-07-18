@@ -65,7 +65,7 @@ func (de *topicDelExecutor) run() {
 			continue
 		}
 		p := de.fstore.GetTopicPath(t.name)
-		if err := removeMqPath(p, unlocker, t.traceId); err != nil {
+		if err := removeTopicPath(p, unlocker, t.traceId); err != nil {
 			t.notify <- false
 			continue
 		}
@@ -73,7 +73,7 @@ func (de *topicDelExecutor) run() {
 	}
 }
 
-func StartMqFileDelete(fstore store.Store) protocol.DelMqFileExecutor {
+func StartTopicFileDelete(fstore store.Store) protocol.DelTopicFileExecutor {
 	exec := &topicDelExecutor{
 		deleteList: make(chan *task, 128),
 		fstore:     fstore,
@@ -85,14 +85,14 @@ func StartMqFileDelete(fstore store.Store) protocol.DelMqFileExecutor {
 	return exec
 }
 
-func removeMqPath(p string, unlocker func(), traceId string) error {
+func removeTopicPath(p string, unlocker func(), traceId string) error {
 	defer unlocker()
 	_, err := os.Stat(p)
 	if os.IsNotExist(err) {
 		return nil
 	}
 	err = os.RemoveAll(p)
-	logger.Get().Infof("tid=%s,deleteMqRoot %s error:%v", traceId, p, err)
+	logger.Get().Infof("tid=%s,removeTopicPath %s error:%v", traceId, p, err)
 	if err != nil {
 		return err
 	}

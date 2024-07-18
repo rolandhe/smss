@@ -25,7 +25,7 @@ func ensureStoreDirectory(root string) error {
 	return checkAndCreateInitDir(root, true)
 }
 
-func ensureMqDirectory(root string, topicInfoList []*store.TopicInfo) error {
+func ensureTopicDirectory(root string, topicInfoList []*store.TopicInfo) error {
 	for _, info := range topicInfoList {
 		p := TopicPath(root, info.Name)
 		if err := dir.EnsurePathExist(p); err != nil {

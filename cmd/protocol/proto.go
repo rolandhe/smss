@@ -66,7 +66,7 @@ func NewCommonHeader(buf []byte) *CommonHeader {
 func (h *CommonHeader) GetCmd() CommandEnum {
 	return CommandEnum(h.buf[0])
 }
-func (h *CommonHeader) GetMqNameLen() int {
+func (h *CommonHeader) GetTopicNameLen() int {
 	size := binary.LittleEndian.Uint16(h.buf[1:])
 	return int(size)
 }
@@ -236,7 +236,7 @@ func (l *DelFileLock) Lock(name, who string, traceId string) (func(), func(d tim
 	}, nil
 }
 
-type DelMqFileExecutor interface {
+type DelTopicFileExecutor interface {
 	Submit(topicName, who string, traceId string) func(d time.Duration) bool
 	GetDeleteFileLocker() *DelFileLock
 }

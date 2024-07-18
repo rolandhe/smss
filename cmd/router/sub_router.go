@@ -85,7 +85,7 @@ func getSubPos(eventId int64, topicPath string) (int64, int64, error) {
 		return fileId, 0, nil
 	}
 
-	return repair.FindMqPosByEventId(topicPath, eventId)
+	return repair.FindTopicPosByEventId(topicPath, eventId)
 }
 
 // readSubInfo, sub 格式

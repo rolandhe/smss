@@ -54,7 +54,7 @@ func (tmv *topicMetaValue) fromBytes(buf []byte) {
 
 }
 
-func (tmv *topicMetaValue) toMqInfo(topicName string) *store.TopicInfo {
+func (tmv *topicMetaValue) toTopicInfo(topicName string) *store.TopicInfo {
 	return &store.TopicInfo{
 		Name:               topicName,
 		CreateTimeStamp:    tmv.createTime,
@@ -66,7 +66,7 @@ func (tmv *topicMetaValue) toMqInfo(topicName string) *store.TopicInfo {
 	}
 }
 
-func (tmv *topicMetaValue) fromMqInfo(info *store.TopicInfo) {
+func (tmv *topicMetaValue) fromTopicInfo(info *store.TopicInfo) {
 	tmv.createTime = info.CreateTimeStamp
 	tmv.expireAtTime = info.ExpireAt
 	tmv.createEventId = info.CreateEventId

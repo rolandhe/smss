@@ -12,7 +12,7 @@ type blockReader struct {
 }
 
 type msgParser struct {
-	msg MqMessageCommand
+	msg TopicMessageCommand
 	//cmdBuf []byte
 }
 
@@ -37,7 +37,7 @@ func (p *msgParser) Reset() {
 }
 
 func (p *msgParser) ParseCmd(cmdBuf []byte) (standard.CmdLine, error) {
-	err := ReadMqMessageCmd(cmdBuf[:len(cmdBuf)-1], &p.msg)
+	err := ReadTopicMessageCmd(cmdBuf[:len(cmdBuf)-1], &p.msg)
 	if err != nil {
 		return nil, err
 	}

@@ -21,12 +21,12 @@ func FindBinlogPosByEventId(ppath string, eventId int64) (int64, int64, error) {
 	})
 }
 
-func FindMqPosByEventId(ppath string, eventId int64) (int64, int64, error) {
+func FindTopicPosByEventId(ppath string, eventId int64) (int64, int64, error) {
 	return findPosByEventId(ppath, eventId, func(cmdBuf []byte) (int64, int) {
-		cmd := &fss.MqMessageCommand{}
-		err := fss.ReadMqMessageCmd(cmdBuf[:len(cmdBuf)-1], cmd)
+		cmd := &fss.TopicMessageCommand{}
+		err := fss.ReadTopicMessageCmd(cmdBuf[:len(cmdBuf)-1], cmd)
 		if err != nil {
-			logger.Get().Infof("FindMqPosByEventId for %d err:%v", eventId, err)
+			logger.Get().Infof("FindTopicPosByEventId for %d err:%v", eventId, err)
 			return -1, -1
 		}
 		return cmd.GetId(), cmd.GetPayloadSize()
