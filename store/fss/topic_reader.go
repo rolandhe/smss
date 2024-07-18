@@ -22,7 +22,7 @@ func (p *msgParser) ToMessage(payload []byte, fileId, pos int64) *store.ReadMess
 	content := payload[:payloadLen-1]
 	v := &store.ReadMessage{
 		Ts:      p.msg.ts,
-		Id:      p.msg.id,
+		EventId: p.msg.id,
 		PayLoad: content,
 	}
 	v.NextPos.FileId = fileId

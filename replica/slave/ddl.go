@@ -5,7 +5,7 @@ import (
 	"github.com/rolandhe/smss/cmd/protocol"
 )
 
-func DDLMQHandle(cmd *protocol.DecodedRawMessage, payload []byte, worker DependWorker) error {
+func DDLTopicHandle(cmd *protocol.DecodedRawMessage, payload []byte, worker DependWorker) error {
 	msg := &protocol.RawMessage{
 		Src:       protocol.RawMessageReplica,
 		WriteTime: cmd.WriteTime,

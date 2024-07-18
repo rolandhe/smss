@@ -45,7 +45,7 @@ func NewFileStore(root string, meta store.Meta) (store.Store, error) {
 }
 
 type wrappedMsges struct {
-	messages []*store.MQMessage
+	messages []*store.TopicMessage
 	saveTime int64
 }
 
@@ -171,7 +171,7 @@ func (fs *fileStore) GetTopicPath(topicName string) string {
 	return TopicPath(fs.root, topicName)
 }
 
-func (fs *fileStore) Save(topicName string, messages []*store.MQMessage) error {
+func (fs *fileStore) Save(topicName string, messages []*store.TopicMessage) error {
 	wrapMsg := &wrappedMsges{
 		messages: messages,
 		saveTime: time.Now().UnixMilli(),

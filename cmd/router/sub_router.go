@@ -143,7 +143,7 @@ func packageMessages(messages []*store.ReadMessage) []byte {
 	payloadSize := 0
 	for _, msg := range messages {
 		binary.LittleEndian.PutUint64(nextBuf, uint64(msg.Ts))
-		binary.LittleEndian.PutUint64(nextBuf[8:], uint64(msg.Id))
+		binary.LittleEndian.PutUint64(nextBuf[8:], uint64(msg.EventId))
 		binary.LittleEndian.PutUint64(nextBuf[16:], uint64(msg.NextPos.FileId))
 		binary.LittleEndian.PutUint64(nextBuf[24:], uint64(msg.NextPos.Pos))
 		n := copy(nextBuf[OneMsgHeaderSize:], msg.PayLoad)

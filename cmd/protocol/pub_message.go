@@ -6,8 +6,8 @@ import (
 	"github.com/rolandhe/smss/store"
 )
 
-func ParsePayload(payload []byte, fileId, pos int64, startSeqId int64) ([]*store.MQMessage, error) {
-	var ret []*store.MQMessage
+func ParsePayload(payload []byte, fileId, pos int64, startEventId int64) ([]*store.TopicMessage, error) {
+	var ret []*store.TopicMessage
 	if len(payload) <= 8 {
 		return nil, dir.NewBizError("invalid message format")
 	}
@@ -24,14 +24,14 @@ func ParsePayload(payload []byte, fileId, pos int64, startSeqId int64) ([]*store
 		content := make([]byte, oneMsgLen)
 		copy(content, payload[:oneMsgLen])
 
-		ret = append(ret, &store.MQMessage{
-			SeqId:     startSeqId,
+		ret = append(ret, &store.TopicMessage{
+			EventId:   startEventId,
 			SrcFileId: fileId,
 			SrcPos:    pos,
 			Content:   content,
 		})
 
-		startSeqId++
+		startEventId++
 
 		if restLen == oneMsgLen {
 			break

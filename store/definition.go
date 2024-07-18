@@ -99,7 +99,7 @@ type TopicBlockReader interface {
 
 type Store interface {
 	io.Closer
-	Save(topicName string, messages []*MQMessage) error
+	Save(topicName string, messages []*TopicMessage) error
 
 	GetReader(topicName, who string, fileId, pos int64, batchSize int) (TopicBlockReader, error)
 
@@ -123,8 +123,8 @@ type MsgHeader struct {
 	Value string
 }
 
-type MQMessage struct {
-	SeqId     int64
+type TopicMessage struct {
+	EventId   int64
 	SrcFileId int64
 	SrcPos    int64
 	Content   []byte
@@ -132,7 +132,7 @@ type MQMessage struct {
 
 type ReadMessage struct {
 	Ts      int64
-	Id      int64
+	EventId int64
 	PayLoad []byte
 	NextPos struct {
 		FileId int64

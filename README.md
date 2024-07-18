@@ -23,7 +23,7 @@ smss的部署非常简单，编译后只有一个可执行文件，再配以一�
 |:--------------------------------|:---------------------------------------------------------------------------|
 | port                            | 服务器端口                                                                      |
 | log.path                        | log文件的输出路径，可以是绝对路径，也可以是相对路径，还可以是 stdout, stdout表示输出到控制台上                   |
-| log.sample                      | 发布消息、管理mq命令的日志输出的采样率，每隔多少条输出一次日志，>=0, ==0表示不输出日志，== 1，每条都输出                |
+| log.sample                      | 发布消息、管理topic命令的日志输出的采样率，每隔多少条输出一次日志，>=0, ==0表示不输出日志，== 1，每条都输出             |
 | store.path                      | 消息数据的存储路径，一般设置为data，即在当前目录下的data子目录中存储数据                                   |
 | store.maxLogSize                | 每个数据存储文件的大小，一般设置为1G,用字节数表示                                                 |
 | store.maxDays                   | 数据文件存活的最大天数，超过这个天数，文件会被删除                                                  |
@@ -51,7 +51,7 @@ role,表示以什么角色来启动实例，角色包括master和slave
 ./smss -role slave -host 127.0.0.1 -port 12301 -event 0
 ``
 
-event, smss的设计里，每一个写操作（包括发布消息、创建、删除mq）都有一个eventId，eventId是唯一且递增的，根据这个eventId可以定位到哪个数据文件的哪个位置。
+event, smss的设计里，每一个写操作（包括发布消息、创建、删除topic）都有一个eventId，eventId是唯一且递增的，根据这个eventId可以定位到哪个数据文件的哪个位置。
 event参数表示slave已经复制完的事件，master需要发送下一个事件的数据，当event设置为0时，表示master需要从它的第一个文件的、第0个字节开始发送数据。
 
 # 设计
@@ -60,18 +60,18 @@ event参数表示slave已经复制完的事件，master需要发送下一个事�
 
 ### 命令集
 
-| 命令  | 数值  | 说明                                                |
-|:----|:----|:--------|
-|CommandSub| 0   | 订阅消息  |
-|CommandPub| 1   | 发布消息|
-|CommandCreateMQ| 2   | 创建topic|
-|CommandDeleteMQ| 3   | 删除topic|
-|CommandDelay| 16  | 发布延迟消息|
-|CommandAlive| 17  | 连接探活，类似于mysql的ping/pong,用于判断连接是否存活|
-|CommandReplica| 64  | 复制binlog指令|
-|CommandValidList| 99  | 读取当前有效的topic，处于标记删除或者超过生命周期的topic都不展示|
-|CommandList| 100 | 读取所有的topic，包括标记删除和超过生命周期的|
-|CommandDelayApply| 101 | 延迟的消息真正发布，延迟消息到时触发后，真正把消息发布出去，内部使用，超过100的指令都是内部使用 |
+| 命令                 | 数值  | 说明                                                |
+|:-------------------|:----|:--------|
+| CommandSub         | 0   | 订阅消息  |
+| CommandPub         | 1   | 发布消息|
+| CommandCreateTopic | 2   | 创建topic|
+| CommandDeleteTopic | 3   | 删除topic|
+| CommandDelay       | 16  | 发布延迟消息|
+| CommandAlive       | 17  | 连接探活，类似于mysql的ping/pong,用于判断连接是否存活|
+| CommandReplica     | 64  | 复制binlog指令|
+| CommandValidList   | 99  | 读取当前有效的topic，处于标记删除或者超过生命周期的topic都不展示|
+| CommandList        | 100 | 读取所有的topic，包括标记删除和超过生命周期的|
+| CommandDelayApply  | 101 | 延迟的消息真正发布，延迟消息到时触发后，真正把消息发布出去，内部使用，超过100的指令都是内部使用 |
 
 ### header定义
 #### request header
@@ -190,7 +190,6 @@ socket读取新的数据块，由于master即使在没有新数据的情况下�
   }
   defer pc.Close()
   
-  //mqName := "audience-audience-audience-audience-audience-audience-audience-audience-audience-audience-audience-audience-123abcdefg-00900000008"
   mqName := "order"
   
   //expireAt := time.Now().Add(time.Minute * 2).UnixMilli()

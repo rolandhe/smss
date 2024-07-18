@@ -31,9 +31,9 @@ const (
 
 const (
 	CommandSub      CommandEnum = 0
-	CommandPub      CommandEnum = 1
-	CommandCreateMQ CommandEnum = 2
-	CommandDeleteMQ CommandEnum = 3
+	CommandPub         CommandEnum = 1
+	CommandCreateTopic CommandEnum = 2
+	CommandDeleteTopic CommandEnum = 3
 
 	CommandDelay CommandEnum = 16
 	CommandAlive CommandEnum = 17

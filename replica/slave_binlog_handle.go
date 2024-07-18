@@ -13,6 +13,6 @@ func init() {
 	bbHandlerMap[protocol.CommandPub] = slave.PubHandler
 	bbHandlerMap[protocol.CommandDelayApply] = slave.DelayApplyHandler
 	bbHandlerMap[protocol.CommandDelay] = slave.DelayHandler
-	bbHandlerMap[protocol.CommandCreateMQ] = slave.DDLMQHandle
-	bbHandlerMap[protocol.CommandDeleteMQ] = slave.DDLMQHandle
+	bbHandlerMap[protocol.CommandCreateTopic] = slave.DDLTopicHandle
+	bbHandlerMap[protocol.CommandDeleteTopic] = slave.DDLTopicHandle
 }

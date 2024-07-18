@@ -42,12 +42,12 @@ func Init(fstore store.Store, lc *tc.TimeTriggerControl, delExec protocol.DelMqF
 		routerSampleLogger: sampleLogger,
 	}
 
-	routerMap[protocol.CommandCreateMQ] = &createMqRouter{
+	routerMap[protocol.CommandCreateTopic] = &createMqRouter{
 		fstore: fstore,
 		lc:     lc,
 	}
 
-	routerMap[protocol.CommandDeleteMQ] = &deleteMqRouter{
+	routerMap[protocol.CommandDeleteTopic] = &deleteMqRouter{
 		fstore:      fstore,
 		delExecutor: delExec,
 	}

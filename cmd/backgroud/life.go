@@ -45,7 +45,7 @@ func doLife(fstore store.Store, worker standard.MessageWorking, traceId string) 
 
 func removeTopic(worker standard.MessageWorking, topicName string, traceId string) error {
 	msg := &protocol.RawMessage{
-		Command:   protocol.CommandDeleteMQ,
+		Command:   protocol.CommandDeleteTopic,
 		TopicName: topicName,
 		TraceId:   traceId,
 		Timestamp: time.Now().UnixMilli(),

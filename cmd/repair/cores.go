@@ -25,8 +25,8 @@ var repairHandlers = map[protocol.CommandEnum]func(lBinlog *lastBinlog, binlogFi
 
 func init() {
 	repairHandlers[protocol.CommandPub] = repairPub
-	repairHandlers[protocol.CommandCreateMQ] = repairCreate
-	repairHandlers[protocol.CommandDeleteMQ] = repairDelete
+	repairHandlers[protocol.CommandCreateTopic] = repairCreate
+	repairHandlers[protocol.CommandDeleteTopic] = repairDelete
 	repairHandlers[protocol.CommandDelay] = repairDelay
 	repairHandlers[protocol.CommandDelayApply] = repairDelayApply
 }

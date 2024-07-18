@@ -16,7 +16,7 @@ import (
 
 // delayRouter  原始的 payload = delayTime + pub message
 // 写binlog是需要提前生成delay id，变成 payload = delayId + payload, 从库复制时可以直接复用该delayId,
-// 并把从库的delay Id seq更新成当前的 delayId
+// 并把从库的delay EventId seq更新成当前的 delayId
 // 延迟消息被存储到 db中，key 包含 delayId，需要从payload中读取
 
 type delayRouter struct {

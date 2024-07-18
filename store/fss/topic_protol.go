@@ -49,7 +49,7 @@ func buildCommandsAndCalcSize(amsg *wrappedMsges) ([][]byte, int) {
 		builder.WriteString(strconv.FormatInt(time.Now().UnixMilli(), 10))
 		builder.WriteRune('\t')
 
-		builder.WriteString(strconv.FormatInt(msg.SeqId, 10))
+		builder.WriteString(strconv.FormatInt(msg.EventId, 10))
 		builder.WriteRune('\t')
 
 		builder.WriteString(strconv.FormatInt(amsg.saveTime, 10))
