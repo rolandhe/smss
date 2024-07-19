@@ -8,6 +8,7 @@ store:
   maxDays: 7
   clearInterval: 10
   waitDelLockTimeoutMs: 3000
+  folderCount: 10
 worker:
   buffSize: 1000
   waitMsgTimeout: 1000

@@ -2,6 +2,7 @@ package fss
 
 import (
 	"errors"
+	"github.com/rolandhe/smss/conf"
 	"github.com/rolandhe/smss/pkg/dir"
 	"github.com/rolandhe/smss/store"
 	"hash/fnv"
@@ -37,10 +38,10 @@ func ensureTopicDirectory(root string, topicInfoList []*store.TopicInfo) error {
 
 func TopicPath(root string, topicName string) string {
 	h := hashString(topicName + "talk is cheap, show me your code")
-	p1 := int(h % 100)
+	p1 := int(h % conf.TopicFolderCount)
 	h = hashString(topicName + "The world is beautiful")
 
-	p2 := int(h % 100)
+	p2 := int(h % conf.TopicFolderCount)
 
 	return path.Join(root, strconv.Itoa(p1), strconv.Itoa(p2), topicName)
 }
@@ -78,7 +79,8 @@ func checkAndCreateInitDir(root string, next bool) error {
 	}
 
 	var existParent []string
-	for i := 0; i < 100; i++ {
+	tfCountLimit := int(conf.TopicFolderCount)
+	for i := 0; i < tfCountLimit; i++ {
 		_, ok := recordMap[i]
 		p := path.Join(root, strconv.Itoa(i))
 		if !ok {
@@ -86,7 +88,7 @@ func checkAndCreateInitDir(root string, next bool) error {
 				return err
 			}
 			if next {
-				for j := 0; j < 100; j++ {
+				for j := 0; j < tfCountLimit; j++ {
 					if err = os.Mkdir(path.Join(p, strconv.Itoa(j)), os.ModePerm); err != nil {
 						return err
 					}
@@ -113,7 +115,8 @@ func validParentDir(s string) int {
 	if err != nil {
 		return -1
 	}
-	if num >= 0 && num <= 99 {
+	tfCountLimit := int(conf.TopicFolderCount)
+	if num >= 0 && num < tfCountLimit {
 		return num
 	}
 	return -1

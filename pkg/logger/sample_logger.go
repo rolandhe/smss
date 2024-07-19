@@ -1,12 +1,14 @@
 package logger
 
+const DefaultSampleCount = 100
+
 type SampleLoggerSupport interface {
 	CanLogger() bool
 }
 
 func NewSampleLoggerSupport(sampleCount int64) SampleLoggerSupport {
 	if sampleCount == 0 {
-		sampleCount = 100
+		sampleCount = DefaultSampleCount
 	}
 	return &sampleLogger{
 		sampleCount: sampleCount,

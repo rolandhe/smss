@@ -30,6 +30,8 @@ var LogPath string
 
 var LogSample int64
 
+var TopicFolderCount uint64
+
 func Init() error {
 	viper.SetConfigName("config")
 	// 设置配置文件类型
@@ -59,5 +61,7 @@ func Init() error {
 
 	LogPath = viper.GetString("log.path")
 	LogSample = viper.GetInt64("log.sample")
+
+	TopicFolderCount = viper.GetUint64("store.folderCount")
 	return nil
 }
