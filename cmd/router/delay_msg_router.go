@@ -15,9 +15,8 @@ import (
 )
 
 // delayRouter  原始的 payload = delayTime + pub message
-// 写binlog是需要提前生成delay id，变成 payload = delayId + payload, 从库复制时可以直接复用该delayId,
-// 并把从库的delay EventId更新成当前的 delayId
-// 延迟消息被存储到 db中，key 包含 delayId，需要从payload中读取
+// 写binlog是需要提前生成event id，变成 payload = eventId + payload, 从库复制时可以直接复用该eventId,
+// 延迟消息被存储到 db中，key 包含 eventId，需要从payload中读取
 
 type delayRouter struct {
 	fstore   store.Store
@@ -30,7 +29,7 @@ func (r *delayRouter) Router(conn net.Conn, header *protocol.CommonHeader, worke
 	}
 	// delayTime + pub message
 	// 最终存储在binlog的格式
-	// delayTime + delayId  + pub message
+	// delayTime + eventId  + pub message
 	buf := make([]byte, 8+pubHeader.GetPayloadSize())
 	if err := nets.ReadAll(conn, buf, NetReadTimeout); err != nil {
 		return err
