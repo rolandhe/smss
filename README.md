@@ -26,9 +26,11 @@ smss的部署非常简单，编译后只有一个可执行文件，再配以一�
 | log.sample                      | 发布消息、管理topic命令的日志输出的采样率，每隔多少条输出一次日志，>=0, ==0表示不输出日志，== 1，每条都输出             |
 | store.path                      | 消息数据的存储路径，一般设置为data，即在当前目录下的data子目录中存储数据                                   |
 | store.maxLogSize                | 每个数据存储文件的大小，一般设置为1G,用字节数表示                                                 |
+| store.flushLevel| 数据刷盘级别，0-不刷盘，使用os cache，1-每秒刷一次盘，2-每次都刷盘(不要使用，很慢)                          |
 | store.maxDays                   | 数据文件存活的最大天数，超过这个天数，文件会被删除                                                  |
 | store.clearInterval             | 数据回收线程的扫描间隔，即每隔这么久时间唤醒扫描一次，单位是s                                            |
 | store.waitDelLockTimeoutMs      | 回收数据文件时，需要获取该文件的保护锁，这个配置表示等待锁的时间，单位ms，一般不需要改动                              |
+|store.noCache| 不使用os pagecache，如果true，会调用posixFadvise，建议os不要使用pagecache                   |
 | worker.buffSize                 | smss采用单线程持久化数据，该单线程称之为worker， buffSize即等待worker处理的任务的个数，一般不需要改动            |
 | worker.waitMsgTimeout           | worker等待新的命令的超时时长，单位ms，超过该时长，worker也会唤醒，唤醒后会打印日志                           |
 | worker.waitMsgTimeoutLogSample  | worker等待新命令超时后日志打印输出的采样率,连续超时唤醒 waitMsgTimeoutLogSample次后，打印一条日志           |

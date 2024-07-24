@@ -5,12 +5,12 @@ log:
 store:
   path: data
   maxLogSize: 1073741824
+  flushLevel: 1
   maxDays: 7
   clearInterval: 10
   waitDelLockTimeoutMs: 3000
-  folderCount: 10
   noCache: false
-  flushLevel: 1
+  folderCount: 10
 worker:
   buffSize: 1000
   waitMsgTimeout: 1000
