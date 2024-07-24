@@ -56,13 +56,17 @@ func (lc *TimeTriggerControl) since() time.Duration {
 	lc.Lock()
 	defer lc.Unlock()
 	if lc.recent == math.MaxInt64 {
-		return time.Millisecond * time.Duration(lc.maxDefaultWait)
+		d := time.Millisecond * time.Duration(lc.maxDefaultWait)
+		lc.recent = time.Now().UnixMilli() + lc.maxDefaultWait
+		return d
 	}
-	v := lc.recent - time.Now().UnixMilli()
+	curTs := time.Now().UnixMilli()
+	v := lc.recent - curTs
 	if v <= 0 {
 		v = DefaultWaitTimeoutMills
+		lc.recent = curTs + DefaultWaitTimeoutMills
 	}
-	lc.recent = math.MaxInt64
+
 	return time.Millisecond * time.Duration(v)
 }
 
