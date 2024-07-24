@@ -47,13 +47,13 @@ func (r *deleteTopicRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int6
 	setupRawMessageEventIdAndWriteTime(msg, 1)
 	return r.doBinlog(f, msg)
 }
-func (r *deleteTopicRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) error {
+func (r *deleteTopicRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) (int, error) {
 	if msg.Src == protocol.RawMessageReplica && msg.Skip {
-		return nil
+		return standard.SyncFdIgnore, nil
 	}
 	err := deleteTopicRoot(msg.TopicName, "deleteTopicRouter", r.fstore, r.delExecutor, msg.TraceId)
 	logger.Get().Infof("tid=%s,deleteTopicRouter.AfterBinlog, topic=%s,eventId=%d, err:%v", msg.TraceId, msg.TopicName, msg.EventId, err)
-	return err
+	return standard.SyncFdIgnore, err
 }
 
 func deleteTopicRoot(topicName, who string, fstore store.Store, delExecutor protocol.DelTopicFileExecutor, traceId string) error {

@@ -32,6 +32,10 @@ var LogSample int64
 
 var TopicFolderCount uint64
 
+var NoCache bool
+
+var FlushLevel int
+
 func Init() error {
 	viper.SetConfigName("config")
 	// 设置配置文件类型
@@ -63,5 +67,8 @@ func Init() error {
 	LogSample = viper.GetInt64("log.sample")
 
 	TopicFolderCount = viper.GetUint64("store.folderCount")
+	NoCache = viper.GetBool("store.noCache")
+
+	FlushLevel = viper.GetInt("store.flushLevel")
 	return nil
 }

@@ -2,6 +2,11 @@ package standard
 
 import "time"
 
+const (
+	SyncFdIgnore = -1
+	SyncFdNone   = 0
+)
+
 const MMapWindow int64 = 1024 * 512
 
 type NotifyRegister interface {
@@ -43,7 +48,3 @@ func (f *FutureMsg[T]) WaitTimeout(timeout time.Duration) bool {
 func (f *FutureMsg[T]) GetErr() error {
 	return f.err
 }
-
-
-
-

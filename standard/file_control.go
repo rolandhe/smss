@@ -14,7 +14,7 @@ import (
 type OutputMsgFunc[T any] func(f *os.File, msg *T) (int64, error)
 type LogFileInfoGet func() (int64, int64)
 
-type AfterWriteCallback func(fileId, pos int64) error
+type AfterWriteCallback func(fileId, pos int64) (int, error)
 
 type WaitNotifyResult int
 

@@ -106,19 +106,19 @@ func (r *delayRouter) outBinlog(f *os.File, msg *protocol.RawMessage) (int64, er
 	return buff.WriteTo(f)
 }
 
-func (r *delayRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) error {
+func (r *delayRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) (int, error) {
 	if msg.Src == protocol.RawMessageReplica && msg.Skip {
-		return nil
+		return standard.SyncFdIgnore, nil
 	}
 	storeMsg := msg.Body.(*protocol.DelayPayload)
 
 	err := r.fstore.SaveDelayMsg(msg.TopicName, storeMsg.Payload)
 	if err != nil {
-		return err
+		return standard.SyncFdIgnore, err
 	}
 	if msg.Src != protocol.RawMessageReplica {
 		triggerTime := binary.LittleEndian.Uint64(storeMsg.Payload)
 		r.delayCtl.Set(int64(triggerTime), true)
 	}
-	return nil
+	return standard.SyncFdIgnore, nil
 }

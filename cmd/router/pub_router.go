@@ -74,17 +74,17 @@ func (r *pubRouter) outputBinlog(f *os.File, msg *protocol.RawMessage) (int64, e
 	return buff.WriteTo(f)
 }
 
-func (r *pubRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) error {
+func (r *pubRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) (int, error) {
 	if msg.Src == protocol.RawMessageReplica && msg.Skip {
-		return nil
+		return standard.SyncFdIgnore, nil
 	}
 	payload := msg.Body.(*protocol.PubPayload)
 	messages, _ := protocol.ParsePayload(payload.Payload, fileId, pos, msg.EventId)
-	err := r.fstore.Save(msg.TopicName, messages)
+	syncFd, err := r.fstore.Save(msg.TopicName, messages)
 
 	r.sampleLog("pubRouter.AfterBinlog", msg, err)
 
-	return err
+	return syncFd, err
 }
 
 func readPubPayload(conn net.Conn, header *protocol.PubProtoHeader) (*protocol.PubPayload, error) {

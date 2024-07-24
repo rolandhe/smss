@@ -5,7 +5,7 @@ import (
 	"github.com/rolandhe/smss/standard"
 )
 
-type CompleteHandlerFunc[T any] func(ins *T, fileId, pos int64) error
+type CompleteHandlerFunc[T any] func(ins *T, fileId, pos int64) (int, error)
 
 func NewWalWriter[T any](mWriter *standard.StdMsgWriter[T], completeHandler CompleteHandlerFunc[T]) *WalWriter[T] {
 	return &WalWriter[T]{
@@ -19,18 +19,19 @@ type WalWriter[T any] struct {
 	completeHandler CompleteHandlerFunc[T]
 }
 
-func (w *WalWriter[T]) Write(msg *T) error {
+func (w *WalWriter[T]) Write(msg *T) (int, int, error) {
 	var err error
-
-	if err = w.StdMsgWriter.Write(msg, func(fileId, pos int64) error {
-		e := w.completeHandler(msg, fileId, pos)
+	var binlogSyncFd int
+	var dataSyncFd int
+	if binlogSyncFd, dataSyncFd, err = w.StdMsgWriter.Write(msg, func(fileId, pos int64) (int, error) {
+		syncFd, e := w.completeHandler(msg, fileId, pos)
 		if e != nil {
 			logger.Get().Infof("to handle msg after writing binlog error,rollback")
 		}
-		return e
+		return syncFd, e
 	}); err != nil {
-		return err
+		return standard.SyncFdIgnore, standard.SyncFdIgnore, err
 	}
 
-	return nil
+	return binlogSyncFd, dataSyncFd, nil
 }

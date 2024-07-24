@@ -1,9 +1,11 @@
 package standard
 
 import (
+	"github.com/rolandhe/smss/conf"
 	"github.com/rolandhe/smss/pkg/logger"
 	"io"
 	"os"
+	"runtime"
 	"time"
 )
 
@@ -34,33 +36,35 @@ func (w *StdMsgWriter[T]) GetRoot() string {
 
 func (w *StdMsgWriter[T]) Close() error {
 	if w.curFs != nil {
+		w.curFs.Sync()
 		w.curFs.Close()
 		w.curFs = nil
 	}
 	return nil
 }
 
-func (w *StdMsgWriter[T]) Write(msg *T, cb AfterWriteCallback) error {
+func (w *StdMsgWriter[T]) Write(msg *T, cb AfterWriteCallback) (int, int, error) {
 	var err error
 
 	if err = w.ensureFs(); err != nil {
-		return err
+		return SyncFdIgnore, SyncFdIgnore, err
 	}
 
 	outSize, err := w.outputFunc(w.curFs, msg)
 
 	if err != nil {
-		return err
+		return SyncFdIgnore, SyncFdIgnore, err
 	}
 	// 如果没有写出任何东西，也就没必要进入下一步了
 	if outSize == 0 {
-		return nil
+		return SyncFdIgnore, SyncFdIgnore, nil
 	}
 
 	fid, size := w.LogFileControl.Get()
 
+	cbSyncFd := SyncFdIgnore
 	if cb != nil {
-		if err = cb(fid, size); err != nil {
+		if cbSyncFd, err = cb(fid, size); err != nil {
 			var e error
 			var n int64
 			if n, e = w.curFs.Seek(-outSize, io.SeekCurrent); e != nil {
@@ -71,7 +75,7 @@ func (w *StdMsgWriter[T]) Write(msg *T, cb AfterWriteCallback) error {
 				logger.Get().Infof("rollback to truncate error,then panic:%v", e)
 				panic("rollback error")
 			}
-			return err
+			return SyncFdIgnore, SyncFdIgnore, err
 		}
 	}
 
@@ -79,15 +83,17 @@ func (w *StdMsgWriter[T]) Write(msg *T, cb AfterWriteCallback) error {
 
 	allSize := size + outSize
 
+	syncFd := int(w.curFs.Fd())
 	if allSize >= w.maxLogSize {
 		w.curFs.Close()
 		w.curFs = nil
+		syncFd = SyncFdNone
 		w.LogFileControl.Set(fid+1, 0)
 	} else {
 		w.LogFileControl.Set(fid, allSize)
 	}
 	w.LogFileControl.Notify()
-	return nil
+	return syncFd, cbSyncFd, nil
 }
 
 func (w *StdMsgWriter[T]) ensureFs() error {
@@ -101,6 +107,14 @@ func (w *StdMsgWriter[T]) ensureFs() error {
 	}
 	if w.curFs, err = os.Create(fPath); err != nil {
 		return err
+	}
+	if conf.NoCache {
+		if runtime.GOOS == "linux" {
+			if err = posixFadvise(int(w.curFs.Fd())); err != nil {
+				logger.Get().Infof("call posixFadvise err:%v", err)
+				return nil
+			}
+		}
 	}
 
 	return nil

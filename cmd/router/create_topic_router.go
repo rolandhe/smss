@@ -81,9 +81,9 @@ func (r *createTopicRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int6
 	setupRawMessageEventIdAndWriteTime(msg, 1)
 	return r.doBinlog(f, msg)
 }
-func (r *createTopicRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) error {
+func (r *createTopicRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) (int, error) {
 	if msg.Src == protocol.RawMessageReplica && msg.Skip {
-		return nil
+		return standard.SyncFdIgnore, nil
 	}
 	payload := msg.Body.(*protocol.DDLPayload)
 	buf := payload.Payload
@@ -93,5 +93,5 @@ func (r *createTopicRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos in
 		r.lc.Set(int64(lf), true)
 	}
 
-	return err
+	return standard.SyncFdIgnore, err
 }

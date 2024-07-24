@@ -99,7 +99,7 @@ type TopicBlockReader interface {
 
 type Store interface {
 	io.Closer
-	Save(topicName string, messages []*TopicMessage) error
+	Save(topicName string, messages []*TopicMessage) (int, error)
 
 	GetReader(topicName, who string, fileId, pos int64, batchSize int) (TopicBlockReader, error)
 

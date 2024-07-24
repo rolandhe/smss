@@ -171,22 +171,23 @@ func (fs *fileStore) GetTopicPath(topicName string) string {
 	return TopicPath(fs.root, topicName)
 }
 
-func (fs *fileStore) Save(topicName string, messages []*store.TopicMessage) error {
+func (fs *fileStore) Save(topicName string, messages []*store.TopicMessage) (int, error) {
 	wrapMsg := &wrappedMsges{
 		messages: messages,
 		saveTime: time.Now().UnixMilli(),
 	}
 	writer, err := fs.ensureWriter(topicName)
 	if err != nil {
-		return err
+		return standard.SyncFdIgnore, err
 	}
 	if writer.IsInvalid() {
-		return errors.New("topic not exist")
+		return standard.SyncFdIgnore, errors.New("topic not exist")
 	}
 
 	writer.WaitGroup.Add(1)
 	defer writer.WaitGroup.Done()
-	return writer.Write(wrapMsg, nil)
+	syncFd, _, err := writer.Write(wrapMsg, nil)
+	return syncFd, err
 }
 
 func (fs *fileStore) SaveDelayMsg(topicName string, payload []byte) error {

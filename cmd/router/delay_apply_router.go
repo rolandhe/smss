@@ -50,14 +50,14 @@ func (r *delayApplyRouter) outBinlog(f *os.File, msg *protocol.RawMessage) (int6
 	return buff.WriteTo(f)
 }
 
-func (r *delayApplyRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) error {
+func (r *delayApplyRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) (int, error) {
 	if msg.Src == protocol.RawMessageReplica && msg.Skip {
-		return nil
+		return standard.SyncFdIgnore, nil
 	}
 	payload := msg.Body.(*protocol.DelayApplyPayload)
 	// 去除前面的 delayTime+delayId
 	messages, _ := protocol.ParsePayload(payload.Payload[16:], fileId, pos, msg.EventId)
-	err := r.fstore.Save(msg.TopicName, messages)
+	syncFd, err := r.fstore.Save(msg.TopicName, messages)
 	r.sampleLog("delayApplyRouter.AfterBinlog", msg, err)
-	return err
+	return syncFd, err
 }

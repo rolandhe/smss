@@ -1,7 +1,7 @@
 port: 12301
 log:
   path: stdout
-  sample: 20000
+  sample: 10000
 store:
   path: data
   maxLogSize: 1073741824
@@ -9,6 +9,8 @@ store:
   clearInterval: 10
   waitDelLockTimeoutMs: 3000
   folderCount: 10
+  noCache: false
+  flushLevel: 1
 worker:
   buffSize: 1000
   waitMsgTimeout: 1000
