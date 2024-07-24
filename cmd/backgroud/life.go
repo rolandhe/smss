@@ -28,22 +28,25 @@ func doLife(fstore store.Store, worker standard.MessageWorking, traceId string) 
 		return 0
 	}
 
+	logger.Get().Infof("tid=%s,ScanExpireTopics %d,next scan time from db:%d", traceId, len(topicList), next)
+
 	for _, topicName := range topicList {
-		if err = removeTopic(worker, topicName, traceId); err != nil {
-			logger.Get().Infof("tid=%s,doLife removeTopic %s err:%v", traceId, topicName, err)
+		if err = deleteTopic(worker, topicName, traceId); err != nil {
+			logger.Get().Infof("tid=%s,doLife deleteTopic %s err:%v", traceId, topicName, err)
 			return 0
 		}
+		logger.Get().Infof("tid=%s,doLife deleteTopic %s ok", traceId, topicName)
 	}
 
 	now := time.Now().UnixMilli()
 	if next <= 0 {
 		next = now + conf.LifeDefaultScanSec*1000
 	}
-	logger.Get().Infof("tid=%s,doLife ok", traceId)
+	logger.Get().Infof("tid=%s,doLife ok,next is %d(%v)", traceId, next, time.UnixMilli(next))
 	return next
 }
 
-func removeTopic(worker standard.MessageWorking, topicName string, traceId string) error {
+func deleteTopic(worker standard.MessageWorking, topicName string, traceId string) error {
 	msg := &protocol.RawMessage{
 		Command:   protocol.CommandDeleteTopic,
 		TopicName: topicName,

@@ -66,7 +66,7 @@ func deleteOldFiles(fstore store.Store, worker standard.MessageWorking, delTopic
 		}
 		if store.TopicStateDeleted == info.State {
 			if info.StateChangeTime+DeleteFileAfterStateChangeTimeout <= time.Now().UnixMilli() {
-				err = removeTopic(worker, info.Name, traceId)
+				err = deleteTopic(worker, info.Name, traceId)
 				logger.Get().Infof("tid=%s,deleteOldFiles to delete expired topic %s err:%v", traceId, info.Name, err)
 			}
 			continue

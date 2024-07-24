@@ -65,7 +65,7 @@ func (de *topicDelExecutor) run() {
 			continue
 		}
 		p := de.fstore.GetTopicPath(t.name)
-		if err := removeTopicPath(p, unlocker, t.traceId); err != nil {
+		if err := deleteTopicPath(p, unlocker, t.traceId); err != nil {
 			t.notify <- false
 			continue
 		}
@@ -85,14 +85,14 @@ func StartTopicFileDelete(fstore store.Store) protocol.DelTopicFileExecutor {
 	return exec
 }
 
-func removeTopicPath(p string, unlocker func(), traceId string) error {
+func deleteTopicPath(p string, unlocker func(), traceId string) error {
 	defer unlocker()
 	_, err := os.Stat(p)
 	if os.IsNotExist(err) {
 		return nil
 	}
 	err = os.RemoveAll(p)
-	logger.Get().Infof("tid=%s,removeTopicPath %s error:%v", traceId, p, err)
+	logger.Get().Infof("tid=%s,deleteTopicPath %s error:%v", traceId, p, err)
 	if err != nil {
 		return err
 	}
