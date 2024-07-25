@@ -18,9 +18,9 @@ var StoreMaxDays int
 
 var StoreClearInterval int
 
-var LifeDefaultScanSec int64
+var DefaultScanSecond int64
 
-var FistExecDelay int64
+var FistExecDelaySecond int64
 
 var WaitFileDeleteLockerTimeout time.Duration
 
@@ -58,9 +58,9 @@ func Init() error {
 	MaxLogSize = viper.GetInt64("store.maxLogSize")
 	StoreMaxDays = viper.GetInt("store.maxDays")
 	StoreClearInterval = viper.GetInt("store.clearInterval")
-	LifeDefaultScanSec = viper.GetInt64("background.life.defaultScanSec")
+	DefaultScanSecond = viper.GetInt64("background.defaultScanSecond")
 
-	FistExecDelay = viper.GetInt64("background.delay.firstExec")
+	FistExecDelaySecond = viper.GetInt64("background.firstExecSecond")
 	WaitFileDeleteLockerTimeout = time.Duration(viper.GetInt64("store.waitDelLockTimeoutMs")) * time.Millisecond
 
 	LogPath = viper.GetString("log.path")

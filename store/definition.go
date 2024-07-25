@@ -2,6 +2,7 @@ package store
 
 import (
 	"io"
+	"slices"
 	"time"
 )
 
@@ -41,8 +42,8 @@ type ManagerMeta interface {
 	GetInstanceRole() (InstanceRoleEnum, error)
 
 	RemoveDelay(key []byte) error
-	RemoveDelayByName(data []byte, topicName string) error
-	ExistDelay(key []byte) (bool, error)
+	RemoveDelayByName(payload []byte, topicName string) error
+	ExistDelay(keyWithoutPrefix []byte) (bool, error)
 
 	CopyCreateTopic(info *TopicInfo) error
 	DeleteTopic(topicName string, force bool) (bool, error)
@@ -138,4 +139,16 @@ type ReadMessage struct {
 		FileId int64
 		Pos    int64
 	}
+}
+
+func DelayKeyFromPayload(topicName string, payload []byte) []byte {
+	key := make([]byte, 16+len(topicName))
+	FillDelayKeyFromPayload(topicName, payload, key)
+	return key
+}
+
+func FillDelayKeyFromPayload(topicName string, payload []byte, buf []byte) {
+	copy(buf, payload[:16])
+	slices.Reverse(buf[:8])
+	copy(buf[16:], topicName)
 }

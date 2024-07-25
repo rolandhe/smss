@@ -12,7 +12,7 @@ import (
 )
 
 func StartLife(fstore store.Store, worker standard.MessageWorking) *tc.TimeTriggerControl {
-	lc := tc.NewTimeTriggerControl(fstore, "life", conf.LifeDefaultScanSec*1000, func(fstore store.Store) int64 {
+	lc := tc.NewTimeTriggerControl(fstore, "life", conf.FistExecDelaySecond*1000, func(fstore store.Store) int64 {
 		traceId := fmt.Sprintf("life-%d", time.Now().UnixMilli())
 		return doLife(fstore, worker, traceId)
 	})
@@ -27,7 +27,6 @@ func doLife(fstore store.Store, worker standard.MessageWorking, traceId string) 
 		logger.Get().Infof("tid=%s,doLife err:%v", traceId, err)
 		return 0
 	}
-
 	logger.Get().Infof("tid=%s,ScanExpireTopics %d,next scan time from db:%d", traceId, len(topicList), next)
 
 	for _, topicName := range topicList {
@@ -39,10 +38,12 @@ func doLife(fstore store.Store, worker standard.MessageWorking, traceId string) 
 	}
 
 	now := time.Now().UnixMilli()
+	isDefault := false
 	if next <= 0 {
-		next = now + conf.LifeDefaultScanSec*1000
+		isDefault = true
+		next = now + conf.DefaultScanSecond*1000
 	}
-	logger.Get().Infof("tid=%s,doLife ok,next is %d(%v)", traceId, next, time.UnixMilli(next))
+	logger.Get().Infof("tid=%s,doLife ok, isDefault=%v", traceId, isDefault)
 	return next
 }
 

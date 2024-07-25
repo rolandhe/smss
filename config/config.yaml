@@ -21,9 +21,7 @@ timeout:
   server:
     alive: 30000
 background:
-  life:
-     defaultScanSec: 7200
-  delay:
-     firstExec: 1
+    defaultScanSecond: 7200
+    firstExecSecond: 1
 
 

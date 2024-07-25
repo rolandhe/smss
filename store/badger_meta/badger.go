@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/dgraph-io/badger/v4"
 	"github.com/rolandhe/smss/store"
+	"log"
 	"time"
 )
 
@@ -157,7 +158,8 @@ func (bm *badgerMeta) ScanExpireTopics() ([]string, int64, error) {
 			item := it.Item()
 			key := item.Key()
 			key = key[preLen:]
-			expireAt := int64(binary.LittleEndian.Uint64(key))
+			expireAt := int64(binary.BigEndian.Uint64(key))
+			log.Printf("%d-%d,%s\n", expireAt, now, string(key[8:]))
 			if expireAt > now {
 				next = expireAt
 				break
@@ -190,7 +192,7 @@ func (bm *badgerMeta) ScanDelays(batchSize int) ([]*store.DelayItem, int64, erro
 			key := item.KeyCopy(nil)
 
 			buf := key[preLen:]
-			expireAt := int64(binary.LittleEndian.Uint64(buf))
+			expireAt := int64(binary.BigEndian.Uint64(buf))
 			if expireAt > now {
 				next = expireAt
 				break
@@ -223,17 +225,73 @@ func (bm *badgerMeta) RemoveDelay(key []byte) error {
 	}
 	return err
 }
-func (bm *badgerMeta) RemoveDelayByName(data []byte, topicName string) error {
+func (bm *badgerMeta) RemoveDelayByName(payload []byte, topicName string) error {
 	preLen := len(delayPrefix)
 	key := make([]byte, preLen+16+len(topicName))
 	copy(key, delayPrefix)
 
 	buf := key[preLen:]
-	// copy 时间戳
-	copy(buf, data)
-	buf = buf[16:]
-	copy(buf, topicName)
+	store.FillDelayKeyFromPayload(topicName, payload, buf)
 	return bm.RemoveDelay(key)
+}
+
+func (bm *badgerMeta) SaveDelay(topicName string, payload []byte) error {
+	preLen := len(delayPrefix)
+	key := make([]byte, preLen+16+len(topicName))
+	copy(key, delayPrefix)
+
+	buf := key[preLen:]
+	store.FillDelayKeyFromPayload(topicName, payload, buf)
+	return bm.db.Update(func(txn *badger.Txn) error {
+		return txn.Set(key, payload)
+	})
+}
+func (bm *badgerMeta) ExistDelay(keyWithoutPrefix []byte) (bool, error) {
+	preLen := len(delayPrefix)
+	delayKey := make([]byte, preLen+len(keyWithoutPrefix))
+	copy(delayKey, delayPrefix)
+	copy(delayKey[preLen:], keyWithoutPrefix)
+	exist := false
+	err := bm.db.View(func(txn *badger.Txn) error {
+		var e error
+		if exist, e = existKey(delayKey, txn); e != nil {
+			return e
+		}
+		return nil
+	})
+
+	return exist, err
+}
+
+func (bm *badgerMeta) SetInstanceRole(role store.InstanceRoleEnum) error {
+	return bm.db.Update(func(txn *badger.Txn) error {
+		if err := txn.Set([]byte(roleKey), role.AsBytes()); err != nil {
+			return err
+		}
+		return nil
+	})
+
+}
+func (bm *badgerMeta) GetInstanceRole() (store.InstanceRoleEnum, error) {
+	var value []byte
+	err := bm.db.View(func(txn *badger.Txn) error {
+		item, e := txn.Get([]byte(roleKey))
+		if e != nil {
+			return e
+		}
+		if value, e = item.ValueCopy(nil); e != nil {
+			return e
+		}
+		return nil
+	})
+
+	if errors.Is(err, badger.ErrKeyNotFound) {
+		return store.Unset, nil
+	}
+	if err != nil {
+		return store.Master, err
+	}
+	return store.InstanceRoleEnum(value[0]), nil
 }
 
 func (bm *badgerMeta) GetTopicInfo(topicName string) (*store.TopicInfo, error) {
@@ -282,104 +340,6 @@ func (bm *badgerMeta) GetTopicSimpleInfoList() ([]*store.TopicInfo, error) {
 	})
 
 	return infoList, err
-}
-
-func (bm *badgerMeta) SaveDelay(topicName string, payload []byte) error {
-	preLen := len(delayPrefix)
-	key := make([]byte, preLen+16+len(topicName))
-	copy(key, delayPrefix)
-
-	buf := key[preLen:]
-	// copy 时间戳+eventId
-	copy(buf[:16], payload)
-	copy(buf[16:], topicName)
-
-	return bm.db.Update(func(txn *badger.Txn) error {
-		return txn.Set(key, payload)
-	})
-}
-func (bm *badgerMeta) ExistDelay(key []byte) (bool, error) {
-	exist := false
-	err := bm.db.View(func(txn *badger.Txn) error {
-		var e error
-		if exist, e = existKey(key, txn); e != nil {
-			return e
-		}
-		return nil
-	})
-
-	return exist, err
-}
-
-//func (bm *badgerMeta) GetDelayId() (uint64, error) {
-//	return bm.globalIdGen.Next()
-//}
-
-//func (bm *badgerMeta) SaveCheckPoint(key string, fileId, pos int64) error {
-//	buf := make([]byte, 16)
-//	binary.LittleEndian.PutUint64(buf, uint64(fileId))
-//	binary.LittleEndian.PutUint64(buf[8:], uint64(pos))
-//
-//	return bm.db.Update(func(txn *badger.Txn) error {
-//		if err := txn.Set([]byte(key), buf); err != nil {
-//			return err
-//		}
-//		return nil
-//	})
-//}
-
-//func (bm *badgerMeta) GetCheckPoint(key string) (int64, int64, error) {
-//	var value []byte
-//	err := bm.db.View(func(txn *badger.Txn) error {
-//		var e error
-//		if value, e = getRawValue([]byte(key), txn); e != nil {
-//			return e
-//		}
-//		return nil
-//	})
-//
-//	if err == badger.ErrKeyNotFound {
-//		return -1, -1, nil
-//	}
-//	if err != nil {
-//		return 0, 0, err
-//	}
-//
-//	fileId := int64(binary.LittleEndian.Uint64(value))
-//	pos := int64(binary.LittleEndian.Uint64(value[8:]))
-//
-//	return fileId, pos, nil
-//}
-
-func (bm *badgerMeta) SetInstanceRole(role store.InstanceRoleEnum) error {
-	return bm.db.Update(func(txn *badger.Txn) error {
-		if err := txn.Set([]byte(roleKey), role.AsBytes()); err != nil {
-			return err
-		}
-		return nil
-	})
-
-}
-func (bm *badgerMeta) GetInstanceRole() (store.InstanceRoleEnum, error) {
-	var value []byte
-	err := bm.db.View(func(txn *badger.Txn) error {
-		item, e := txn.Get([]byte(roleKey))
-		if e != nil {
-			return e
-		}
-		if value, e = item.ValueCopy(nil); e != nil {
-			return e
-		}
-		return nil
-	})
-
-	if errors.Is(err, badger.ErrKeyNotFound) {
-		return store.Unset, nil
-	}
-	if err != nil {
-		return store.Master, err
-	}
-	return store.InstanceRoleEnum(value[0]), nil
 }
 
 func (bm *badgerMeta) Close() error {

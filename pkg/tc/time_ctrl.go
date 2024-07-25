@@ -1,7 +1,6 @@
 package tc
 
 import (
-	"github.com/rolandhe/smss/conf"
 	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/rolandhe/smss/store"
 	"math"
@@ -10,30 +9,32 @@ import (
 )
 
 const (
-	DefaultWaitTimeoutMills = 10
+	DefaultFirstDelay = 5000
 )
 
-func NewTimeTriggerControl(fstore store.Store, name string, maxDefaultWait int64, doBiz func(fstore store.Store) int64) *TimeTriggerControl {
+func NewTimeTriggerControl(fstore store.Store, name string, firstRunDelayMs int64, doBiz func(fstore store.Store) int64) *TimeTriggerControl {
+	if firstRunDelayMs <= 0 {
+		firstRunDelayMs = DefaultFirstDelay
+	}
 	return &TimeTriggerControl{
-		quickAlive:     make(chan struct{}, 1),
-		recent:         math.MaxInt64,
-		fstore:         fstore,
-		doBiz:          doBiz,
-		name:           name,
-		maxDefaultWait: maxDefaultWait,
+		quickAlive: make(chan struct{}, 1),
+		recent:     time.Now().UnixMilli() + firstRunDelayMs,
+		fstore:     fstore,
+		doBiz: func(fstore store.Store) int64 {
+			time.Sleep(time.Millisecond)
+			return doBiz(fstore)
+		},
+		name: name,
 	}
 }
 
 type TimeTriggerControl struct {
-	quickAlive chan struct{}
 	sync.Mutex
-	recent int64
-	fstore store.Store
+	quickAlive chan struct{}
+	recent     int64
+	fstore     store.Store
 
-	name string
-
-	maxDefaultWait int64
-
+	name  string
 	doBiz func(fstore store.Store) int64
 }
 
@@ -52,22 +53,17 @@ func (lc *TimeTriggerControl) Set(expireAt int64, needNotify bool) bool {
 	return true
 }
 
-func (lc *TimeTriggerControl) since() time.Duration {
+func (lc *TimeTriggerControl) since() (int64, int64) {
 	lc.Lock()
 	defer lc.Unlock()
-	if lc.recent == math.MaxInt64 {
-		d := time.Millisecond * time.Duration(lc.maxDefaultWait)
-		lc.recent = time.Now().UnixMilli() + lc.maxDefaultWait
-		return d
-	}
 	curTs := time.Now().UnixMilli()
 	v := lc.recent - curTs
-	if v <= 0 {
-		v = DefaultWaitTimeoutMills
-		lc.recent = curTs + DefaultWaitTimeoutMills
+	if v < 0 {
+		v = 0
+		lc.recent = math.MaxInt64
 	}
-
-	return time.Millisecond * time.Duration(v)
+	lc.dry()
+	return v, lc.recent
 }
 
 func (lc *TimeTriggerControl) notify() {
@@ -85,21 +81,47 @@ func (lc *TimeTriggerControl) dry() {
 	}
 }
 func (lc *TimeTriggerControl) Process() {
-	d := time.Second * time.Duration(conf.FistExecDelay)
 	for {
-		select {
-		case <-lc.quickAlive:
-			d = lc.since()
-			nextTime := time.Now().Add(d)
-			logger.Get().Infof(" %s notify, next time is %d(%v)", lc.name, d.Milliseconds(), nextTime)
-		case <-time.After(d):
-			logger.Get().Infof("%s wakeup, after %dms", lc.name, d.Milliseconds())
-			next := lc.doBiz(lc.fstore)
-			if next <= 0 {
-				next = time.Now().Add(time.Millisecond * DefaultWaitTimeoutMills).UnixMilli()
-			}
-			lc.Set(next, false)
-			d = lc.since()
+		waitDurationMs, currentRecent := lc.since()
+		if waitDurationMs == 0 {
+			logger.Get().Infof("%s, immediate to doBiz", lc.name)
+			nextTimeStamp := lc.doBiz(lc.fstore)
+			lc.Set(nextTimeStamp, false)
+			logger.Get().Infof("%s, after immediate, and next wait timeout from doBiz is %d(%v)", lc.name, nextTimeStamp, time.UnixMilli(nextTimeStamp).Local())
+			continue
 		}
+		waitNextStamp := waitedRealTime(waitDurationMs)
+		logger.Get().Infof("%s, wait duration %d ms, next time is %v", lc.name, waitDurationMs, waitNextStamp)
+		bizWakeup := lc.waitNext(waitDurationMs)
+		if bizWakeup {
+			logger.Get().Infof("%s, wake up by front biz, to reset wait timeout, last wait is %d", lc.name, waitDurationMs)
+			continue
+		}
+
+		logger.Get().Infof("%s, wake up by wait timeout %d(%v), to doBiz", lc.name, waitDurationMs, waitNextStamp)
+		lc.consumeRecent(currentRecent)
+		nextTimeStamp := lc.doBiz(lc.fstore)
+		lc.Set(nextTimeStamp, false)
+		logger.Get().Infof("%s, after doBiz, and next wait timeout from biz is %d(%v)", lc.name, nextTimeStamp, time.UnixMilli(nextTimeStamp).Local())
 	}
+}
+func (lc *TimeTriggerControl) consumeRecent(currentRecent int64) {
+	lc.Lock()
+	defer lc.Unlock()
+	if lc.recent <= currentRecent {
+		lc.recent = math.MaxInt64
+	}
+}
+
+func (lc *TimeTriggerControl) waitNext(waitTimeMs int64) bool {
+	select {
+	case <-lc.quickAlive:
+		return true
+	case <-time.After(time.Millisecond * time.Duration(waitTimeMs)):
+		return false
+	}
+}
+
+func waitedRealTime(waitTimeMs int64) time.Time {
+	return time.Now().Add(time.Millisecond * time.Duration(waitTimeMs))
 }

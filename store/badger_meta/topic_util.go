@@ -19,7 +19,7 @@ const (
 func topicLifetimeName(topicName string, expireAt int64) []byte {
 	buf := make([]byte, len(lifePrefix)+8+len(topicName))
 	n := copy(buf, lifePrefix)
-	binary.LittleEndian.PutUint64(buf[n:], uint64(expireAt))
+	binary.BigEndian.PutUint64(buf[n:], uint64(expireAt))
 	copy(buf[n+8:], topicName)
 	return buf
 }

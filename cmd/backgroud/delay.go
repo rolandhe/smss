@@ -3,6 +3,7 @@ package backgroud
 import (
 	"fmt"
 	"github.com/rolandhe/smss/cmd/protocol"
+	"github.com/rolandhe/smss/conf"
 	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/rolandhe/smss/pkg/tc"
 	"github.com/rolandhe/smss/standard"
@@ -11,8 +12,8 @@ import (
 )
 
 const (
-	DelayBatchSize      = 20
-	DefaultDelayTimeout = 180 * 60 * 1000
+	DelayBatchSize = 20
+	//DefaultDelayTimeout = 180 * 60 * 1000
 )
 
 func StartDelay(fstore store.Store, worker standard.MessageWorking) *tc.TimeTriggerControl {
@@ -20,7 +21,7 @@ func StartDelay(fstore store.Store, worker standard.MessageWorking) *tc.TimeTrig
 		return doDelay(fstore, worker)
 	}
 
-	lc := tc.NewTimeTriggerControl(fstore, "delay", DefaultDelayTimeout, f)
+	lc := tc.NewTimeTriggerControl(fstore, "delay", conf.FistExecDelaySecond*1000, f)
 
 	go lc.Process()
 
@@ -57,10 +58,10 @@ func doDelay(fstore store.Store, worker standard.MessageWorking) int64 {
 	isDefault := false
 	if ret == 0 {
 		isDefault = true
-		ret = time.Now().UnixMilli() + DefaultDelayTimeout
+		ret = time.Now().UnixMilli() + conf.DefaultScanSecond*1000
 	}
 
-	logger.Get().Infof("tid=%s,doDelay ok,next time is %d(%v), isDefualt %v", tid, ret, time.UnixMilli(ret).Local(), isDefault)
+	logger.Get().Infof("tid=%s,doDelay ok, isDefualt %v", tid, isDefault)
 	return ret
 }
 

@@ -29,9 +29,7 @@ func repairPub(lBinlog *lastBinlog, binlogFile, dataRoot string, meta store.Meta
 }
 
 func repairDelayApply(lBinlog *lastBinlog, binlogFile, dataRoot string, meta store.Meta) error {
-	delayKey := make([]byte, 16+len(lBinlog.topicName))
-	copy(delayKey, lBinlog.payload[:16])
-	copy(delayKey[16:], lBinlog.topicName)
+	delayKey := store.DelayKeyFromPayload(lBinlog.topicName,lBinlog.payload)
 	exist, err := meta.ExistDelay(delayKey)
 	if err != nil {
 		return err
