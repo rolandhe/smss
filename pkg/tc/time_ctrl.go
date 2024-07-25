@@ -20,11 +20,8 @@ func NewTimeTriggerControl(fstore store.Store, name string, firstRunDelayMs int6
 		quickAlive: make(chan struct{}, 1),
 		recent:     time.Now().UnixMilli() + firstRunDelayMs,
 		fstore:     fstore,
-		doBiz: func(fstore store.Store) int64 {
-			time.Sleep(time.Millisecond)
-			return doBiz(fstore)
-		},
-		name: name,
+		doBiz:      doBiz,
+		name:       name,
 	}
 }
 
