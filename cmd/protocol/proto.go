@@ -30,7 +30,7 @@ const (
 )
 
 const (
-	CommandSub      CommandEnum = 0
+	CommandSub         CommandEnum = 0
 	CommandPub         CommandEnum = 1
 	CommandCreateTopic CommandEnum = 2
 	CommandDeleteTopic CommandEnum = 3
@@ -39,6 +39,7 @@ const (
 	CommandAlive CommandEnum = 17
 
 	CommandReplica   CommandEnum = 64
+	CommandTopicInfo CommandEnum = 65
 	CommandValidList CommandEnum = 99
 	CommandList      CommandEnum = 100
 

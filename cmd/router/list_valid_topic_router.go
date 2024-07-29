@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"github.com/rolandhe/smss/cmd/protocol"
-	"github.com/rolandhe/smss/pkg/dir"
 	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/rolandhe/smss/pkg/nets"
 	"github.com/rolandhe/smss/standard"
@@ -27,7 +26,7 @@ func (r *validListRouter) Router(conn net.Conn, commHeader *protocol.CommonHeade
 	infos, err := r.fstore.GetTopicInfoReader().GetTopicSimpleInfoList()
 	if err != nil {
 		logger.Get().Infof("tid=%s,GetTopicSimpleInfoList err:%v", commHeader.TraceId, err)
-		return dir.NewBizError(err.Error())
+		return nets.OutputRecoverErr(conn, err.Error(), NetWriteTimeout)
 	}
 	var rets []*outTopicInfo
 	for _, info := range infos {
