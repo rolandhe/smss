@@ -19,6 +19,7 @@ func SlaveReplica(masterHost string, masterPort int, eventId int64, needSync boo
 	if needSync {
 		err = syncTopicInfo(sc, eventId, fstore)
 		if err != nil {
+			sc.Close()
 			return err
 		}
 	}

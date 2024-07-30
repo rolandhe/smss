@@ -7,7 +7,6 @@ import (
 	"github.com/rolandhe/smss/cmd/protocol"
 	"github.com/rolandhe/smss/cmd/repair"
 	"github.com/rolandhe/smss/conf"
-	"github.com/rolandhe/smss/pkg/dir"
 	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/rolandhe/smss/pkg/nets"
 	"github.com/rolandhe/smss/standard"
@@ -48,7 +47,8 @@ func MasterHandle(conn net.Conn, header *protocol.CommonHeader, walMonitor WalMo
 	lastEventId := int64(binary.LittleEndian.Uint64(buf))
 
 	if lastEventId < 0 {
-		return dir.NewBizError("invalid replica eventId")
+		logger.Get().Infof("tid=%s,replca server,eventId=%d, event id must >=", header.TraceId, lastEventId)
+		return nets.OutputRecoverErr(conn, "invalid replica eventId", writeTimeout)
 	}
 
 	uuidStr := uuid.NewString()
