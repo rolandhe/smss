@@ -317,20 +317,19 @@ func (c *readerCtrl) ensureFs(root string, posFunc LogFileInfoGet) error {
 		return err
 	}
 	c.fixed = false
-	if info.Size() >= c.maxLogFileSize {
+	fid, fsize := posFunc()
+	if fid > c.fileId {
 		c.fileSize = info.Size()
 		c.fixed = true
-	} else {
-		fid, fsize := posFunc()
-		if fid > c.fileId {
-			c.fileSize = info.Size()
+	} else if fid == c.fileId {
+		c.fileSize = fsize
+		if fsize >= c.maxLogFileSize {
 			c.fixed = true
-		} else if fid == c.fileId {
-			c.fileSize = fsize
-		} else {
-			return errors.New("invalid file id")
 		}
+	} else {
+		return errors.New("invalid file id")
 	}
+
 	if c.curFs, err = os.Open(p); err != nil {
 		return err
 	}
