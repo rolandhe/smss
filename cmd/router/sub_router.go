@@ -43,31 +43,33 @@ func (r *subRouter) Router(conn net.Conn, commHeader *protocol.CommonHeader, wor
 	if info.BatchSize <= 0 {
 		info.BatchSize = protocol.DefaultSubBatchSize
 	}
+	tid := fmt.Sprintf("%s-%s", header.TopicName, info.Who)
 
+	logger.Get().Infof("tid=%s,recv subinfo,eventId: %d", tid, info.EventId)
 	var topicInfo *store.TopicInfo
 	topicInfo, err = r.fstore.GetTopicInfoReader().GetTopicInfo(header.TopicName)
 	if err != nil {
 		return nets.OutputRecoverErr(conn, err.Error(), NetWriteTimeout)
 	}
 	if topicInfo == nil || topicInfo.IsInvalid() {
-		logger.Get().Infof("topic not exist:%s", header.TopicName)
+		logger.Get().Infof("tid=%s,topic not exist:%s", tid, header.TopicName)
 		return nets.OutputRecoverErr(conn, "topic not exist", NetWriteTimeout)
 	}
 
 	var fileId, pos int64
 	topicPath := r.fstore.GetTopicPath(header.TopicName)
 	if fileId, pos, err = getSubPos(info.EventId, topicPath); err != nil {
-		logger.Get().Infof("event id not found:%s, %d", header.TopicName, info.EventId)
+		logger.Get().Infof("tid=%s,event id not found: %d,err:%v", tid, info.EventId, err)
 		return nets.OutputRecoverErr(conn, "event id not found", NetWriteTimeout)
 	}
 
 	reader, err := r.fstore.GetReader(header.TopicName, info.Who, fileId, pos, info.BatchSize)
 	if err != nil {
+		logger.Get().Infof("tid=%s,eventId=%d,get reader err:%v", tid, info.EventId, err)
 		return nets.OutputRecoverErr(conn, err.Error(), NetWriteTimeout)
 	}
 
-	tid := fmt.Sprintf("%s-%s", header.TopicName, info.Who)
-
+	logger.Get().Infof("tid=%s,subinfo check ok,start to send messages,eventId: %d", tid, info.EventId)
 	return nets.LongTimeRun[store.ReadMessage](conn, "sub", tid, info.AckTimeout, NetWriteTimeout, &subLongtimeReader{
 		TopicBlockReader: reader,
 	})
