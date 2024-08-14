@@ -239,6 +239,6 @@ func (fs *fileStore) unRegisterReaderNotify(topicName, whoami string) {
 		return
 	}
 	writer.UnRegNotify(whoami)
-	logger.Get().Infof("fileStore.registerReaderNotify %s-%s", topicName, whoami)
+	logger.Get().Infof("fileStore.unRegisterReaderNotify %s-%s", topicName, whoami)
 	writer.WaitGroup.Done()
 }
