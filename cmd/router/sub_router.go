@@ -38,6 +38,7 @@ func (r *subRouter) Router(conn net.Conn, commHeader *protocol.CommonHeader, wor
 
 	info, err := readSubInfo(conn, header)
 	if err != nil {
+		logger.Get().Infof("readSubInfo err,topic is %s,error is %v", header.TopicName, err)
 		return err
 	}
 	if info.BatchSize <= 0 {
