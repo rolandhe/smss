@@ -225,6 +225,7 @@ func (fs *fileStore) registerReaderNotify(topicName, whoami string, notify *stan
 		return nil, err
 	}
 	infoGet, err := writer.RegNotify(whoami, notify)
+	logger.Get().Infof("fileStore.registerReaderNotify %s-%s,err:%v", topicName, whoami, err)
 	if err != nil {
 		return nil, err
 	}
@@ -237,7 +238,7 @@ func (fs *fileStore) unRegisterReaderNotify(topicName, whoami string) {
 	if writer == nil {
 		return
 	}
-
 	writer.UnRegNotify(whoami)
+	logger.Get().Infof("fileStore.registerReaderNotify %s-%s", topicName, whoami)
 	writer.WaitGroup.Done()
 }

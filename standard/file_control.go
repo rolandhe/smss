@@ -155,7 +155,6 @@ func (fc *logFileCtrl) RegNotify(name string, notify *NotifyDevice) (LogFileInfo
 func (fc *logFileCtrl) UnRegNotify(name string) {
 	fc.notify.Lock()
 	defer fc.notify.Unlock()
-	logger.Get().Infof("UnRegNotify %s", name)
 	delete(fc.notify.waiters, name)
 }
 

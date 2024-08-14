@@ -5,6 +5,7 @@ import (
 	"github.com/rolandhe/smss/binlog"
 	"github.com/rolandhe/smss/cmd/protocol"
 	"github.com/rolandhe/smss/conf"
+	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store"
 )
@@ -88,8 +89,11 @@ type serverRegister struct {
 }
 
 func (reg *serverRegister) RegisterReaderNotify(notify *standard.NotifyDevice) (standard.LogFileInfoGet, error) {
-	return reg.walMonitor.RegNotify(reg.uuid, notify)
+	infoGet, err := reg.walMonitor.RegNotify(reg.uuid, notify)
+	logger.Get().Infof("serverRegister.RegisterReaderNotify, %s,err:%v", reg.uuid, err)
+	return infoGet, err
 }
 func (reg *serverRegister) UnRegisterReaderNotify() {
 	reg.walMonitor.UnRegNotify(reg.uuid)
+	logger.Get().Infof("serverRegister.UnRegisterReaderNotify, %s", reg.uuid)
 }
