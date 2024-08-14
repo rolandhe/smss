@@ -3,6 +3,7 @@ package nets
 import (
 	"errors"
 	"github.com/rolandhe/smss/cmd/protocol"
+	"github.com/rolandhe/smss/conf"
 	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/rolandhe/smss/standard"
 	"io"
@@ -53,9 +54,15 @@ func LongTimeRun[T any](conn net.Conn, biz, tid string, ackTimeout, writeTimeout
 		reader.Close()
 		endFlag.Store(true)
 	}()
+	var logCounter int64 = 0
 	for {
 		var msgs []*T
 		msgs, err = reader.Read(recvCh)
+
+		if logCounter%conf.LogSample == 0 {
+			logger.Get().Infof("tid=%s,after-sub-read,err:%v", tid, err)
+		}
+		logCounter++
 
 		if err == nil {
 			if err = reader.Output(conn, msgs); err != nil {
