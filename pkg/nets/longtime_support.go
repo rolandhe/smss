@@ -6,23 +6,23 @@ import (
 	"github.com/rolandhe/smss/conf"
 	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/rolandhe/smss/standard"
+	"github.com/rolandhe/smss/store"
 	"io"
 	"net"
-	"sync/atomic"
 	"time"
 )
 
-func longtimeReadMonitor(biz string, conn net.Conn, recvChan chan int, endFlag *atomic.Bool, tid string) {
+func longtimeReadMonitor(biz string, conn net.Conn, endNotify *store.EndNotifyEquipment, tid string) {
 	f := func(v int) {
 		select {
-		case recvChan <- v:
+		case endNotify.EndNotify <- v:
 		case <-time.After(time.Second):
 
 		}
 	}
 	for {
 		code, err := InputAck(conn, time.Second*5)
-		if endFlag.Load() {
+		if endNotify.EndFlag.Load() {
 			break
 		}
 		if err != nil && IsTimeoutError(err) {
@@ -30,6 +30,7 @@ func longtimeReadMonitor(biz string, conn net.Conn, recvChan chan int, endFlag *
 		}
 		if err != nil {
 			logger.Get().Infof("tid=%s,longtimeReadMonitor of %s met err,and exit monitor:%v", tid, biz, err)
+			endNotify.EndFlag.Store(true)
 			f(protocol.ConnPeerClosed)
 			break
 		}
@@ -39,25 +40,26 @@ func longtimeReadMonitor(biz string, conn net.Conn, recvChan chan int, endFlag *
 }
 
 type LongtimeReader[T any] interface {
-	Read(endNotify <-chan int) ([]*T, error)
+	Read(endNotify *store.EndNotifyEquipment) ([]*T, error)
 	Output(conn net.Conn, msgs []*T) error
 	io.Closer
 }
 
 func LongTimeRun[T any](conn net.Conn, biz, tid string, ackTimeout, writeTimeout time.Duration, reader LongtimeReader[T]) error {
 	var err error
-	recvCh := make(chan int, 1)
-	var endFlag atomic.Bool
-	go longtimeReadMonitor(biz, conn, recvCh, &endFlag, tid)
+	endNotify := &store.EndNotifyEquipment{
+		EndNotify: make(chan int, 1),
+	}
+	go longtimeReadMonitor(biz, conn, endNotify, tid)
 
 	defer func() {
 		reader.Close()
-		endFlag.Store(true)
+		endNotify.EndFlag.Store(true)
 	}()
 	var logCounter int64 = 0
 	for {
 		var msgs []*T
-		msgs, err = reader.Read(recvCh)
+		msgs, err = reader.Read(endNotify)
 
 		if logCounter%conf.LogSample == 0 {
 			logger.Get().Infof("tid=%s,after-sub-read,err:%v", tid, err)
@@ -65,12 +67,15 @@ func LongTimeRun[T any](conn net.Conn, biz, tid string, ackTimeout, writeTimeout
 		logCounter++
 
 		if err == nil {
+			if endNotify.EndFlag.Load() {
+				return errors.New("conn peer closed")
+			}
 			if err = reader.Output(conn, msgs); err != nil {
 				return err
 			}
 			var ackCode int
 			select {
-			case ackCode = <-recvCh:
+			case ackCode = <-endNotify.EndNotify:
 			case <-time.After(ackTimeout):
 				logger.Get().Infof("tid=%s,read ack timeout", tid)
 				return errors.New("read ack timeout")

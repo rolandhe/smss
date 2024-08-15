@@ -6,7 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/rolandhe/smss/binlog"
+	"github.com/rolandhe/smss/conf"
 	"github.com/rolandhe/smss/pkg/logger"
+	"github.com/rolandhe/smss/pkg/tm"
 	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store/fss"
 	"io"
@@ -42,17 +44,23 @@ func findPosByEventId(ppath string, eventId int64, cmdExtractFunc func(cmdBuf []
 	if maxLogFileId < 0 {
 		return 0, 0, nil
 	}
-	curFileId := maxLogFileId
 
-	for curFileId >= 0 {
+	nowDate := tm.NowDate()
+	for curFileId := maxLogFileId; curFileId >= 0; curFileId-- {
 		p := path.Join(ppath, fmt.Sprintf("%d.log", curFileId))
-		_, err = os.Stat(p)
+		stat, err := os.Stat(p)
 		if err != nil && os.IsNotExist(err) {
 			return 0, 0, errors.New("can't find event id,because file not exist")
 		}
 		if err != nil {
 			return 0, 0, err
 		}
+
+		modDate := tm.ToDate(stat.ModTime())
+		if tm.DiffDays(nowDate, modDate) > conf.StoreMaxDays {
+			continue
+		}
+
 		found, findPos, err := findInFile(p, eventId, cmdExtractFunc)
 		if err != nil {
 			return 0, 0, err
@@ -60,7 +68,6 @@ func findPosByEventId(ppath string, eventId int64, cmdExtractFunc func(cmdBuf []
 		if found == okFound {
 			return curFileId, findPos, nil
 		}
-		curFileId--
 	}
 	return 0, 0, errors.New("can't find event id")
 }

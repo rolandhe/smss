@@ -2,8 +2,10 @@ package standard
 
 import (
 	"fmt"
+	"github.com/rolandhe/smss/conf"
 	"github.com/rolandhe/smss/pkg/dir"
 	"github.com/rolandhe/smss/pkg/logger"
+	"github.com/rolandhe/smss/pkg/tm"
 	"math"
 	"os"
 	"path"
@@ -52,6 +54,11 @@ func ReadFirstFileId(root string) (int64, error) {
 	}
 
 	var firstId int64 = math.MaxInt64
+	var lastId int64
+	var lastSize int64
+	count := 0
+	nowDate := tm.NowDate()
+
 	for _, entry := range entries {
 		if entry.IsDir() {
 			continue
@@ -66,13 +73,32 @@ func ReadFirstFileId(root string) (int64, error) {
 		if num < 0 {
 			continue
 		}
+		count++
+		lastId = num
+
+		info, err := entry.Info()
+		if err != nil {
+			return 0, err
+		}
+		modDate := tm.ToDate(info.ModTime())
+		lastSize = info.Size()
+		if tm.DiffDays(nowDate, modDate) >= conf.StoreMaxDays {
+			continue
+		}
 
 		if num < firstId {
 			firstId = num
 		}
 	}
 	if firstId == math.MaxInt64 {
-		firstId = 0
+		if count == 0 {
+			firstId = 0
+		}
+		if count == 1 && lastSize < conf.MaxLogSize {
+			firstId = lastId
+		} else {
+			firstId = lastId + 1
+		}
 	}
 	return firstId, nil
 }

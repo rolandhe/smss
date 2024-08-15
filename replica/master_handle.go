@@ -10,6 +10,7 @@ import (
 	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/rolandhe/smss/pkg/nets"
 	"github.com/rolandhe/smss/standard"
+	"github.com/rolandhe/smss/store"
 	"net"
 	"runtime"
 	"sync/atomic"
@@ -74,22 +75,24 @@ func MasterHandle(conn net.Conn, header *protocol.CommonHeader, walMonitor WalMo
 
 func noAckPush(conn net.Conn, tid string, reader serverBinlogBlockReader) error {
 	var err error
-	recvCh := make(chan int, 1)
-	var endFlag atomic.Bool
 
-	go peerCloseMonitor(conn, recvCh, &endFlag, tid)
+	endNotify := &store.EndNotifyEquipment{
+		EndNotify: make(chan int, 1),
+	}
+
+	go peerCloseMonitor(conn, endNotify, tid)
 	defer func() {
 		reader.Close()
-		endFlag.Store(true)
+		endNotify.EndFlag.Store(true)
 	}()
 	count := int64(0)
 	totalCost := int64(0)
 	for {
 		var msgs []*binlogBlock
-		if endFlag.Load() {
+		if endNotify.EndFlag.Load() {
 			return errors.New("conn end by flag")
 		}
-		msgs, err = reader.Read(recvCh)
+		msgs, err = reader.Read(endNotify)
 		if err == nil {
 			outBuf := make([]byte, protocol.RespHeaderSize+4+len(msgs[0].data))
 			binary.LittleEndian.PutUint16(outBuf, protocol.OkCode)
@@ -100,7 +103,7 @@ func noAckPush(conn net.Conn, tid string, reader serverBinlogBlockReader) error 
 			start := time.Now().UnixMilli()
 			readDelay := start - msgs[0].rawMsg.WriteTime
 
-			if err = writeAllWithTotalTimeout(conn, outBuf, BinlogOutTimeout, &endFlag); err != nil {
+			if err = writeAllWithTotalTimeout(conn, outBuf, BinlogOutTimeout, &endNotify.EndFlag); err != nil {
 				logger.Get().Infof("tid=%s, eventId=%d,err:%v", tid, msgs[0].rawMsg.EventId, err)
 				return err
 			}
@@ -125,10 +128,10 @@ func noAckPush(conn net.Conn, tid string, reader serverBinlogBlockReader) error 
 	}
 }
 
-func peerCloseMonitor(conn net.Conn, recvChan chan int, endFlag *atomic.Bool, tid string) {
+func peerCloseMonitor(conn net.Conn, endNotify *store.EndNotifyEquipment, tid string) {
 	f := func(v int) {
 		select {
-		case recvChan <- v:
+		case endNotify.EndNotify <- v:
 		case <-time.After(time.Second):
 
 		}
@@ -136,7 +139,7 @@ func peerCloseMonitor(conn net.Conn, recvChan chan int, endFlag *atomic.Bool, ti
 	buf := make([]byte, 20)
 	for {
 		err := nets.ReadAll(conn, buf, time.Second*5)
-		if endFlag.Load() {
+		if endNotify.EndFlag.Load() {
 			break
 		}
 		if err != nil && nets.IsTimeoutError(err) {
@@ -144,8 +147,8 @@ func peerCloseMonitor(conn net.Conn, recvChan chan int, endFlag *atomic.Bool, ti
 		}
 		if err != nil {
 			logger.Get().Infof("tid=%s,peerCloseMonitor met err,and exit monitor:%v", tid, err)
+			endNotify.EndFlag.Store(true)
 			f(protocol.ConnPeerClosed)
-			endFlag.Store(true)
 			break
 		}
 	}
@@ -159,14 +162,14 @@ func writeAllWithTotalTimeout(conn net.Conn, buf []byte, timeout time.Duration, 
 		l := len(buf)
 		conn.SetWriteDeadline(time.Now().Add(d))
 		timeout -= d
+		if endFlag.Load() {
+			return errors.New("conn end by flag")
+		}
 		n, err := conn.Write(buf)
 		if err != nil {
 			if !nets.IsTimeoutError(err) || timeout <= 0 {
 				return err
 			}
-		}
-		if endFlag.Load() {
-			return errors.New("conn end by flag")
 		}
 		if n == l {
 			return nil

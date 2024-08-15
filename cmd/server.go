@@ -64,7 +64,7 @@ func StartServer(root string, insRole *InstanceRole) {
 		return
 	}
 
-	startBgAndInitRouter(fstore, worker, insRole.Role)
+	startBgAndInitRouter(root,fstore, worker, insRole.Role)
 	if insRole.Role == store.Master {
 		router.InitReplica(w.StdMsgWriter)
 	} else {
@@ -98,9 +98,9 @@ func StartServer(root string, insRole *InstanceRole) {
 	backgroud.StopClear()
 }
 
-func startBgAndInitRouter(fstore store.Store, worker standard.MessageWorking, role store.InstanceRoleEnum) {
+func startBgAndInitRouter(root string,fstore store.Store, worker standard.MessageWorking, role store.InstanceRoleEnum) {
 	delExec := backgroud.StartTopicFileDelete(fstore)
-	backgroud.StartClearOldFiles(fstore, worker, delExec)
+	backgroud.StartClearOldFiles(root,fstore, worker, delExec)
 	var lc *tc.TimeTriggerControl
 	if role == store.Master {
 		delayCtrl := backgroud.StartDelay(fstore, worker)

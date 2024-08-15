@@ -3,6 +3,7 @@ package store
 import (
 	"io"
 	"slices"
+	"sync/atomic"
 	"time"
 )
 
@@ -88,8 +89,13 @@ type Meta interface {
 	Scanner
 }
 
+type EndNotifyEquipment struct {
+	EndNotify chan int
+	EndFlag   atomic.Bool
+}
+
 type BlockReader[T any] interface {
-	Read(endNotify <-chan int) ([]*T, error)
+	Read(endNotify *EndNotifyEquipment) ([]*T, error)
 	Init(fileId, pos int64) error
 	io.Closer
 }

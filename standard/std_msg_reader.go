@@ -7,6 +7,7 @@ import (
 	"github.com/rolandhe/smss/conf"
 	"github.com/rolandhe/smss/pkg/dir"
 	"github.com/rolandhe/smss/pkg/logger"
+	"github.com/rolandhe/smss/store"
 	"os"
 	"path"
 )
@@ -63,11 +64,11 @@ type StdMsgBlockReader[T any] struct {
 	logCount int64
 }
 
-func (r *StdMsgBlockReader[T]) Read(endNotify <-chan int) ([]*T, error) {
+func (r *StdMsgBlockReader[T]) Read(endNotify *store.EndNotifyEquipment) ([]*T, error) {
 	if r.notify.IsTermite() {
 		return nil, errors.New("topic not exist")
 	}
-	if err := r.waitFs(endNotify); err != nil {
+	if err := r.waitFs(endNotify.EndNotify); err != nil {
 		return nil, err
 	}
 	// read data
@@ -120,7 +121,7 @@ func (r *StdMsgBlockReader[T]) waitFs(endNotify <-chan int) error {
 
 func (r *StdMsgBlockReader[T]) Close() error {
 	r.register.UnRegisterReaderNotify()
-	return nil
+	return r.ctrl.Close()
 }
 
 func (r *StdMsgBlockReader[T]) Init(fileId, pos int64) error {
@@ -208,8 +209,8 @@ func (r *StdMsgBlockReader[T]) waitPos(endNotify <-chan int) error {
 	return nil
 }
 
-func (r *StdMsgBlockReader[T]) readCore(endNotify <-chan int) ([]*T, error) {
-	if err := r.waitPos(endNotify); err != nil {
+func (r *StdMsgBlockReader[T]) readCore(endNotify *store.EndNotifyEquipment) ([]*T, error) {
+	if err := r.waitPos(endNotify.EndNotify); err != nil {
 		return nil, err
 	}
 
@@ -225,6 +226,12 @@ func (r *StdMsgBlockReader[T]) readCore(endNotify <-chan int) ([]*T, error) {
 	var cmdStep commandStep
 	var plStep payloadStep
 	for {
+		if endNotify.EndFlag.Load() {
+			return nil, PeerClosedErr
+		}
+		if r.notify.IsTermite() {
+			return nil, TopicWriterTermiteErr
+		}
 		if r.ctrl.pos == r.ctrl.fileSize {
 			break
 		}
@@ -301,6 +308,14 @@ func (c *readerCtrl) reset() {
 	c.fixed = false
 	c.pos = 0
 	c.fileId++
+}
+func (c *readerCtrl) Close() error {
+	if c.curFs != nil {
+		err := c.curFs.Close()
+		c.curFs = nil
+		return err
+	}
+	return nil
 }
 
 func (c *readerCtrl) ensureFs(root string, posFunc LogFileInfoGet) error {
