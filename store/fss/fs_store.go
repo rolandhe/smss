@@ -198,7 +198,7 @@ func (fs *fileStore) Close() error {
 	return fs.meta.Close()
 }
 
-func (fs *fileStore) GetReader(topicName, whoami string, fileId, pos int64, batchSize int) (store.TopicBlockReader, error) {
+func (fs *fileStore) GetReader(topicName, whoami string, filePosCallback func(lastFileId int64) (int64, int64, error), batchSize int) (store.TopicBlockReader, error) {
 	info, err := fs.meta.GetTopicInfo(topicName)
 	if err != nil {
 		return nil, err
@@ -212,7 +212,7 @@ func (fs *fileStore) GetReader(topicName, whoami string, fileId, pos int64, batc
 		topicName: topicName,
 		whoami:    whoami,
 	})
-	if err = reader.Init(fileId, pos); err != nil {
+	if err = reader.Init(filePosCallback); err != nil {
 		return nil, err
 	}
 	return reader, nil

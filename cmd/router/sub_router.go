@@ -57,14 +57,18 @@ func (r *subRouter) Router(conn net.Conn, commHeader *protocol.CommonHeader, wor
 		return nets.OutputRecoverErr(conn, "topic not exist", NetWriteTimeout)
 	}
 
-	var fileId, pos int64
 	topicPath := r.fstore.GetTopicPath(header.TopicName)
-	if fileId, pos, err = getSubPos(info.EventId, topicPath); err != nil {
-		logger.Get().Infof("tid=%s,event id not found: %d,err:%v", tid, info.EventId, err)
-		return nets.OutputRecoverErr(conn, "event id not found", NetWriteTimeout)
+	//var fileId, pos int64
+	//if fileId, pos, err = getSubPos(info.EventId, topicPath); err != nil {
+	//	logger.Get().Infof("tid=%s,event id not found: %d,err:%v", tid, info.EventId, err)
+	//	return nets.OutputRecoverErr(conn, "event id not found", NetWriteTimeout)
+	//}
+
+	cbFunc := func(lastFileId int64) (int64, int64, error) {
+		return getSubPos(info.EventId, topicPath, lastFileId)
 	}
 
-	reader, err := r.fstore.GetReader(header.TopicName, info.Who, fileId, pos, info.BatchSize)
+	reader, err := r.fstore.GetReader(header.TopicName, info.Who, cbFunc, info.BatchSize)
 	if err != nil {
 		logger.Get().Infof("tid=%s,eventId=%d,get reader err:%v", tid, info.EventId, err)
 		return nets.OutputRecoverErr(conn, err.Error(), NetWriteTimeout)
@@ -76,7 +80,7 @@ func (r *subRouter) Router(conn net.Conn, commHeader *protocol.CommonHeader, wor
 	})
 }
 
-func getSubPos(eventId int64, topicPath string) (int64, int64, error) {
+func getSubPos(eventId int64, topicPath string, lastFileId int64) (int64, int64, error) {
 	var fileId int64
 	var err error
 
@@ -88,7 +92,7 @@ func getSubPos(eventId int64, topicPath string) (int64, int64, error) {
 		return fileId, 0, nil
 	}
 
-	return repair.FindTopicPosByEventId(topicPath, eventId)
+	return repair.FindTopicPosByEventId(topicPath, eventId, lastFileId)
 }
 
 // readSubInfo, sub 格式

@@ -16,15 +16,15 @@ import (
 	"path"
 )
 
-func FindBinlogPosByEventId(ppath string, eventId int64) (int64, int64, error) {
-	return findPosByEventId(ppath, eventId, func(cmdBuf []byte) (int64, int) {
+func FindBinlogPosByEventId(ppath string, eventId int64, lastFileId int64) (int64, int64, error) {
+	return findPosByEventId(ppath, eventId, lastFileId, func(cmdBuf []byte) (int64, int) {
 		cmd := binlog.CmdDecoder(cmdBuf)
 		return cmd.EventId, cmd.PayloadLen
 	})
 }
 
-func FindTopicPosByEventId(ppath string, eventId int64) (int64, int64, error) {
-	return findPosByEventId(ppath, eventId, func(cmdBuf []byte) (int64, int) {
+func FindTopicPosByEventId(ppath string, eventId int64, lastFileId int64) (int64, int64, error) {
+	return findPosByEventId(ppath, eventId, lastFileId, func(cmdBuf []byte) (int64, int) {
 		cmd := &fss.TopicMessageCommand{}
 		err := fss.ReadTopicMessageCmd(cmdBuf[:len(cmdBuf)-1], cmd)
 		if err != nil {
@@ -35,7 +35,7 @@ func FindTopicPosByEventId(ppath string, eventId int64) (int64, int64, error) {
 	})
 }
 
-func findPosByEventId(ppath string, eventId int64, cmdExtractFunc func(cmdBuf []byte) (int64, int)) (int64, int64, error) {
+func findPosByEventId(ppath string, eventId int64, lastFileId int64, cmdExtractFunc func(cmdBuf []byte) (int64, int)) (int64, int64, error) {
 	maxLogFileId, err := standard.ReadMaxFileId(ppath)
 	if err != nil {
 		return 0, 0, err
@@ -46,6 +46,9 @@ func findPosByEventId(ppath string, eventId int64, cmdExtractFunc func(cmdBuf []
 	}
 
 	nowDate := tm.NowDate()
+
+	lastExpired := false
+
 	for curFileId := maxLogFileId; curFileId >= 0; curFileId-- {
 		p := path.Join(ppath, fmt.Sprintf("%d.log", curFileId))
 		stat, err := os.Stat(p)
@@ -57,17 +60,24 @@ func findPosByEventId(ppath string, eventId int64, cmdExtractFunc func(cmdBuf []
 		}
 
 		modDate := tm.ToDate(stat.ModTime())
-		if tm.DiffDays(nowDate, modDate) > conf.StoreMaxDays {
-			continue
-		}
+		expired := tm.DiffDays(nowDate, modDate) > conf.StoreMaxDays
 
 		found, findPos, err := findInFile(p, eventId, cmdExtractFunc)
 		if err != nil {
 			return 0, 0, err
 		}
 		if found == okFound {
+			if expired {
+				if lastExpired {
+					return 0, 0, errors.New("can't find event id")
+				}
+				if lastFileId > curFileId && findPos != stat.Size() {
+					return 0, 0, errors.New("can't find event id")
+				}
+			}
 			return curFileId, findPos, nil
 		}
+		lastExpired = expired
 	}
 	return 0, 0, errors.New("can't find event id")
 }

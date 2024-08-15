@@ -12,7 +12,6 @@ import (
 	"github.com/rolandhe/smss/standard"
 	"github.com/rolandhe/smss/store"
 	"net"
-	"runtime"
 	"sync/atomic"
 	"time"
 )
@@ -24,7 +23,7 @@ type WalMonitorSupport interface {
 	standard.LogFileControl
 }
 
-func getFilePosByEventId(root string, eventId int64) (int64, int64, error) {
+func getFilePosByEventId(root string, eventId int64, lastFileId int64) (int64, int64, error) {
 	var fileId int64
 	var err error
 	if eventId == 0 {
@@ -35,11 +34,10 @@ func getFilePosByEventId(root string, eventId int64) (int64, int64, error) {
 		return fileId, 0, nil
 	}
 
-	return repair.FindBinlogPosByEventId(root, eventId)
+	return repair.FindBinlogPosByEventId(root, eventId, lastFileId)
 }
 
 func MasterHandle(conn net.Conn, header *protocol.CommonHeader, walMonitor WalMonitorSupport, readTimeout, writeTimeout time.Duration) error {
-	runtime.LockOSThread()
 	buf := make([]byte, 8)
 	err := nets.ReadAll(conn, buf, readTimeout)
 	if err != nil {
@@ -53,15 +51,17 @@ func MasterHandle(conn net.Conn, header *protocol.CommonHeader, walMonitor WalMo
 	}
 
 	uuidStr := uuid.NewString()
-	fileId, pos, err := getFilePosByEventId(walMonitor.GetRoot(), lastEventId)
-	if err != nil {
-		logger.Get().Infof("tid=%s,replca server,eventId=%d, error:%v", header.TraceId, lastEventId, err)
-		return nets.OutputRecoverErr(conn, err.Error(), writeTimeout)
-	}
+	//fileId, pos, err := getFilePosByEventId(walMonitor.GetRoot(), lastEventId)
+	//if err != nil {
+	//	logger.Get().Infof("tid=%s,replca server,eventId=%d, error:%v", header.TraceId, lastEventId, err)
+	//	return nets.OutputRecoverErr(conn, err.Error(), writeTimeout)
+	//}
 
 	reader := newBlockReader(uuidStr, walMonitor)
 
-	if err = reader.Init(fileId, pos); err != nil {
+	if err = reader.Init(func(lastFileId int64) (int64, int64, error) {
+		return getFilePosByEventId(walMonitor.GetRoot(), lastEventId, lastFileId)
+	}); err != nil {
 		logger.Get().Infof("tid=%s,replica server,eventId=%d, init error:%v", header.TraceId, lastEventId, err)
 		return nets.OutputRecoverErr(conn, err.Error(), writeTimeout)
 	}

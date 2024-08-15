@@ -96,7 +96,7 @@ type EndNotifyEquipment struct {
 
 type BlockReader[T any] interface {
 	Read(endNotify *EndNotifyEquipment) ([]*T, error)
-	Init(fileId, pos int64) error
+	Init(filePosCallback func(lastFileId int64) (int64, int64, error)) error
 	io.Closer
 }
 
@@ -108,7 +108,7 @@ type Store interface {
 	io.Closer
 	Save(topicName string, messages []*TopicMessage) (int, error)
 
-	GetReader(topicName, who string, fileId, pos int64, batchSize int) (TopicBlockReader, error)
+	GetReader(topicName, who string, filePosCallback func(lastFileId int64) (int64, int64,error), batchSize int) (TopicBlockReader, error)
 
 	CreateTopic(topicName string, life int64, eventId int64) error
 

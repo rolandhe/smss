@@ -124,8 +124,21 @@ func (r *StdMsgBlockReader[T]) Close() error {
 	return r.ctrl.Close()
 }
 
-func (r *StdMsgBlockReader[T]) Init(fileId, pos int64) error {
+func (r *StdMsgBlockReader[T]) Init(filePosCallback func(lastFileId int64) (int64, int64, error)) error {
+	var err error
+	r.infoGet, err = r.register.RegisterReaderNotify(r.notify)
+	if err != nil {
+		return dir.NewBizError(err.Error())
+	}
+	lastFileId, lastPos := r.infoGet()
+	fileId, pos, err := filePosCallback(lastFileId)
+
+	if err != nil {
+		r.register.UnRegisterReaderNotify()
+		return err
+	}
 	if fileId < 0 || pos < 0 {
+		r.register.UnRegisterReaderNotify()
 		return dir.NewBizError("invalid pos")
 	}
 
@@ -133,17 +146,12 @@ func (r *StdMsgBlockReader[T]) Init(fileId, pos int64) error {
 	info, err := os.Stat(p)
 
 	if err != nil && os.IsNotExist(err) && pos > 0 {
+		r.register.UnRegisterReaderNotify()
 		return dir.NewBizError("invalid pos")
 	}
 
-	r.infoGet, err = r.register.RegisterReaderNotify(r.notify)
-	if err != nil {
-		return dir.NewBizError(err.Error())
-	}
-
-	lastFileId, lastPos := r.infoGet()
-
 	if fileId > lastFileId || (fileId == lastFileId && pos > lastPos) {
+		r.register.UnRegisterReaderNotify()
 		return dir.NewBizError("invalid pos")
 	}
 
