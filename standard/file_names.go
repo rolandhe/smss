@@ -92,13 +92,12 @@ func ReadFirstFileId(root string) (int64, error) {
 	}
 	if firstId == math.MaxInt64 {
 		if count == 0 {
-			firstId = 0
+			return 0, nil
 		}
 		if count == 1 && lastSize < conf.MaxLogSize {
-			firstId = lastId
-		} else {
-			firstId = lastId + 1
+			return lastId, nil
 		}
+		firstId = lastId + 1
 	}
 	return firstId, nil
 }
