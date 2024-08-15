@@ -85,7 +85,7 @@ func getSubPos(eventId int64, topicPath string, lastFileId int64) (int64, int64,
 	var err error
 
 	if eventId == 0 {
-		fileId, err = standard.ReadFirstFileId(topicPath)
+		fileId, err = standard.ReadFirstFileId(topicPath, lastFileId)
 		if err != nil {
 			return 0, 0, err
 		}

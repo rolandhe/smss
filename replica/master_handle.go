@@ -27,7 +27,7 @@ func getFilePosByEventId(root string, eventId int64, lastFileId int64) (int64, i
 	var fileId int64
 	var err error
 	if eventId == 0 {
-		fileId, err = standard.ReadFirstFileId(root)
+		fileId, err = standard.ReadFirstFileId(root, lastFileId)
 		if err != nil {
 			return 0, 0, err
 		}
