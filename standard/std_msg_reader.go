@@ -286,6 +286,9 @@ func (r *StdMsgBlockReader[T]) readCore(endNotify *store.EndNotifyEquipment) ([]
 			r.parser.ChangeMessagePos(last, r.ctrl.fileId, r.ctrl.pos)
 		}
 	}
+	if r.notify.IsTermite() {
+		return nil, TopicWriterTermiteErr
+	}
 
 	return readMsgs, nil
 }
