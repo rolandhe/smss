@@ -1,8 +1,8 @@
 package conf
 
 import (
-	"github.com/rolandhe/smss/pkg/logger"
 	"github.com/spf13/viper"
+	"log"
 	"time"
 )
 
@@ -36,15 +36,19 @@ var NoCache bool
 
 var FlushLevel int
 
-func Init() error {
+var LogRotateMaxSize int
+var LogRotateMaxBackups int
+var LogRotateMaxAge int
+
+func Init() {
 	viper.SetConfigName("config")
 	// 设置配置文件类型
 	viper.SetConfigType("yaml")
 	// 设置配置文件路径，可以设置多个路径
 	viper.AddConfigPath("./config")
 	if err := viper.ReadInConfig(); err != nil {
-		logger.Get().Infof("fatal error config file: %v", err)
-		return err
+		log.Printf("fatal error config file: %v", err)
+		panic(err)
 	}
 
 	Port = viper.GetInt("port")
@@ -70,5 +74,8 @@ func Init() error {
 	NoCache = viper.GetBool("store.noCache")
 
 	FlushLevel = viper.GetInt("store.flushLevel")
-	return nil
+
+	LogRotateMaxSize = viper.GetInt("log.rotate.maxSize")
+	LogRotateMaxBackups = viper.GetInt("log.rotate.maxBackups")
+	LogRotateMaxAge = viper.GetInt("log.rotate.maxAge")
 }

@@ -19,10 +19,7 @@ var (
 // master mode: ./smss -role master
 // slave mode: ./smss -role slave -host 127.0.0.1 -port 12301 -event 0
 func main() {
-	if err := conf.Init(); err != nil {
-		return
-	}
-
+	conf.Init()
 	logger.InitLogger(conf.LogPath)
 	defer logger.Sync()
 

@@ -2,6 +2,10 @@ port: 12301
 log:
   path: stdout
   sample: 10000
+  rotate:
+    maxSize: 500
+    maxBackups: 10
+    maxAge: 14
 store:
   path: data
   maxLogSize: 1073741824
