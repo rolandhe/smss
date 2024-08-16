@@ -69,10 +69,10 @@ func findPosByEventId(ppath string, eventId int64, lastFileId int64, cmdExtractF
 		if found == okFound {
 			if expired {
 				if lastExpired {
-					return 0, 0, errors.New("can't find event id")
+					return 0, 0, errors.New("found event id,but expired")
 				}
 				if lastFileId > curFileId && findPos != stat.Size() {
-					return 0, 0, errors.New("can't find event id")
+					return 0, 0, errors.New("found event id,but expired")
 				}
 			}
 			return curFileId, findPos, nil

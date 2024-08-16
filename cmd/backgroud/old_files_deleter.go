@@ -12,6 +12,7 @@ import (
 	"github.com/rolandhe/smss/store"
 	"os"
 	"path"
+	"slices"
 	"strings"
 	"time"
 )
@@ -130,12 +131,16 @@ func deleteInvalidFiles(p string, unLockFunc func(), traceId string, scenario st
 		}
 	}
 
+	slices.Sort(delIds)
+	l := len(delIds)
+	if l > 0 && delIds[l-1] == maxId {
+		delIds = delIds[:l-1]
+		logger.Get().Infof("tid=%s,%s,deleteInvalidFiles,retain the last expired file:%s/%d.log", traceId, scenario, p, maxId)
+	}
+
 	logger.Get().Infof("tid=%s,%s,to delete expired files:%d", traceId, scenario, len(delIds))
 
 	for _, id := range delIds {
-		if id == maxId {
-			continue
-		}
 		dp := fmt.Sprintf("%s/%d.log", p, id)
 		err = os.Remove(dp)
 		//if err = os.Remove(dp); err != nil {
