@@ -64,18 +64,18 @@ type StdMsgBlockReader[T any] struct {
 	logCount int64
 }
 
-func (r *StdMsgBlockReader[T]) Read(endNotify *store.EndNotifyEquipment) ([]*T, error) {
-	if r.notify.IsTermite() {
+func (r *StdMsgBlockReader[T]) Read(clientClosedNotify *store.ClientClosedNotifyEquipment) ([]*T, error) {
+	if r.notify.IsDeleteTopic() {
 		return nil, errors.New("topic not exist")
 	}
-	if err := r.waitFs(endNotify.EndNotify); err != nil {
+	if err := r.waitFs(clientClosedNotify.ClientClosedNotifyChan); err != nil {
 		return nil, err
 	}
 	// read data
-	return r.readCore(endNotify)
+	return r.readCore(clientClosedNotify)
 }
 
-func (r *StdMsgBlockReader[T]) waitFs(endNotify <-chan int) error {
+func (r *StdMsgBlockReader[T]) waitFs(ClientClosedNotifyChan <-chan struct{}) error {
 	for {
 		if r.ctrl.curFs != nil {
 			break
@@ -93,13 +93,13 @@ func (r *StdMsgBlockReader[T]) waitFs(endNotify <-chan int) error {
 				break
 			}
 		}
-		waitRet := r.notify.Wait(endNotify)
-		if waitRet == WaitNotifyByInput {
-			logger.Get().Infof("%s waited file %d,notify to %s,ret=WaitNotifyByInput", r.subject, r.ctrl.fileId, r.whoami)
+		waitRet := r.notify.Wait(ClientClosedNotifyChan)
+		if waitRet == WaitNotifyByClientClosed {
+			logger.Get().Infof("%s waited file %d,notify to %s,ret=WaitNotifyByClientClosed", r.subject, r.ctrl.fileId, r.whoami)
 			return PeerClosedErr
 		}
-		if waitRet == WaitNotifyResultTermite {
-			logger.Get().Infof("%s waited file %d,notify to %s, ret=WaitNotifyResultTermite", r.subject, r.ctrl.fileId, r.whoami)
+		if waitRet == WaitNotifyTopicDeleted {
+			logger.Get().Infof("%s waited file %d,notify to %s, ret=WaitNotifyTopicDeleted", r.subject, r.ctrl.fileId, r.whoami)
 			return TopicWriterTermiteErr
 		}
 		if waitRet == WaitNotifyResultTimeout {
@@ -177,18 +177,18 @@ func (r *StdMsgBlockReader[T]) Init(filePosCallback func(lastFileId int64) (int6
 	return nil
 }
 
-func (r *StdMsgBlockReader[T]) waitPos(endNotify <-chan int) error {
+func (r *StdMsgBlockReader[T]) waitPos(ClientClosedNotifyChan <-chan struct{}) error {
 	for {
 		if r.ctrl.pos < r.ctrl.fileSize {
 			break
 		}
-		waitRet := r.notify.Wait(endNotify)
-		if waitRet == WaitNotifyByInput {
-			logger.Get().Infof("%s waited notify %d.%d %s,but notified by endNotify, ret=WaitNotifyByInput(conn closed)", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami)
+		waitRet := r.notify.Wait(ClientClosedNotifyChan)
+		if waitRet == WaitNotifyByClientClosed {
+			logger.Get().Infof("%s waited notify %d.%d %s,but notified by ClientClosedNotifyChan, ret=WaitNotifyByClientClosed(conn closed)", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami)
 			return PeerClosedErr
 		}
-		if waitRet == WaitNotifyResultTermite {
-			logger.Get().Infof("%s waited pos,notify %d.%d %s,ret=WaitNotifyResultTermite", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami)
+		if waitRet == WaitNotifyTopicDeleted {
+			logger.Get().Infof("%s waited pos,notify %d.%d %s,ret=WaitNotifyTopicDeleted", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami)
 			return TopicWriterTermiteErr
 		}
 		if waitRet == WaitNotifyResultTimeout {
@@ -217,8 +217,8 @@ func (r *StdMsgBlockReader[T]) waitPos(endNotify <-chan int) error {
 	return nil
 }
 
-func (r *StdMsgBlockReader[T]) readCore(endNotify *store.EndNotifyEquipment) ([]*T, error) {
-	if err := r.waitPos(endNotify.EndNotify); err != nil {
+func (r *StdMsgBlockReader[T]) readCore(clientClosedNotify *store.ClientClosedNotifyEquipment) ([]*T, error) {
+	if err := r.waitPos(clientClosedNotify.ClientClosedNotifyChan); err != nil {
 		return nil, err
 	}
 
@@ -234,10 +234,10 @@ func (r *StdMsgBlockReader[T]) readCore(endNotify *store.EndNotifyEquipment) ([]
 	var cmdStep commandStep
 	var plStep payloadStep
 	for {
-		if endNotify.EndFlag.Load() {
+		if clientClosedNotify.ClientClosedFlag.Load() {
 			return nil, PeerClosedErr
 		}
-		if r.notify.IsTermite() {
+		if r.notify.IsDeleteTopic() {
 			return nil, TopicWriterTermiteErr
 		}
 		if r.ctrl.pos == r.ctrl.fileSize {
@@ -294,7 +294,7 @@ func (r *StdMsgBlockReader[T]) readCore(endNotify *store.EndNotifyEquipment) ([]
 			r.parser.ChangeMessagePos(last, r.ctrl.fileId, r.ctrl.pos)
 		}
 	}
-	if r.notify.IsTermite() {
+	if r.notify.IsDeleteTopic() {
 		return nil, TopicWriterTermiteErr
 	}
 

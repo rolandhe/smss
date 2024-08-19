@@ -84,7 +84,7 @@ func (sm *safeMap) invalidWriter(topicName string) *sync.WaitGroup {
 	if writer == nil {
 		return nil
 	}
-	writer.Terminate()
+	writer.InvalidByDeleteTopic()
 	return &writer.WaitGroup
 }
 

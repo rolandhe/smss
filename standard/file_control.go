@@ -19,16 +19,16 @@ type AfterWriteCallback func(fileId, pos int64) (int, error)
 type WaitNotifyResult int
 
 const (
-	WaitNotifyResultOK      WaitNotifyResult = 0
-	WaitNotifyResultTermite WaitNotifyResult = 1
-	WaitNotifyResultTimeout WaitNotifyResult = 2
-	WaitNotifyByInput       WaitNotifyResult = 3
+	WaitNotifyResultOK       WaitNotifyResult = 0
+	WaitNotifyTopicDeleted   WaitNotifyResult = 1
+	WaitNotifyResultTimeout  WaitNotifyResult = 2
+	WaitNotifyByClientClosed WaitNotifyResult = 3
 )
 
 type NotifyDevice struct {
-	notify chan struct{}
-	wg     atomic.Pointer[sync.WaitGroup]
-	state  atomic.Bool
+	notify           chan struct{}
+	wg               atomic.Pointer[sync.WaitGroup]
+	deleteTopicState atomic.Bool
 }
 
 func NewNotifyDevice() *NotifyDevice {
@@ -37,8 +37,8 @@ func NewNotifyDevice() *NotifyDevice {
 	}
 }
 
-func (nd *NotifyDevice) Termite() {
-	nd.state.Store(true)
+func (nd *NotifyDevice) DeleteTopicNotify() {
+	nd.deleteTopicState.Store(true)
 	close(nd.notify)
 }
 
@@ -50,13 +50,13 @@ func (nd *NotifyDevice) Notify() bool {
 		return false
 	}
 }
-func (nd *NotifyDevice) Wait(endNotify <-chan int) WaitNotifyResult {
+func (nd *NotifyDevice) Wait(clientClosedNotifyChan <-chan struct{}) WaitNotifyResult {
 	select {
-	case <-endNotify:
-		return WaitNotifyByInput
+	case <-clientClosedNotifyChan:
+		return WaitNotifyByClientClosed
 	case <-nd.notify:
-		if nd.IsTermite() {
-			return WaitNotifyResultTermite
+		if nd.IsDeleteTopic() {
+			return WaitNotifyTopicDeleted
 		}
 		return WaitNotifyResultOK
 	case <-time.After(conf.ServerAliveTimeout):
@@ -64,8 +64,8 @@ func (nd *NotifyDevice) Wait(endNotify <-chan int) WaitNotifyResult {
 	}
 }
 
-func (nd *NotifyDevice) IsTermite() bool {
-	return nd.state.Load()
+func (nd *NotifyDevice) IsDeleteTopic() bool {
+	return nd.deleteTopicState.Load()
 }
 
 type LogFileControl interface {
@@ -74,7 +74,7 @@ type LogFileControl interface {
 	RegNotify(name string, notify *NotifyDevice) (LogFileInfoGet, error)
 	UnRegNotify(name string)
 	Notify()
-	Terminate()
+	InvalidByDeleteTopic()
 	IsInvalid() bool
 }
 
@@ -114,7 +114,7 @@ func (n *notifier) notifyAll(closed bool) {
 	n.logCount++
 	for k, c := range n.waiters {
 		if closed {
-			c.Termite()
+			c.DeleteTopicNotify()
 			return
 		}
 		if c.Notify() {
@@ -162,7 +162,7 @@ func (fc *logFileCtrl) Notify() {
 	fc.notify.notifyAll(false)
 }
 
-func (fc *logFileCtrl) Terminate() {
+func (fc *logFileCtrl) InvalidByDeleteTopic() {
 	fc.invalid.Store(true)
 	fc.notify.notifyAll(true)
 }

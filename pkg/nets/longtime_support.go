@@ -12,17 +12,10 @@ import (
 	"time"
 )
 
-func longtimeReadMonitor(biz string, conn net.Conn, endNotify *store.EndNotifyEquipment, tid string) {
-	f := func(v int) {
-		select {
-		case endNotify.EndNotify <- v:
-		case <-time.After(time.Second):
-
-		}
-	}
+func longtimeReadMonitor(biz string, conn net.Conn, resultChan chan int, clientClosedNotify *store.ClientClosedNotifyEquipment, tid string) {
 	for {
 		code, err := InputAck(conn, time.Second*5)
-		if endNotify.EndFlag.Load() {
+		if clientClosedNotify.ClientClosedFlag.Load() {
 			break
 		}
 		if err != nil && IsTimeoutError(err) {
@@ -30,36 +23,42 @@ func longtimeReadMonitor(biz string, conn net.Conn, endNotify *store.EndNotifyEq
 		}
 		if err != nil {
 			logger.Get().Infof("tid=%s,longtimeReadMonitor of %s met err,and exit monitor:%v", tid, biz, err)
-			endNotify.EndFlag.Store(true)
-			f(protocol.ConnPeerClosed)
+			clientClosedNotify.ClientClosedFlag.Store(true)
+			close(clientClosedNotify.ClientClosedNotifyChan)
 			break
 		}
-		f(code)
+		select {
+		case resultChan <- code:
+		case <-time.After(time.Millisecond * 100):
+			logger.Get().Infof("tid=%s,longtimeReadMonitor write ack code timeout,100 ms", tid)
+			return
+		}
 	}
 
 }
 
 type LongtimeReader[T any] interface {
-	Read(endNotify *store.EndNotifyEquipment) ([]*T, error)
+	Read(clientTermiteNotify *store.ClientClosedNotifyEquipment) ([]*T, error)
 	Output(conn net.Conn, msgs []*T) error
 	io.Closer
 }
 
 func LongTimeRun[T any](conn net.Conn, biz, tid string, ackTimeout, writeTimeout time.Duration, reader LongtimeReader[T]) error {
 	var err error
-	endNotify := &store.EndNotifyEquipment{
-		EndNotify: make(chan int, 1),
+	clientClosedNotify := &store.ClientClosedNotifyEquipment{
+		ClientClosedNotifyChan: make(chan struct{}),
 	}
-	go longtimeReadMonitor(biz, conn, endNotify, tid)
+	resultChan := make(chan int, 1)
+	go longtimeReadMonitor(biz, conn, resultChan, clientClosedNotify, tid)
 
 	defer func() {
 		reader.Close()
-		endNotify.EndFlag.Store(true)
+		clientClosedNotify.ClientClosedFlag.Store(true)
 	}()
 	var logCounter int64 = 0
 	for {
 		var msgs []*T
-		msgs, err = reader.Read(endNotify)
+		msgs, err = reader.Read(clientClosedNotify)
 
 		if logCounter%conf.LogSample == 0 {
 			logger.Get().Infof("tid=%s,after-sub-read,err:%v", tid, err)
@@ -67,7 +66,7 @@ func LongTimeRun[T any](conn net.Conn, biz, tid string, ackTimeout, writeTimeout
 		logCounter++
 
 		if err == nil {
-			if endNotify.EndFlag.Load() {
+			if clientClosedNotify.ClientClosedFlag.Load() {
 				return errors.New("conn peer closed")
 			}
 			if err = reader.Output(conn, msgs); err != nil {
@@ -75,15 +74,15 @@ func LongTimeRun[T any](conn net.Conn, biz, tid string, ackTimeout, writeTimeout
 			}
 			var ackCode int
 			select {
-			case ackCode = <-endNotify.EndNotify:
+			case <-clientClosedNotify.ClientClosedNotifyChan:
+				logger.Get().Infof("tid=%s,conn peer closed", tid)
+				return errors.New("conn peer closed")
+			case ackCode = <-resultChan:
 			case <-time.After(ackTimeout):
 				logger.Get().Infof("tid=%s,read ack timeout", tid)
 				return errors.New("read ack timeout")
 			}
-			if ackCode == protocol.ConnPeerClosed {
-				logger.Get().Infof("tid=%s,conn peer closed", tid)
-				return errors.New("conn peer closed")
-			}
+
 			if ackCode == protocol.SubAckWithEnd {
 				logger.Get().Infof("tid=%s,client send ack and closed", tid)
 				return nil

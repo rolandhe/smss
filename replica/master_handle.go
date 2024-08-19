@@ -51,11 +51,6 @@ func MasterHandle(conn net.Conn, header *protocol.CommonHeader, walMonitor WalMo
 	}
 
 	uuidStr := uuid.NewString()
-	//fileId, pos, err := getFilePosByEventId(walMonitor.GetRoot(), lastEventId)
-	//if err != nil {
-	//	logger.Get().Infof("tid=%s,replca server,eventId=%d, error:%v", header.TraceId, lastEventId, err)
-	//	return nets.OutputRecoverErr(conn, err.Error(), writeTimeout)
-	//}
 
 	reader := newBlockReader(uuidStr, walMonitor)
 
@@ -76,23 +71,23 @@ func MasterHandle(conn net.Conn, header *protocol.CommonHeader, walMonitor WalMo
 func noAckPush(conn net.Conn, tid string, reader serverBinlogBlockReader) error {
 	var err error
 
-	endNotify := &store.EndNotifyEquipment{
-		EndNotify: make(chan int, 1),
+	clientClosedNotify := &store.ClientClosedNotifyEquipment{
+		ClientClosedNotifyChan: make(chan struct{}),
 	}
 
-	go peerCloseMonitor(conn, endNotify, tid)
+	go peerCloseMonitor(conn, clientClosedNotify, tid)
 	defer func() {
 		reader.Close()
-		endNotify.EndFlag.Store(true)
+		clientClosedNotify.ClientClosedFlag.Store(true)
 	}()
 	count := int64(0)
 	totalCost := int64(0)
 	for {
 		var msgs []*binlogBlock
-		if endNotify.EndFlag.Load() {
+		if clientClosedNotify.ClientClosedFlag.Load() {
 			return errors.New("conn end by flag")
 		}
-		msgs, err = reader.Read(endNotify)
+		msgs, err = reader.Read(clientClosedNotify)
 		if err == nil {
 			outBuf := make([]byte, protocol.RespHeaderSize+4+len(msgs[0].data))
 			binary.LittleEndian.PutUint16(outBuf, protocol.OkCode)
@@ -103,7 +98,7 @@ func noAckPush(conn net.Conn, tid string, reader serverBinlogBlockReader) error 
 			start := time.Now().UnixMilli()
 			readDelay := start - msgs[0].rawMsg.WriteTime
 
-			if err = writeAllWithTotalTimeout(conn, outBuf, BinlogOutTimeout, &endNotify.EndFlag); err != nil {
+			if err = writeAllWithTotalTimeout(conn, outBuf, BinlogOutTimeout, &clientClosedNotify.ClientClosedFlag); err != nil {
 				logger.Get().Infof("tid=%s, eventId=%d,err:%v", tid, msgs[0].rawMsg.EventId, err)
 				return err
 			}
@@ -128,18 +123,11 @@ func noAckPush(conn net.Conn, tid string, reader serverBinlogBlockReader) error 
 	}
 }
 
-func peerCloseMonitor(conn net.Conn, endNotify *store.EndNotifyEquipment, tid string) {
-	f := func(v int) {
-		select {
-		case endNotify.EndNotify <- v:
-		case <-time.After(time.Second):
-
-		}
-	}
+func peerCloseMonitor(conn net.Conn, clientClosedNotify *store.ClientClosedNotifyEquipment, tid string) {
 	buf := make([]byte, 20)
 	for {
 		err := nets.ReadAll(conn, buf, time.Second*5)
-		if endNotify.EndFlag.Load() {
+		if clientClosedNotify.ClientClosedFlag.Load() {
 			break
 		}
 		if err != nil && nets.IsTimeoutError(err) {
@@ -147,8 +135,8 @@ func peerCloseMonitor(conn net.Conn, endNotify *store.EndNotifyEquipment, tid st
 		}
 		if err != nil {
 			logger.Get().Infof("tid=%s,peerCloseMonitor met err,and exit monitor:%v", tid, err)
-			endNotify.EndFlag.Store(true)
-			f(protocol.ConnPeerClosed)
+			clientClosedNotify.ClientClosedFlag.Store(true)
+			close(clientClosedNotify.ClientClosedNotifyChan)
 			break
 		}
 	}

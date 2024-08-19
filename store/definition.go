@@ -89,13 +89,13 @@ type Meta interface {
 	Scanner
 }
 
-type EndNotifyEquipment struct {
-	EndNotify chan int
-	EndFlag   atomic.Bool
+type ClientClosedNotifyEquipment struct {
+	ClientClosedNotifyChan chan struct{}
+	ClientClosedFlag       atomic.Bool
 }
 
 type BlockReader[T any] interface {
-	Read(endNotify *EndNotifyEquipment) ([]*T, error)
+	Read(clientClosedNotify *ClientClosedNotifyEquipment) ([]*T, error)
 	Init(filePosCallback func(lastFileId int64) (int64, int64, error)) error
 	io.Closer
 }
@@ -108,7 +108,7 @@ type Store interface {
 	io.Closer
 	Save(topicName string, messages []*TopicMessage) (int, error)
 
-	GetReader(topicName, who string, filePosCallback func(lastFileId int64) (int64, int64,error), batchSize int) (TopicBlockReader, error)
+	GetReader(topicName, who string, filePosCallback func(lastFileId int64) (int64, int64, error), batchSize int) (TopicBlockReader, error)
 
 	CreateTopic(topicName string, life int64, eventId int64) error
 

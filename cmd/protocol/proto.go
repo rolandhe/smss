@@ -26,7 +26,6 @@ const (
 const (
 	HeaderSize     int = 20
 	RespHeaderSize     = 10
-	ConnPeerClosed     = -100
 )
 
 const (
