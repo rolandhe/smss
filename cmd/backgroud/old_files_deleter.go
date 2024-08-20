@@ -143,9 +143,6 @@ func deleteInvalidFiles(p string, unLockFunc func(), traceId string, scenario st
 	for _, id := range delIds {
 		dp := fmt.Sprintf("%s/%d.log", p, id)
 		err = os.Remove(dp)
-		//if err = os.Remove(dp); err != nil {
-		//	logger.Get().Infof("tid=%s,delete %s err:%v", traceId, dp, err)
-		//}
 		logger.Get().Infof("tid=%s,%s,delete %s err:%v", traceId, scenario, dp, err)
 	}
 }
