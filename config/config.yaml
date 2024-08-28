@@ -11,7 +11,7 @@ store:
   maxLogSize: 1073741824
   flushLevel: 1
   maxDays: 7
-  clearInterval: 10
+  clearInterval: 7200
   waitDelLockTimeoutMs: 3000
   noCache: false
   folderCount: 10

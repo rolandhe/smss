@@ -181,9 +181,10 @@ socket读取新的数据块，由于master即使在没有新数据的情况下�
 
 # 客户端sdk
 
-当前只提供[golang版本](https://github.com/rolandhe/smss-client)
+* [golang版本](https://github.com/rolandhe/smss-client)
+* [java版本](https://github.com/rolandhe/smss-client-java)
 
-## 示例
+## golang示例
 ### 创建topic
 
 ```go
