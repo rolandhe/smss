@@ -91,8 +91,10 @@ func readPubPayload(conn net.Conn, header *protocol.PubProtoHeader) (*protocol.P
 	payloadSize := header.GetPayloadSize()
 	if payloadSize <= 8 {
 		logger.Get().Infof("tid=%s,invalid request, payload size must be more than 8", header.TraceId)
-		e := nets.OutputRecoverErr(conn, "invalid request, payload size must be more than 8", NetWriteTimeout)
-		return nil, e
+		if e := nets.OutputRecoverErr(conn, "invalid request, payload size must be more than 8", NetWriteTimeout); e != nil {
+			return nil, e
+		}
+		return nil, dir.NewBizError("invalid pub payload")
 	}
 
 	buf := make([]byte, payloadSize)
@@ -104,8 +106,11 @@ func readPubPayload(conn net.Conn, header *protocol.PubProtoHeader) (*protocol.P
 
 	ok, count := protocol.CheckPayload(buf)
 	if !ok {
-		e := nets.OutputRecoverErr(conn, "invalid pub payload", NetWriteTimeout)
-		return nil, e
+		if e := nets.OutputRecoverErr(conn, "invalid pub payload", NetWriteTimeout); e != nil {
+			return nil, e
+		}
+
+		return nil, dir.NewBizError("invalid pub payload")
 	}
 
 	return &protocol.PubPayload{
