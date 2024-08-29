@@ -168,6 +168,48 @@ eventId的语义是当前客户端已经消费的最后一个消息的eventId，
 
 客户端可以批量订阅消息，即每次smss推送多条消息给订阅端，这个可以在订阅时指定，同时也可以指定客户端处理消息的最长时间，smss在这个最长时间内不能获取客户端返回的ack，即认为客户端已经死掉，它会关闭连接，释放资源。
 
+## 分组订阅
+smss支持多次消费topic中的消息，多个订阅者可以同时消费topic的相同或者不同的消息，这比较灵活，但有的服务由于ha的原因需要部署多个实例，但多个实例需要只有一个实例能消费topic的消息，类似kafka的group
+功能，smss的订阅者需要自行指定当前订阅者的名称，类似于kafka的分组名称，不同名称的订阅者之间可以并行，但相同的订阅者只能有1个实例能够消费。
+* smss的客户端并没有提供一个分布式锁来保证相同名称的订阅者之间的互斥，这需要开发者自行实现，比如是zookeeper或者redis来实现分布式锁
+* smss服务端提供了兜底方案，如果已经存在一个订阅者，后续的相同名称的订阅者将被拒绝
+
+```
+    func NewSubClient(mqName, who, host string, port int, timeout time.Duration) (*SubClient, error)
+```
+
+参数 who即当前订阅者的名称
+
+### redis分布式锁
+订阅消息是一个长时间的过程，在订阅过程中可能随时中断，那么另一个实例需要能够马上获取到锁，然后开始订阅，但redis并没有提供像zookeeper那样的分布式锁。使用redis 的setnx + 超时+定时续约的方式
+可以模拟长时间锁。
+* 使用uuid生成当前订阅id
+* 使用setnx who id expire 获取锁，expire 是一个较小的时间，比如30s
+
+```
+func acquireLock(client *redis.Client, who string, subId string, expiration time.Duration) bool {
+    return client.SetNX(context.Background(), who, subId, expiration).Val()
+}
+```
+
+* 以短于30s的周期定时续约，比如25s，为了保持原子性，使用lua
+
+```
+  const luaExtendScript = `
+      if redis.call("get", KEYS[1]) == ARGV[1] then
+          return redis.call("expire", KEYS[1], ARGV[2])
+      else
+          return 0
+      end
+  `
+  func extendLock(client *redis.Client, who string, subId string, expiration int) bool {
+      cmd := client.Eval(context.Background(), luaExtendScript, []string{who}, subId, expiration)
+      return cmd.Val().(int64) == 1
+  }
+```
+* 使用完锁后，删除 who以释放锁
+* 另一个实例，定时长时获取锁，比如20s
+
 ## 复制
 
 复制跟订阅类似，只是复制是从binlog读取文件，订阅是从topic读取文件，在smss底层，二者共用standard代码。   
@@ -185,7 +227,15 @@ socket读取新的数据块，由于master即使在没有新数据的情况下�
 * [java版本](https://github.com/rolandhe/smss-client-java)
 
 ## golang示例
+### 客户端组件
+* 订阅客户端
+* 发送或其他管理客户端
+  * 简单客户端，底层使用短链接，使用完成后关闭连接，非生产环境可以使用
+  * 连接池，连接使用完后可重用，生产环境中要使用连接池
+
 ### 创建topic
+
+使用短连接实例。
 
 ```go
 
@@ -208,12 +258,15 @@ socket读取新的数据块，由于master即使在没有新数据的情况下�
 ### 删除topic
 
 ```go
-    pc, err := client.NewPubClient("localhost", 12301, time.Second*500)
-	if err != nil {
-		log.Printf("%v\n", err)
-		return
-	}
-	defer pc.Close()
+    pcPool := client.NewPubClientPool(pool.NewDefaultConfig(), "localhost", 12301, time.Second*5)
+    defer pcPool.ShutDown()
+    
+    pc, err := pcPool.Borrow()
+    if err != nil {
+      log.Printf("%v\n", err)
+      return
+    }
+    defer pc.Close()
 
 	err = pc.DeleteTopic("temp1", "tid-9999del33")
 
@@ -224,12 +277,15 @@ socket读取新的数据块，由于master即使在没有新数据的情况下�
 ### 读取所有topic信息
 
 ```go
-    pc, err := client.NewPubClient("localhost", 12301, time.Second*5)
-	if err != nil {
-		log.Printf("%v\n", err)
-		return
-	}
-	defer pc.Close()
+    pcPool := client.NewPubClientPool(pool.NewDefaultConfig(), "localhost", 12301, time.Second*5)
+    defer pcPool.ShutDown()
+    
+    pc, err := pcPool.Borrow()
+    if err != nil {
+      log.Printf("%v\n", err)
+      return
+    }
+    defer pc.Close()
 
 	var j string
 	j, err = pc.GetTopicList("tid-99yymm009")
@@ -241,11 +297,15 @@ socket读取新的数据块，由于master即使在没有新数据的情况下�
 ### 发布消息
 
 ```go
-    pc, err := client.NewPubClient("localhost", 12301, time.Second*5000)
-	if err != nil {
-		log.Printf("%v\n", err)
-		return
-	}
+    pcPool := client.NewPubClientPool(pool.NewDefaultConfig(), "localhost", 12301, time.Second*5)
+    defer pcPool.ShutDown()
+    
+    pc, err := pcPool.Borrow()
+    if err != nil {
+      log.Printf("%v\n", err)
+      return
+    }
+    defer pc.Close()
 	
 	base := "ggppmm-hello world,haha."
 	for i := 0; i < 100; i++ {
@@ -266,11 +326,15 @@ socket读取新的数据块，由于master即使在没有新数据的情况下�
 ### 发布延迟消息
 
 ```go
-    pc, err := client.NewPubClient("localhost", 12301, time.Second*50000)
-	if err != nil {
-		log.Printf("%v\n", err)
-		return
-	}
+    pcPool := client.NewPubClientPool(pool.NewDefaultConfig(), "localhost", 12301, time.Second*5)
+    defer pcPool.ShutDown()
+    
+    pc, err := pcPool.Borrow()
+    if err != nil {
+      log.Printf("%v\n", err)
+      return
+    }
+    defer pc.Close()
 
 	i := 11
 
