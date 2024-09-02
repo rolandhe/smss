@@ -23,7 +23,7 @@ var curInsRole store.InstanceRoleEnum
 func InitCommonInfo(id int64, role store.InstanceRoleEnum) {
 	if role == store.Master {
 		nextEventId = id
-		logger.Get().Infof("init next event id:%d", nextEventId)
+		logger.Infof("init next event id:%d", nextEventId)
 	}
 	curInsRole = role
 }
@@ -87,6 +87,6 @@ func (sl *routerSampleLogger) sampleLog(scene string, msg *protocol.RawMessage, 
 		return
 	}
 	if sl.CanLogger() {
-		logger.Get().Infof("tid=%s,%s %s, eventId=%d,cost=%d ms, finish:%v", msg.TraceId, scene, msg.TopicName, msg.EventId, msg.Cost(), err)
+		logger.Infof("tid=%s,%s %s, eventId=%d,cost=%d ms, finish:%v", msg.TraceId, scene, msg.TopicName, msg.EventId, msg.Cost(), err)
 	}
 }

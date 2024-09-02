@@ -24,17 +24,17 @@ func StartLife(fstore store.Store, worker standard.MessageWorking) *tc.TimeTrigg
 func doLife(fstore store.Store, worker standard.MessageWorking, traceId string) int64 {
 	topicList, next, err := fstore.GetScanner().ScanExpireTopics()
 	if err != nil {
-		logger.Get().Infof("tid=%s,doLife err:%v", traceId, err)
+		logger.Infof("tid=%s,doLife err:%v", traceId, err)
 		return 0
 	}
-	logger.Get().Infof("tid=%s,ScanExpireTopics %d,next scan time from db:%d", traceId, len(topicList), next)
+	logger.Infof("tid=%s,ScanExpireTopics %d,next scan time from db:%d", traceId, len(topicList), next)
 
 	for _, topicName := range topicList {
 		if err = deleteTopic(worker, topicName, traceId); err != nil {
-			logger.Get().Infof("tid=%s,doLife deleteTopic %s err:%v", traceId, topicName, err)
+			logger.Infof("tid=%s,doLife deleteTopic %s err:%v", traceId, topicName, err)
 			return 0
 		}
-		logger.Get().Infof("tid=%s,doLife deleteTopic %s ok", traceId, topicName)
+		logger.Infof("tid=%s,doLife deleteTopic %s ok", traceId, topicName)
 	}
 
 	now := time.Now().UnixMilli()
@@ -43,7 +43,7 @@ func doLife(fstore store.Store, worker standard.MessageWorking, traceId string) 
 		isDefault = true
 		next = now + conf.DefaultScanSecond*1000
 	}
-	logger.Get().Infof("tid=%s,doLife ok, isDefault=%v", traceId, isDefault)
+	logger.Infof("tid=%s,doLife ok, isDefault=%v", traceId, isDefault)
 	return next
 }
 

@@ -33,7 +33,7 @@ func StartClearOldFiles(root string, store store.Store, worker standard.MessageW
 
 	// 启动 cron 调度器
 	cronIns.Start()
-	logger.Get().Info("StartClearOldFiles run ok")
+	logger.Infof("StartClearOldFiles run ok")
 }
 
 func StopClear() {
@@ -47,13 +47,13 @@ func StopClear() {
 func deleteOldFiles(root string, fstore store.Store, worker standard.MessageWorking, delTopicFileExecutor protocol.DelTopicFileExecutor) {
 	traceId := fmt.Sprintf("delOldFile-%d", time.Now().UnixMilli())
 
-	logger.Get().Infof("tid=%s,run deleteOldFiles", traceId)
+	logger.Infof("tid=%s,run deleteOldFiles", traceId)
 
 	deleteBinlogFiles(traceId, path.Join(root, store.BinlogDir))
 
 	infoList, err := fstore.GetTopicInfoReader().GetTopicSimpleInfoList()
 	if err != nil {
-		logger.Get().Infof("deleteOldFiles err:%v", err)
+		logger.Infof("deleteOldFiles err:%v", err)
 		return
 	}
 
@@ -77,7 +77,7 @@ func deleteOldFiles(root string, fstore store.Store, worker standard.MessageWork
 		if store.TopicStateDeleted == info.State {
 			if info.StateChangeTime+DeleteFileAfterStateChangeTimeout <= time.Now().UnixMilli() {
 				err = deleteTopic(worker, info.Name, traceId)
-				logger.Get().Infof("tid=%s,deleteOldFiles to delete expired topic %s err:%v", traceId, info.Name, err)
+				logger.Infof("tid=%s,deleteOldFiles to delete expired topic %s err:%v", traceId, info.Name, err)
 			}
 			continue
 		}
@@ -98,7 +98,7 @@ func deleteInvalidFiles(p string, unLockFunc func(), traceId string, scenario st
 	}
 	entries, err := os.ReadDir(p)
 	if err != nil {
-		logger.Get().Infof("tid=%s,%s,read dir:%s error:%v", traceId, scenario, p, err)
+		logger.Infof("tid=%s,%s,read dir:%s error:%v", traceId, scenario, p, err)
 		return
 	}
 
@@ -112,7 +112,7 @@ func deleteInvalidFiles(p string, unLockFunc func(), traceId string, scenario st
 		name := entry.Name()
 		items := strings.Split(name, ".")
 		if len(items) != 2 || items[1] != "log" {
-			logger.Get().Infof("tid=%s,%s,file %s not valid log file", traceId, scenario, name)
+			logger.Infof("tid=%s,%s,file %s not valid log file", traceId, scenario, name)
 			continue
 		}
 		num := dir.ParseNumber(items[0])
@@ -122,7 +122,7 @@ func deleteInvalidFiles(p string, unLockFunc func(), traceId string, scenario st
 
 		info, err := entry.Info()
 		if err != nil {
-			logger.Get().Infof("tid=%s,%s,read dir:%s/%s error:%v", traceId, scenario, p, entry.Name(), err)
+			logger.Infof("tid=%s,%s,read dir:%s/%s error:%v", traceId, scenario, p, entry.Name(), err)
 			continue
 		}
 		modDate := tm.ToDate(info.ModTime())
@@ -135,14 +135,14 @@ func deleteInvalidFiles(p string, unLockFunc func(), traceId string, scenario st
 	l := len(delIds)
 	if l > 0 && delIds[l-1] == maxId {
 		delIds = delIds[:l-1]
-		logger.Get().Infof("tid=%s,%s,deleteInvalidFiles,retain the last expired file:%s/%d.log", traceId, scenario, p, maxId)
+		logger.Infof("tid=%s,%s,deleteInvalidFiles,retain the last expired file:%s/%d.log", traceId, scenario, p, maxId)
 	}
 
-	logger.Get().Infof("tid=%s,%s,to delete expired files:%d", traceId, scenario, len(delIds))
+	logger.Infof("tid=%s,%s,to delete expired files:%d", traceId, scenario, len(delIds))
 
 	for _, id := range delIds {
 		dp := fmt.Sprintf("%s/%d.log", p, id)
 		err = os.Remove(dp)
-		logger.Get().Infof("tid=%s,%s,delete %s err:%v", traceId, scenario, dp, err)
+		logger.Infof("tid=%s,%s,delete %s err:%v", traceId, scenario, dp, err)
 	}
 }

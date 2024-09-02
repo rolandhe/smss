@@ -26,7 +26,7 @@ func (w *WalWriter[T]) Write(msg *T) (int, int, error) {
 	if binlogSyncFd, dataSyncFd, err = w.StdMsgWriter.Write(msg, func(fileId, pos int64) (int, error) {
 		syncFd, e := w.completeHandler(msg, fileId, pos)
 		if e != nil {
-			logger.Get().Infof("to handle msg after writing binlog error,rollback")
+			logger.Infof("to handle msg after writing binlog error,rollback")
 		}
 		return syncFd, e
 	}); err != nil {

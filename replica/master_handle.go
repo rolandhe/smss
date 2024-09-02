@@ -46,7 +46,7 @@ func MasterHandle(conn net.Conn, header *protocol.CommonHeader, walMonitor WalMo
 	lastEventId := int64(binary.LittleEndian.Uint64(buf))
 
 	if lastEventId < 0 {
-		logger.Get().Infof("tid=%s,replca server,eventId=%d, event id must >=", header.TraceId, lastEventId)
+		logger.Infof("tid=%s,replca server,eventId=%d, event id must >=", header.TraceId, lastEventId)
 		return nets.OutputRecoverErr(conn, "invalid replica eventId", writeTimeout)
 	}
 
@@ -57,13 +57,13 @@ func MasterHandle(conn net.Conn, header *protocol.CommonHeader, walMonitor WalMo
 	if err = reader.Init(func(lastFileId int64) (int64, int64, error) {
 		return getFilePosByEventId(walMonitor.GetRoot(), lastEventId, lastFileId)
 	}); err != nil {
-		logger.Get().Infof("tid=%s,replica server,eventId=%d, init error:%v", header.TraceId, lastEventId, err)
+		logger.Infof("tid=%s,replica server,eventId=%d, init error:%v", header.TraceId, lastEventId, err)
 		return nets.OutputRecoverErr(conn, err.Error(), writeTimeout)
 	}
 
 	err = noAckPush(conn, header.TraceId, reader)
 	if err != nil {
-		logger.Get().Infof("master handle finish,eventId=%d, err:%v", lastEventId, err)
+		logger.Infof("master handle finish,eventId=%d, err:%v", lastEventId, err)
 	}
 	return err
 }
@@ -99,20 +99,20 @@ func noAckPush(conn net.Conn, tid string, reader serverBinlogBlockReader) error 
 			readDelay := start - msgs[0].rawMsg.WriteTime
 
 			if err = writeAllWithTotalTimeout(conn, outBuf, BinlogOutTimeout, &clientClosedNotify.ClientClosedFlag); err != nil {
-				logger.Get().Infof("tid=%s, eventId=%d,err:%v", tid, msgs[0].rawMsg.EventId, err)
+				logger.Infof("tid=%s, eventId=%d,err:%v", tid, msgs[0].rawMsg.EventId, err)
 				return err
 			}
 			cost := start - time.Now().UnixMilli()
 			totalCost += cost
 			if conf.LogSample > 0 && count%conf.LogSample == 0 {
-				logger.Get().Infof("master to slave:tid=%s, eventId=%d,count=%d, delay time=%dms,readDelay=%dms,total cost=%dms", tid, msgs[0].rawMsg.EventId, count, readDelay+cost, readDelay, totalCost)
+				logger.Infof("master to slave:tid=%s, eventId=%d,count=%d, delay time=%dms,readDelay=%dms,total cost=%dms", tid, msgs[0].rawMsg.EventId, count, readDelay+cost, readDelay, totalCost)
 			}
 			count++
 			continue
 		}
 		if errors.Is(err, standard.WaitNewTimeoutErr) {
 			err = nets.OutAlive(conn, BinlogOutTimeout)
-			logger.Get().Infof("tid=%s,sub wait new data timeout, send alive:%v", tid, err)
+			logger.Infof("tid=%s,sub wait new data timeout, send alive:%v", tid, err)
 			if err != nil {
 				return err
 			}
@@ -134,7 +134,7 @@ func peerCloseMonitor(conn net.Conn, clientClosedNotify *store.ClientClosedNotif
 			continue
 		}
 		if err != nil {
-			logger.Get().Infof("tid=%s,peerCloseMonitor met err,and exit monitor:%v", tid, err)
+			logger.Infof("tid=%s,peerCloseMonitor met err,and exit monitor:%v", tid, err)
 			clientClosedNotify.ClientClosedFlag.Store(true)
 			close(clientClosedNotify.ClientClosedNotifyChan)
 			break

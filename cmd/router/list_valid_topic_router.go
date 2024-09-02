@@ -25,7 +25,7 @@ func (r *validListRouter) Router(conn net.Conn, commHeader *protocol.CommonHeade
 	eventId := int64(binary.LittleEndian.Uint64(buf))
 	infos, err := r.fstore.GetTopicInfoReader().GetTopicSimpleInfoList()
 	if err != nil {
-		logger.Get().Infof("tid=%s,GetTopicSimpleInfoList err:%v", commHeader.TraceId, err)
+		logger.Infof("tid=%s,GetTopicSimpleInfoList err:%v", commHeader.TraceId, err)
 		return nets.OutputRecoverErr(conn, err.Error(), NetWriteTimeout)
 	}
 	var rets []*outTopicInfo

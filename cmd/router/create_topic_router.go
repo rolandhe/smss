@@ -29,7 +29,7 @@ func (r *createTopicRouter) Router(conn net.Conn, header *protocol.CommonHeader,
 	if len(header.TopicName) > 128 || strings.ContainsFunc(header.TopicName, func(r rune) bool {
 		return r == ' ' || r == '\n' || r == '\t'
 	}) {
-		logger.Get().Infof("tid=%s,create %s error, topic name MUST be less than 128 char and NOT contains space/enter/tab", header.TraceId, header.TopicName)
+		logger.Infof("tid=%s,create %s error, topic name MUST be less than 128 char and NOT contains space/enter/tab", header.TraceId, header.TopicName)
 		return nets.OutputRecoverErr(conn, "topic name MUST be less than 128 char and NOT contains space/enter/tab", NetWriteTimeout)
 	}
 	if curInsRole != store.Master {

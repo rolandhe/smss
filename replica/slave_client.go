@@ -104,7 +104,7 @@ func (sc *slaveClient) getValidTopic(eventId int64) ([]*store.TopicInfo, error) 
 }
 
 func (sc *slaveClient) replica(eventId int64) error {
-	logger.Get().Infof("slave begin to replica,eventId=%d", eventId)
+	logger.Infof("slave begin to replica,eventId=%d", eventId)
 	sc.lastEventId = eventId
 	buf := make([]byte, 28)
 	buf[0] = byte(protocol.CommandReplica)
@@ -121,7 +121,7 @@ func (sc *slaveClient) replica(eventId int64) error {
 		err := nets.ReadAll(sc.conn, hBuf, replicaReadNewLogTimeout)
 		if err != nil {
 			if nets.IsTimeoutError(err) {
-				logger.Get().Infof("wait new binlog data timeout,wait...")
+				logger.Infof("wait new binlog data timeout,wait...")
 				continue
 			}
 			return err
@@ -140,7 +140,7 @@ func (sc *slaveClient) replica(eventId int64) error {
 			continue
 		}
 		if code == protocol.AliveCode {
-			logger.Get().Infof("slave recv alive msg")
+			logger.Infof("slave recv alive msg")
 			continue
 		}
 		if code == protocol.ErrCode {
@@ -154,7 +154,7 @@ func (sc *slaveClient) replica(eventId int64) error {
 			}
 			return errors.New(string(eMsgBuf))
 		}
-		logger.Get().Infof("invalid response:%d", code)
+		logger.Infof("invalid response:%d", code)
 		return errors.New("invalid response")
 	}
 }
@@ -174,14 +174,14 @@ func applyBinlog(body []byte, cmdParse *msgParser, worker slave.DependWorker, co
 
 	hFunc := bbHandlerMap[cmdLine.GetCmd()]
 	if hFunc == nil {
-		logger.Get().Infof("not support cmd:%d", cmdLine.GetCmd())
+		logger.Infof("not support cmd:%d", cmdLine.GetCmd())
 		return 0, dir.NewBizError("not support cmd")
 	}
 	st := time.Now().UnixMilli()
 	err = hFunc(cmdParse.cmd, payload, worker)
 	if conf.LogSample > 0 && count%conf.LogSample == 0 {
 		rCost := time.Now().UnixMilli() - st
-		logger.Get().Infof("slave: tid=%s,cmd=%d,eventId=%d,count=%d,delay=%dms,rCost=%d,err:%v", cmdParse.cmd.TraceId, cmdParse.cmd.Command, cmdParse.cmd.EventId, count, cmdParse.cmd.GetDelay(), rCost, err)
+		logger.Infof("slave: tid=%s,cmd=%d,eventId=%d,count=%d,delay=%dms,rCost=%d,err:%v", cmdParse.cmd.TraceId, cmdParse.cmd.Command, cmdParse.cmd.EventId, count, cmdParse.cmd.GetDelay(), rCost, err)
 	}
 	return cmdParse.cmd.EventId, err
 }

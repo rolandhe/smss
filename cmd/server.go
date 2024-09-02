@@ -28,20 +28,20 @@ type InstanceRole struct {
 func StartServer(root string, insRole *InstanceRole) {
 	meta, err := fss.NewMeta(root)
 	if err != nil {
-		logger.Get().Infof("meta err:%v", err)
+		logger.Infof("meta err:%v", err)
 		return
 	}
 
 	var storedRole store.InstanceRoleEnum
 	storedRole, err = meta.GetInstanceRole()
 	if err != nil {
-		logger.Get().Infof("get role error:%v", err)
+		logger.Infof("get role error:%v", err)
 		return
 	}
 
 	if storedRole != insRole.Role {
 		if err = meta.SetInstanceRole(insRole.Role); err != nil {
-			logger.Get().Infof("set role error:%v", err)
+			logger.Infof("set role error:%v", err)
 			return
 		}
 	}
@@ -55,7 +55,7 @@ func StartServer(root string, insRole *InstanceRole) {
 	w, fstore, err := newWriter(root, meta)
 	if err != nil {
 		meta.Close()
-		logger.Get().Infof("create writer err:%v", err)
+		logger.Infof("create writer err:%v", err)
 		return
 	}
 
@@ -64,7 +64,7 @@ func StartServer(root string, insRole *InstanceRole) {
 		return
 	}
 
-	startBgAndInitRouter(root,fstore, worker, insRole.Role)
+	startBgAndInitRouter(root, fstore, worker, insRole.Role)
 	if insRole.Role == store.Master {
 		router.InitReplica(w.StdMsgWriter)
 	} else {
@@ -75,22 +75,22 @@ func StartServer(root string, insRole *InstanceRole) {
 			needSync = false
 		}
 		if err = replica.SlaveReplica(insRole.FromHost, insRole.FromPort, eventId, needSync, worker, fstore); err != nil {
-			logger.Get().Infof("SlaveReplica err:%v", err)
+			logger.Infof("SlaveReplica err:%v", err)
 			return
 		}
 	}
 
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", conf.Port))
 	if err != nil {
-		logger.Get().Errorf("listen err:%v", err)
+		logger.Errorf("listen err:%v", err)
 		return
 	}
-	logger.Get().Infof("started server:%d", conf.Port)
+	logger.Infof("started server:%d", conf.Port)
 	for {
 		var conn net.Conn
 		conn, err = ln.Accept()
 		if err != nil {
-			logger.Get().Infof("accept conn err,end server:%v", err)
+			logger.Infof("accept conn err,end server:%v", err)
 			return
 		}
 		go handleConnection(conn, worker)
@@ -98,9 +98,9 @@ func StartServer(root string, insRole *InstanceRole) {
 	backgroud.StopClear()
 }
 
-func startBgAndInitRouter(root string,fstore store.Store, worker standard.MessageWorking, role store.InstanceRoleEnum) {
+func startBgAndInitRouter(root string, fstore store.Store, worker standard.MessageWorking, role store.InstanceRoleEnum) {
 	delExec := backgroud.StartTopicFileDelete(fstore)
-	backgroud.StartClearOldFiles(root,fstore, worker, delExec)
+	backgroud.StartClearOldFiles(root, fstore, worker, delExec)
 	var lc *tc.TimeTriggerControl
 	if role == store.Master {
 		delayCtrl := backgroud.StartDelay(fstore, worker)
@@ -118,7 +118,7 @@ func handleConnection(conn net.Conn, worker *backWorker) {
 	var cmd protocol.CommandEnum
 	defer func() {
 		conn.Close()
-		logger.Get().Infof("handleConnection close with cmd:%d", cmd)
+		logger.Infof("handleConnection close with cmd:%d", cmd)
 	}()
 	continuesTimeoutCount := 0
 	for {
@@ -127,13 +127,13 @@ func handleConnection(conn net.Conn, worker *backWorker) {
 			if nets.IsTimeoutError(err) {
 				continuesTimeoutCount++
 				if continuesTimeoutCount == 360 {
-					logger.Get().Infof("handleConnection no cmd more than 30 mins:%v", err)
+					logger.Infof("handleConnection no cmd more than 30 mins:%v", err)
 					return
 				}
-				logger.Get().Infof("handleConnection times=%d, read header err:%v", continuesTimeoutCount, err)
+				logger.Infof("handleConnection times=%d, read header err:%v", continuesTimeoutCount, err)
 				continue
 			}
-			logger.Get().Infof("handleConnection read header err:%v", err)
+			logger.Infof("handleConnection read header err:%v", err)
 			return
 		}
 		continuesTimeoutCount = 0
@@ -149,7 +149,7 @@ func handleConnection(conn net.Conn, worker *backWorker) {
 
 		if header.GetCmd() == protocol.CommandAlive {
 			if err = nets.OutAlive(conn, conf.DefaultIoWriteTimeout); err != nil {
-				logger.Get().Infof("tid:=%s,out alive err:%v", header.TraceId, err)
+				logger.Infof("tid:=%s,out alive err:%v", header.TraceId, err)
 				return
 			}
 			continue
@@ -157,7 +157,7 @@ func handleConnection(conn net.Conn, worker *backWorker) {
 
 		handler := router.GetRouter(header.GetCmd())
 		if handler == nil {
-			logger.Get().Infof("tid=%s,don't support action:%d", header.TraceId, header.GetCmd())
+			logger.Infof("tid=%s,don't support action:%d", header.TraceId, header.GetCmd())
 			err = nets.OutputRecoverErr(conn, "don't support action", router.NetWriteTimeout)
 			if err != nil && !dir.IsBizErr(err) {
 				return
@@ -166,7 +166,7 @@ func handleConnection(conn net.Conn, worker *backWorker) {
 		}
 		err = handler.Router(conn, header, worker)
 		if err != nil {
-			logger.Get().Infof("tid=%s,cmd=%d,router error:%v", header.TraceId, header.GetCmd(), err)
+			logger.Infof("tid=%s,cmd=%d,router error:%v", header.TraceId, header.GetCmd(), err)
 		}
 		if err != nil && !dir.IsBizErr(err) {
 			return

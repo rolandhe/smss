@@ -32,7 +32,7 @@ func ReadMaxFileId(root string) (int64, error) {
 		name := entry.Name()
 		items := strings.Split(name, ".")
 		if len(items) != 2 || items[1] != "log" {
-			logger.Get().Infof("file %s not valid log file", name)
+			logger.Infof("file %s not valid log file", name)
 			continue
 		}
 		num := dir.ParseNumber(items[0])
@@ -63,7 +63,7 @@ func ReadFirstFileId(root string, lastFileId int64) (int64, error) {
 		name := entry.Name()
 		items := strings.Split(name, ".")
 		if len(items) != 2 || items[1] != "log" {
-			logger.Get().Infof("file %s not valid log file", name)
+			logger.Infof("file %s not valid log file", name)
 			continue
 		}
 		num := dir.ParseNumber(items[0])

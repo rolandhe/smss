@@ -23,7 +23,7 @@ func (r *pubRouter) Router(conn net.Conn, header *protocol.CommonHeader, worker 
 		CommonHeader: header,
 	})
 	if err != nil {
-		logger.Get().Infof("tid=%s,readPubPayload err:%v", header.TraceId, err)
+		logger.Infof("tid=%s,readPubPayload err:%v", header.TraceId, err)
 		return err
 	}
 
@@ -40,7 +40,7 @@ func (r *pubRouter) Router(conn net.Conn, header *protocol.CommonHeader, worker 
 	}
 
 	if err = worker.Work(msg); err != nil {
-		logger.Get().Infof("tid=%s,pub to call Work err:%v", header.TraceId, err)
+		logger.Infof("tid=%s,pub to call Work err:%v", header.TraceId, err)
 		return nets.OutputRecoverErr(conn, err.Error(), NetWriteTimeout)
 	}
 
@@ -50,7 +50,7 @@ func (r *pubRouter) Router(conn net.Conn, header *protocol.CommonHeader, worker 
 func (r *pubRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, error) {
 	info, err := r.fstore.GetTopicInfoReader().GetTopicInfo(msg.TopicName)
 	if err != nil {
-		logger.Get().Infof("tid=%s,pubRouter.DoBinlog call topic %s info error:%v", msg.TraceId, msg.TopicName, err)
+		logger.Infof("tid=%s,pubRouter.DoBinlog call topic %s info error:%v", msg.TraceId, msg.TopicName, err)
 		return 0, err
 	}
 	if info == nil || info.IsInvalid() {
@@ -58,7 +58,7 @@ func (r *pubRouter) DoBinlog(f *os.File, msg *protocol.RawMessage) (int64, error
 			msg.Skip = true
 			return r.outputBinlog(f, msg)
 		}
-		logger.Get().Infof("tid=%s,pubRouter.DoBinlog %s not exist", msg.TraceId, msg.TopicName)
+		logger.Infof("tid=%s,pubRouter.DoBinlog %s not exist", msg.TraceId, msg.TopicName)
 		return 0, dir.NewBizError("topic not exist")
 	}
 
@@ -90,7 +90,7 @@ func (r *pubRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos int64) (in
 func readPubPayload(conn net.Conn, header *protocol.PubProtoHeader) (*protocol.PubPayload, error) {
 	payloadSize := header.GetPayloadSize()
 	if payloadSize <= 8 {
-		logger.Get().Infof("tid=%s,invalid request, payload size must be more than 8", header.TraceId)
+		logger.Infof("tid=%s,invalid request, payload size must be more than 8", header.TraceId)
 		if e := nets.OutputRecoverErr(conn, "invalid request, payload size must be more than 8", NetWriteTimeout); e != nil {
 			return nil, e
 		}

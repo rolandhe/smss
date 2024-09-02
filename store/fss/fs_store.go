@@ -125,7 +125,7 @@ func (fs *fileStore) CreateTopic(topicName string, life int64, eventId int64) er
 	if err != nil {
 		return err
 	}
-	logger.Get().Infof("%+v", info)
+	logger.Infof("%+v", info)
 	p := TopicPath(fs.root, topicName)
 	err = dir.EnsurePathExist(p)
 	if err != nil {
@@ -225,7 +225,7 @@ func (fs *fileStore) registerReaderNotify(topicName, whoami string, notify *stan
 		return nil, err
 	}
 	infoGet, err := writer.RegNotify(whoami, notify)
-	logger.Get().Infof("fileStore.registerReaderNotify %s-%s,err:%v", topicName, whoami, err)
+	logger.Infof("fileStore.registerReaderNotify %s-%s,err:%v", topicName, whoami, err)
 	if err != nil {
 		return nil, err
 	}
@@ -239,6 +239,6 @@ func (fs *fileStore) unRegisterReaderNotify(topicName, whoami string) {
 		return
 	}
 	writer.UnRegNotify(whoami)
-	logger.Get().Infof("fileStore.unRegisterReaderNotify %s-%s", topicName, whoami)
+	logger.Infof("fileStore.unRegisterReaderNotify %s-%s", topicName, whoami)
 	writer.WaitGroup.Done()
 }

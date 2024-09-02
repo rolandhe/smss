@@ -134,7 +134,7 @@ func (ctx *readContext) clearMmapData() {
 	err := syscall.Munmap(ctx.rawPointer)
 	ctx.rawPointer = nil
 	if err != nil {
-		logger.Get().Error("failed to clear mmap data,err:%v", err)
+		logger.Errorf("failed to clear mmap data,err:%v", err)
 		panic("failed to clear mmap data")
 	}
 }

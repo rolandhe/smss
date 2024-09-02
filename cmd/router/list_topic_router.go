@@ -25,7 +25,7 @@ type outTopicInfo struct {
 func (r *topicListRouter) Router(conn net.Conn, commHeader *protocol.CommonHeader, worker standard.MessageWorking) error {
 	infos, err := r.fstore.GetTopicInfoReader().GetTopicSimpleInfoList()
 	if err != nil {
-		logger.Get().Infof("tid=%s,GetTopicSimpleInfoList err:%v", commHeader.TraceId, err)
+		logger.Infof("tid=%s,GetTopicSimpleInfoList err:%v", commHeader.TraceId, err)
 		return nets.OutputRecoverErr(conn, err.Error(), NetWriteTimeout)
 	}
 	if len(infos) == 0 {

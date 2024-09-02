@@ -81,25 +81,25 @@ func (lc *TimeTriggerControl) Process() {
 	for {
 		waitDurationMs, currentRecent := lc.since()
 		if waitDurationMs == 0 {
-			logger.Get().Infof("%s, immediate to doBiz", lc.name)
+			logger.Infof("%s, immediate to doBiz", lc.name)
 			nextTimeStamp := lc.doBiz(lc.fstore)
 			lc.Set(nextTimeStamp, false)
-			logger.Get().Infof("%s, after immediate, and next wait timeout from doBiz is %d(%v)", lc.name, nextTimeStamp, time.UnixMilli(nextTimeStamp).Local())
+			logger.Infof("%s, after immediate, and next wait timeout from doBiz is %d(%v)", lc.name, nextTimeStamp, time.UnixMilli(nextTimeStamp).Local())
 			continue
 		}
 		waitNextStamp := waitedRealTime(waitDurationMs)
-		logger.Get().Infof("%s, wait duration %d ms, next time is %v", lc.name, waitDurationMs, waitNextStamp)
+		logger.Infof("%s, wait duration %d ms, next time is %v", lc.name, waitDurationMs, waitNextStamp)
 		bizWakeup := lc.waitNext(waitDurationMs)
 		if bizWakeup {
-			logger.Get().Infof("%s, wake up by front biz, to reset wait timeout, last wait is %d", lc.name, waitDurationMs)
+			logger.Infof("%s, wake up by front biz, to reset wait timeout, last wait is %d", lc.name, waitDurationMs)
 			continue
 		}
 
-		logger.Get().Infof("%s, wake up by wait timeout %d(%v), to doBiz", lc.name, waitDurationMs, waitNextStamp)
+		logger.Infof("%s, wake up by wait timeout %d(%v), to doBiz", lc.name, waitDurationMs, waitNextStamp)
 		lc.consumeRecent(currentRecent)
 		nextTimeStamp := lc.doBiz(lc.fstore)
 		lc.Set(nextTimeStamp, false)
-		logger.Get().Infof("%s, after doBiz, and next wait timeout from biz is %d(%v)", lc.name, nextTimeStamp, time.UnixMilli(nextTimeStamp).Local())
+		logger.Infof("%s, after doBiz, and next wait timeout from biz is %d(%v)", lc.name, nextTimeStamp, time.UnixMilli(nextTimeStamp).Local())
 	}
 }
 func (lc *TimeTriggerControl) consumeRecent(currentRecent int64) {

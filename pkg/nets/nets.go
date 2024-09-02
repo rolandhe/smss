@@ -53,7 +53,7 @@ func OutputRecoverErr(conn net.Conn, errMsg string, timeout time.Duration) error
 	buf = append(buf, []byte(errMsg)...)
 
 	if err := WriteAll(conn, buf, timeout); err != nil {
-		logger.Get().Infof("outputRecoverErr,write to err msg conn err,%v", err)
+		logger.Infof("outputRecoverErr,write to err msg conn err,%v", err)
 		return err
 	}
 	return nil
@@ -63,7 +63,7 @@ func OutputOk(conn net.Conn, timeout time.Duration) error {
 	buf := make([]byte, protocol.RespHeaderSize)
 	binary.LittleEndian.PutUint16(buf, protocol.OkCode)
 	if err := WriteAll(conn, buf, timeout); err != nil {
-		logger.Get().Infof("outputRecoverErr,write code to conn err,%v", err)
+		logger.Infof("outputRecoverErr,write code to conn err,%v", err)
 		return err
 	}
 	return nil

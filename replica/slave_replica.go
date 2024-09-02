@@ -38,7 +38,7 @@ func SlaveReplica(masterHost string, masterPort int, eventId int64, needSync boo
 				if err == nil {
 					break
 				}
-				logger.Get().Infof("new sc err:%v", err)
+				logger.Infof("new sc err:%v", err)
 				time.Sleep(time.Millisecond * 5000)
 			}
 
@@ -68,7 +68,7 @@ func syncTopicInfo(sc *slaveClient, eventId int64, fstore store.Store) error {
 func run(sc *slaveClient, eventId int64) int64 {
 	defer sc.Close()
 	err := sc.replica(eventId)
-	logger.Get().Infof("slave,last eventId=%d, run err:%v", sc.lastEventId, err)
+	logger.Infof("slave,last eventId=%d, run err:%v", sc.lastEventId, err)
 	return sc.lastEventId
 }
 

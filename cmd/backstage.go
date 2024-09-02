@@ -126,7 +126,7 @@ func (worker *backWorker) waitMsg(timeout time.Duration, syncWake bool) *standar
 	case <-time.After(timeout):
 		if !syncWake {
 			if worker.CanLogger() {
-				logger.Get().Infof("get future task tomeout")
+				logger.Infof("get future task tomeout")
 			}
 		}
 		return nil
@@ -144,12 +144,12 @@ type everyFsyncControl struct {
 func (efs *everyFsyncControl) sync(blFd, dataFd int, msg *protocol.RawMessage, force bool) int64 {
 	if blFd > standard.SyncFdNone {
 		if err := syscall.Fsync(blFd); err != nil {
-			logger.Get().Errorf("sync binlog fsync err: %v", err)
+			logger.Errorf("sync binlog fsync err: %v", err)
 		}
 	}
 	if dataFd > standard.SyncFdNone {
 		if err := syscall.Fsync(dataFd); err != nil {
-			logger.Get().Errorf("sync topic data fsync err: %v", err)
+			logger.Errorf("sync topic data fsync err: %v", err)
 		}
 	}
 	return 0
@@ -216,7 +216,7 @@ func (sfs *secondaryFsyncControl) syncFd(force bool) {
 	count := 0
 	if sfs.binlogFd > standard.SyncFdNone {
 		if err := syscall.Fsync(sfs.binlogFd); err != nil {
-			logger.Get().Errorf("sync binlog fsync err: %v", err)
+			logger.Errorf("sync binlog fsync err: %v", err)
 		}
 		count++
 	}
@@ -224,7 +224,7 @@ func (sfs *secondaryFsyncControl) syncFd(force bool) {
 	for k, v := range sfs.topicFdMap {
 		if v > standard.SyncFdNone {
 			if err := syscall.Fsync(v); err != nil {
-				logger.Get().Errorf("sync topic fsync err: %v", err)
+				logger.Errorf("sync topic fsync err: %v", err)
 			}
 			count++
 		}
@@ -234,7 +234,7 @@ func (sfs *secondaryFsyncControl) syncFd(force bool) {
 	}
 
 	if count > 0 {
-		logger.Get().Infof("syncFd: %d files", count)
+		logger.Infof("syncFd: %d files", count)
 	}
 	sfs.lastTime = 0
 	sfs.binlogFd = standard.SyncFdNone

@@ -56,12 +56,12 @@ type extractLog[C, T any] interface {
 }
 
 type lastBinlog struct {
-	fileId       int64
-	pos          int64
+	fileId         int64
+	pos            int64
 	cmd            protocol.CommandEnum
 	messageEventId int64
 	topicName      string
-	payload      []byte
+	payload        []byte
 }
 
 type extractBinlog struct {
@@ -134,7 +134,7 @@ func readLastLogBlock[C, T any](startPosition int64, p string, fileSize int64, e
 			return nil, err
 		}
 		if discard != int(startPosition) {
-			logger.Get().Infof("invalid start pos of %s, expect:%d, but:%d", p, startPosition, discard)
+			logger.Infof("invalid start pos of %s, expect:%d, but:%d", p, startPosition, discard)
 			return nil, errors.New("invalid start pos")
 		}
 	}
@@ -189,7 +189,7 @@ func readLastLogBlock[C, T any](startPosition int64, p string, fileSize int64, e
 				return nil, err
 			}
 			if discard != payloadLen {
-				logger.Get().Infof("invalid file:%s, expect:%d,but  discard %d err", p, payloadLen, discard)
+				logger.Infof("invalid file:%s, expect:%d,but  discard %d err", p, payloadLen, discard)
 				return nil, errors.New("invalid file")
 			}
 		}

@@ -28,7 +28,7 @@ func FindTopicPosByEventId(ppath string, eventId int64, lastFileId int64) (int64
 		cmd := &fss.TopicMessageCommand{}
 		err := fss.ReadTopicMessageCmd(cmdBuf[:len(cmdBuf)-1], cmd)
 		if err != nil {
-			logger.Get().Infof("FindTopicPosByEventId for %d err:%v", eventId, err)
+			logger.Infof("FindTopicPosByEventId for %d err:%v", eventId, err)
 			return -1, -1
 		}
 		return cmd.GetId(), cmd.GetPayloadSize()
@@ -138,7 +138,7 @@ func findInFile(p string, eventId int64, extractCmd func(cmdBuf []byte) (int64, 
 			return defaultFound, 0, err
 		}
 		if discard != payloadLen {
-			logger.Get().Infof("invalid file:%s, expect:%d,but  discard %d err", p, payloadLen, discard)
+			logger.Infof("invalid file:%s, expect:%d,but  discard %d err", p, payloadLen, discard)
 			return defaultFound, 0, errors.New("invalid file")
 		}
 

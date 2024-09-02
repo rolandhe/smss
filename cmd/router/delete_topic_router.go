@@ -52,7 +52,7 @@ func (r *deleteTopicRouter) AfterBinlog(msg *protocol.RawMessage, fileId, pos in
 		return standard.SyncFdIgnore, nil
 	}
 	err := deleteTopicRoot(msg.TopicName, "deleteTopicRouter", r.fstore, r.delExecutor, msg.TraceId)
-	logger.Get().Infof("tid=%s,deleteTopicRouter.AfterBinlog, topic=%s,eventId=%d, err:%v", msg.TraceId, msg.TopicName, msg.EventId, err)
+	logger.Infof("tid=%s,deleteTopicRouter.AfterBinlog, topic=%s,eventId=%d, err:%v", msg.TraceId, msg.TopicName, msg.EventId, err)
 	return standard.SyncFdIgnore, err
 }
 
@@ -60,11 +60,11 @@ func deleteTopicRoot(topicName, who string, fstore store.Store, delExecutor prot
 	return fstore.ForceDeleteTopic(topicName, func() error {
 		waiter := delExecutor.Submit(topicName, who, traceId)
 		if !waiter(time.Second * 2) {
-			logger.Get().Infof("tid=%s,delete %s topic file failed", traceId, topicName)
+			logger.Infof("tid=%s,delete %s topic file failed", traceId, topicName)
 			return errors.New("delete topic file failed")
 		}
 
-		logger.Get().Infof("tid=%s,deleteTopicRoot %s ok", traceId, topicName)
+		logger.Infof("tid=%s,deleteTopicRoot %s ok", traceId, topicName)
 
 		return nil
 	})

@@ -35,7 +35,7 @@ func PathExist(p string) (bool, error) {
 func ParseNumber(s string) int64 {
 	num, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
-		logger.Get().Infof("parse number for %s err: %v", s, err)
+		logger.Infof("parse number for %s err: %v", s, err)
 		return -1
 	}
 	return num

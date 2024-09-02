@@ -68,11 +68,11 @@ func (w *StdMsgWriter[T]) Write(msg *T, cb AfterWriteCallback) (int, int, error)
 			var e error
 			var n int64
 			if n, e = w.curFs.Seek(-outSize, io.SeekCurrent); e != nil {
-				logger.Get().Infof("rollback to seek error,then panic:%v", e)
+				logger.Infof("rollback to seek error,then panic:%v", e)
 				panic("rollback error")
 			}
 			if e = w.curFs.Truncate(n); e != nil {
-				logger.Get().Infof("rollback to truncate error,then panic:%v", e)
+				logger.Infof("rollback to truncate error,then panic:%v", e)
 				panic("rollback error")
 			}
 			return SyncFdIgnore, SyncFdIgnore, err
@@ -111,7 +111,7 @@ func (w *StdMsgWriter[T]) ensureFs() error {
 	if conf.NoCache {
 		if runtime.GOOS == "linux" {
 			if err = posixFadvise(int(w.curFs.Fd())); err != nil {
-				logger.Get().Infof("call posixFadvise err:%v", err)
+				logger.Infof("call posixFadvise err:%v", err)
 				return nil
 			}
 		}

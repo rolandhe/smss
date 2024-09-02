@@ -22,7 +22,7 @@ func longtimeReadMonitor(biz string, conn net.Conn, resultChan chan int, clientC
 			continue
 		}
 		if err != nil {
-			logger.Get().Infof("tid=%s,longtimeReadMonitor of %s met err,and exit monitor:%v", tid, biz, err)
+			logger.Infof("tid=%s,longtimeReadMonitor of %s met err,and exit monitor:%v", tid, biz, err)
 			clientClosedNotify.ClientClosedFlag.Store(true)
 			close(clientClosedNotify.ClientClosedNotifyChan)
 			break
@@ -30,7 +30,7 @@ func longtimeReadMonitor(biz string, conn net.Conn, resultChan chan int, clientC
 		select {
 		case resultChan <- code:
 		case <-time.After(time.Millisecond * 100):
-			logger.Get().Infof("tid=%s,longtimeReadMonitor write ack code timeout,100 ms", tid)
+			logger.Infof("tid=%s,longtimeReadMonitor write ack code timeout,100 ms", tid)
 			return
 		}
 	}
@@ -61,7 +61,7 @@ func LongTimeRun[T any](conn net.Conn, biz, tid string, ackTimeout, writeTimeout
 		msgs, err = reader.Read(clientClosedNotify)
 
 		if logCounter%conf.LogSample == 0 {
-			logger.Get().Infof("tid=%s,after-sub-read,err:%v", tid, err)
+			logger.Infof("tid=%s,after-sub-read,err:%v", tid, err)
 		}
 		logCounter++
 
@@ -75,38 +75,38 @@ func LongTimeRun[T any](conn net.Conn, biz, tid string, ackTimeout, writeTimeout
 			var ackCode int
 			select {
 			case <-clientClosedNotify.ClientClosedNotifyChan:
-				logger.Get().Infof("tid=%s,conn peer closed", tid)
+				logger.Infof("tid=%s,conn peer closed", tid)
 				return errors.New("conn peer closed")
 			case ackCode = <-resultChan:
 			case <-time.After(ackTimeout):
-				logger.Get().Infof("tid=%s,read ack timeout", tid)
+				logger.Infof("tid=%s,read ack timeout", tid)
 				return errors.New("read ack timeout")
 			}
 
 			if ackCode == protocol.SubAckWithEnd {
-				logger.Get().Infof("tid=%s,client send ack and closed", tid)
+				logger.Infof("tid=%s,client send ack and closed", tid)
 				return nil
 			}
 			if ackCode != protocol.SubAck {
-				logger.Get().Infof("tid=%s,client send invalid ack code %d", tid, ackCode)
+				logger.Infof("tid=%s,client send invalid ack code %d", tid, ackCode)
 				return errors.New("invalid ack")
 			}
 			continue
 		}
 		if errors.Is(err, standard.WaitNewTimeoutErr) {
 			err = OutAlive(conn, writeTimeout)
-			logger.Get().Infof("tid=%s,sub wait new data timeout, send alive:%v", tid, err)
+			logger.Infof("tid=%s,sub wait new data timeout, send alive:%v", tid, err)
 			if err != nil {
 				return err
 			}
 			continue
 		}
 		if errors.Is(err, standard.PeerClosedErr) {
-			logger.Get().Infof("tid=%s,PeerClosedErr:%v", tid, err)
+			logger.Infof("tid=%s,PeerClosedErr:%v", tid, err)
 			return err
 		}
 		if errors.Is(err, standard.TopicWriterTermiteErr) {
-			logger.Get().Infof("tid=%s,TopicWriterTermiteErr:%v", tid, err)
+			logger.Infof("tid=%s,TopicWriterTermiteErr:%v", tid, err)
 			return OutSubEnd(conn, writeTimeout)
 		}
 

@@ -38,7 +38,7 @@ func (r *subRouter) Router(conn net.Conn, commHeader *protocol.CommonHeader, wor
 
 	info, err := readSubInfo(conn, header)
 	if err != nil {
-		logger.Get().Infof("readSubInfo err,topic is %s,error is %v", header.TopicName, err)
+		logger.Infof("readSubInfo err,topic is %s,error is %v", header.TopicName, err)
 		return err
 	}
 	if info.BatchSize <= 0 {
@@ -46,21 +46,21 @@ func (r *subRouter) Router(conn net.Conn, commHeader *protocol.CommonHeader, wor
 	}
 	tid := fmt.Sprintf("%s-%s", header.TopicName, info.Who)
 
-	logger.Get().Infof("tid=%s,recv subinfo,eventId: %d", tid, info.EventId)
+	logger.Infof("tid=%s,recv subinfo,eventId: %d", tid, info.EventId)
 	var topicInfo *store.TopicInfo
 	topicInfo, err = r.fstore.GetTopicInfoReader().GetTopicInfo(header.TopicName)
 	if err != nil {
 		return nets.OutputRecoverErr(conn, err.Error(), NetWriteTimeout)
 	}
 	if topicInfo == nil || topicInfo.IsInvalid() {
-		logger.Get().Infof("tid=%s,topic not exist:%s", tid, header.TopicName)
+		logger.Infof("tid=%s,topic not exist:%s", tid, header.TopicName)
 		return nets.OutputRecoverErr(conn, "topic not exist", NetWriteTimeout)
 	}
 
 	topicPath := r.fstore.GetTopicPath(header.TopicName)
 	//var fileId, pos int64
 	//if fileId, pos, err = getSubPos(info.EventId, topicPath); err != nil {
-	//	logger.Get().Infof("tid=%s,event id not found: %d,err:%v", tid, info.EventId, err)
+	//	logger.Infof("tid=%s,event id not found: %d,err:%v", tid, info.EventId, err)
 	//	return nets.OutputRecoverErr(conn, "event id not found", NetWriteTimeout)
 	//}
 
@@ -70,11 +70,11 @@ func (r *subRouter) Router(conn net.Conn, commHeader *protocol.CommonHeader, wor
 
 	reader, err := r.fstore.GetReader(header.TopicName, info.Who, cbFunc, info.BatchSize)
 	if err != nil {
-		logger.Get().Infof("tid=%s,eventId=%d,get reader err:%v", tid, info.EventId, err)
+		logger.Infof("tid=%s,eventId=%d,get reader err:%v", tid, info.EventId, err)
 		return nets.OutputRecoverErr(conn, err.Error(), NetWriteTimeout)
 	}
 
-	logger.Get().Infof("tid=%s,subinfo check ok,start to send messages,eventId: %d", tid, info.EventId)
+	logger.Infof("tid=%s,subinfo check ok,start to send messages,eventId: %d", tid, info.EventId)
 	return nets.LongTimeRun[store.ReadMessage](conn, "sub", tid, info.AckTimeout, NetWriteTimeout, &subLongtimeReader{
 		TopicBlockReader: reader,
 	})

@@ -225,7 +225,7 @@ func (l *DelFileLock) Lock(name, who string, traceId string) (func(), func(d tim
 			case <-oldHolder.ch:
 				return true
 			case <-time.After(d):
-				logger.Get().Infof("tid=%s,wait lock %s timeout,i am %s, by %s(src-tid=%s) locked", traceId, name, who, oldHolder.who, oldHolder.traceId)
+				logger.Infof("tid=%s,wait lock %s timeout,i am %s, by %s(src-tid=%s) locked", traceId, name, who, oldHolder.who, oldHolder.traceId)
 				return false
 			}
 		}

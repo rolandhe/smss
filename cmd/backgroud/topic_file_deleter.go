@@ -54,7 +54,7 @@ func (de *topicDelExecutor) run() {
 		unlocker, waiter := de.locker.Lock(t.name, t.who, t.traceId)
 		if waiter != nil {
 			if !waiter(conf.WaitFileDeleteLockerTimeout) {
-				logger.Get().Infof("waiter delete topic %s file locker failed", t.name)
+				logger.Infof("waiter delete topic %s file locker failed", t.name)
 				t.notify <- false
 				continue
 			}
@@ -92,7 +92,7 @@ func deleteTopicPath(p string, unlocker func(), traceId string) error {
 		return nil
 	}
 	err = os.RemoveAll(p)
-	logger.Get().Infof("tid=%s,deleteTopicPath %s error:%v", traceId, p, err)
+	logger.Infof("tid=%s,deleteTopicPath %s error:%v", traceId, p, err)
 	if err != nil {
 		return err
 	}

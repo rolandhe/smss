@@ -69,6 +69,22 @@ func Sync() {
 	}
 }
 
-func Get() *zap.SugaredLogger {
-	return core
+//func Get() *zap.SugaredLogger {
+//	return core
+//}
+
+func Debugf(template string, args ...interface{}) {
+	core.WithOptions(zap.AddCallerSkip(1)).Debugf(template, args...)
+}
+
+func Infof(template string, args ...interface{}) {
+	core.WithOptions(zap.AddCallerSkip(1)).Infof(template, args...)
+}
+
+func Warnf(template string, args ...interface{}) {
+	core.WithOptions(zap.AddCallerSkip(1)).Warnf(template, args...)
+}
+
+func Errorf(template string, args ...interface{}) {
+	core.WithOptions(zap.AddCallerSkip(1)).Errorf(template, args...)
 }

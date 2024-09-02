@@ -90,10 +90,10 @@ type serverRegister struct {
 
 func (reg *serverRegister) RegisterReaderNotify(notify *standard.NotifyDevice) (standard.LogFileInfoGet, error) {
 	infoGet, err := reg.walMonitor.RegNotify(reg.uuid, notify)
-	logger.Get().Infof("serverRegister.RegisterReaderNotify, %s,err:%v", reg.uuid, err)
+	logger.Infof("serverRegister.RegisterReaderNotify, %s,err:%v", reg.uuid, err)
 	return infoGet, err
 }
 func (reg *serverRegister) UnRegisterReaderNotify() {
 	reg.walMonitor.UnRegNotify(reg.uuid)
-	logger.Get().Infof("serverRegister.UnRegisterReaderNotify, %s", reg.uuid)
+	logger.Infof("serverRegister.UnRegisterReaderNotify, %s", reg.uuid)
 }

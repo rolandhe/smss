@@ -19,16 +19,16 @@ type topicInfoRouter struct {
 
 func (r *topicInfoRouter) Router(conn net.Conn, commHeader *protocol.CommonHeader, worker standard.MessageWorking) error {
 	if len(commHeader.TopicName) == 0 {
-		logger.Get().Infof("tid=%s,GetTopicInfo err:empty topic name", commHeader.TraceId)
+		logger.Infof("tid=%s,GetTopicInfo err:empty topic name", commHeader.TraceId)
 		return nets.OutputRecoverErr(conn, "topic name is required", NetWriteTimeout)
 	}
 	info, err := r.fstore.GetTopicInfoReader().GetTopicInfo(commHeader.TopicName)
 	if err != nil {
-		logger.Get().Infof("tid=%s,GetTopicInfo err:%v", commHeader.TraceId, err)
+		logger.Infof("tid=%s,GetTopicInfo err:%v", commHeader.TraceId, err)
 		return nets.OutputRecoverErr(conn, err.Error(), NetWriteTimeout)
 	}
 	if info == nil {
-		logger.Get().Infof("tid=%s,GetTopicInfo err:%s not exist", commHeader.TraceId, commHeader.TopicName)
+		logger.Infof("tid=%s,GetTopicInfo err:%s not exist", commHeader.TraceId, commHeader.TopicName)
 		return nets.OutputRecoverErr(conn, "topic not exist", NetWriteTimeout)
 	}
 	oInfo := &outTopicInfo{

@@ -95,19 +95,19 @@ func (r *StdMsgBlockReader[T]) waitFs(ClientClosedNotifyChan <-chan struct{}) er
 		}
 		waitRet := r.notify.Wait(ClientClosedNotifyChan)
 		if waitRet == WaitNotifyByClientClosed {
-			logger.Get().Infof("%s waited file %d,notify to %s,ret=WaitNotifyByClientClosed", r.subject, r.ctrl.fileId, r.whoami)
+			logger.Infof("%s waited file %d,notify to %s,ret=WaitNotifyByClientClosed", r.subject, r.ctrl.fileId, r.whoami)
 			return PeerClosedErr
 		}
 		if waitRet == WaitNotifyTopicDeleted {
-			logger.Get().Infof("%s waited file %d,notify to %s, ret=WaitNotifyTopicDeleted", r.subject, r.ctrl.fileId, r.whoami)
+			logger.Infof("%s waited file %d,notify to %s, ret=WaitNotifyTopicDeleted", r.subject, r.ctrl.fileId, r.whoami)
 			return TopicWriterTermiteErr
 		}
 		if waitRet == WaitNotifyResultTimeout {
-			logger.Get().Infof("%s waited file %d,notify to %s, ret=WaitNotifyResultTimeout", r.subject, r.ctrl.fileId, r.whoami)
+			logger.Infof("%s waited file %d,notify to %s, ret=WaitNotifyResultTimeout", r.subject, r.ctrl.fileId, r.whoami)
 			return WaitNewTimeoutErr
 		}
 		if conf.LogSample > 0 && r.logCount%conf.LogSample == 0 {
-			logger.Get().Infof("%s waited file %d ok,notify to %s,count=%d", r.subject, r.ctrl.fileId, r.whoami, r.logCount)
+			logger.Infof("%s waited file %d ok,notify to %s,count=%d", r.subject, r.ctrl.fileId, r.whoami, r.logCount)
 		}
 		r.logCount++
 
@@ -164,7 +164,7 @@ func (r *StdMsgBlockReader[T]) Init(filePosCallback func(lastFileId int64) (int6
 	r.ctrl.pos = pos
 	err = r.ctrl.ensureFs(r.root, r.infoGet)
 	if err != nil {
-		logger.Get().Infof("init reader err:%v", err)
+		logger.Infof("init reader err:%v", err)
 		r.register.UnRegisterReaderNotify()
 		return dir.NewBizError(err.Error())
 	}
@@ -184,19 +184,19 @@ func (r *StdMsgBlockReader[T]) waitPos(ClientClosedNotifyChan <-chan struct{}) e
 		}
 		waitRet := r.notify.Wait(ClientClosedNotifyChan)
 		if waitRet == WaitNotifyByClientClosed {
-			logger.Get().Infof("%s waited notify %d.%d %s,but notified by ClientClosedNotifyChan, ret=WaitNotifyByClientClosed(conn closed)", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami)
+			logger.Infof("%s waited notify %d.%d %s,but notified by ClientClosedNotifyChan, ret=WaitNotifyByClientClosed(conn closed)", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami)
 			return PeerClosedErr
 		}
 		if waitRet == WaitNotifyTopicDeleted {
-			logger.Get().Infof("%s waited pos,notify %d.%d %s,ret=WaitNotifyTopicDeleted", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami)
+			logger.Infof("%s waited pos,notify %d.%d %s,ret=WaitNotifyTopicDeleted", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami)
 			return TopicWriterTermiteErr
 		}
 		if waitRet == WaitNotifyResultTimeout {
-			logger.Get().Infof("%s waited pos,notify %d.%d %s,ret=WaitNotifyResultTimeout", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami)
+			logger.Infof("%s waited pos,notify %d.%d %s,ret=WaitNotifyResultTimeout", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami)
 			return WaitNewTimeoutErr
 		}
 		if conf.LogSample > 0 && r.logCount%conf.LogSample == 0 {
-			logger.Get().Infof("%s waited pos ok,notify %d.%d %s,count=%d", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami, r.logCount)
+			logger.Infof("%s waited pos ok,notify %d.%d %s,count=%d", r.subject, r.ctrl.fileId, r.ctrl.pos, r.whoami, r.logCount)
 		}
 		r.logCount++
 
@@ -287,7 +287,7 @@ func (r *StdMsgBlockReader[T]) readCore(clientClosedNotify *store.ClientClosedNo
 	}
 
 	if r.ctrl.isEOF() {
-		logger.Get().Infof("%s-%s log file EOF", r.subject, r.whoami)
+		logger.Infof("%s-%s log file EOF", r.subject, r.whoami)
 		r.ctrl.reset()
 		if len(readMsgs) > 0 {
 			last := readMsgs[len(readMsgs)-1]
