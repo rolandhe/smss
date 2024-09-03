@@ -40,6 +40,8 @@ var LogRotateMaxSize int
 var LogRotateMaxBackups int
 var LogRotateMaxAge int
 
+var LogWithGid bool
+
 func Init() {
 	viper.SetConfigName("config")
 	// 设置配置文件类型
@@ -78,4 +80,6 @@ func Init() {
 	LogRotateMaxSize = viper.GetInt("log.rotate.maxSize")
 	LogRotateMaxBackups = viper.GetInt("log.rotate.maxBackups")
 	LogRotateMaxAge = viper.GetInt("log.rotate.maxAge")
+
+	LogWithGid = viper.GetBool("log.withGid")
 }

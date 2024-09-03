@@ -1,19 +1,22 @@
 package logger
 
 import (
+	"bytes"
+	"fmt"
 	"github.com/rolandhe/smss/conf"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
 	"os"
 	"path"
+	"runtime"
+	"strconv"
 )
 
 var core *zap.SugaredLogger
 
 func InitLogger(ppath string) {
 	var config zap.Config
-
 	//logPath := ppath
 
 	config = zap.NewDevelopmentConfig()
@@ -73,18 +76,47 @@ func Sync() {
 //	return core
 //}
 
+func getGoroutineID() uint64 {
+	b := make([]byte, 64)
+	b = b[:runtime.Stack(b, false)]
+	b = bytes.TrimPrefix(b, []byte("goroutine "))
+	b = b[:bytes.IndexByte(b, ' ')]
+	n, _ := strconv.ParseUint(string(b), 10, 64)
+	return n
+}
+
 func Debugf(template string, args ...interface{}) {
+	if conf.LogWithGid {
+		nTemplate := fmt.Sprintf("gid=%d,%s", getGoroutineID(), template)
+		core.WithOptions(zap.AddCallerSkip(1)).Debugf(nTemplate, args...)
+		return
+	}
 	core.WithOptions(zap.AddCallerSkip(1)).Debugf(template, args...)
 }
 
 func Infof(template string, args ...interface{}) {
+	if conf.LogWithGid {
+		nTemplate := fmt.Sprintf("gid=%d,%s", getGoroutineID(), template)
+		core.WithOptions(zap.AddCallerSkip(1)).Infof(nTemplate, args...)
+		return
+	}
 	core.WithOptions(zap.AddCallerSkip(1)).Infof(template, args...)
 }
 
 func Warnf(template string, args ...interface{}) {
+	if conf.LogWithGid {
+		nTemplate := fmt.Sprintf("gid=%d,%s", getGoroutineID(), template)
+		core.WithOptions(zap.AddCallerSkip(1)).Warnf(nTemplate, args...)
+		return
+	}
 	core.WithOptions(zap.AddCallerSkip(1)).Warnf(template, args...)
 }
 
 func Errorf(template string, args ...interface{}) {
+	if conf.LogWithGid {
+		nTemplate := fmt.Sprintf("gid=%d,%s", getGoroutineID(), template)
+		core.WithOptions(zap.AddCallerSkip(1)).Errorf(nTemplate, args...)
+		return
+	}
 	core.WithOptions(zap.AddCallerSkip(1)).Errorf(template, args...)
 }

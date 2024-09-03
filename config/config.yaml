@@ -2,6 +2,7 @@ port: 12301
 log:
   path: stdout
   sample: 10000
+  withGid: true
   rotate:
     maxSize: 500
     maxBackups: 10

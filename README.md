@@ -19,28 +19,29 @@ smss的部署非常简单，编译后只有一个可执行文件，再配以一�
 
 ## 配置文件——config.yaml
 
-| 配置项                              | 描述                                                                         | 
-|:---------------------------------|:---------------------------------------------------------------------------|
-| port                             | 服务器端口                                                                      |
-| log.path                         | log文件的输出路径，可以是绝对路径，也可以是相对路径，还可以是 stdout, stdout表示输出到控制台上                   |
-| log.sample                       | 发布消息、管理topic命令的日志输出的采样率，每隔多少条输出一次日志，>=0, ==0表示不输出日志，== 1，每条都输出             |
-| log.rotate.maxSize               | 日志文件滚动，日志文件的最大值，单位M                                                        |
-| log.rotate.maxBackups            | 日志文件留存的个数                                                                  |
-| log.rotate.maxAge               | 日志文件保存时长，单位天                                                               |
-| store.path                       | 消息数据的存储路径，一般设置为data，即在当前目录下的data子目录中存储数据                                   |
-| store.maxLogSize                 | 每个数据存储文件的大小，一般设置为1G,用字节数表示                                                 |
-| store.flushLevel                 | 数据刷盘级别，0-不刷盘，使用os cache，1-每秒刷一次盘，2-每次都刷盘(不要使用，很慢)                          |
-| store.maxDays                    | 数据文件存活的最大天数，超过这个天数，文件会被删除                                                  |
-| store.clearInterval              | 数据回收线程的扫描间隔，即每隔这么久时间唤醒扫描一次，单位是s                                            |
-| store.waitDelLockTimeoutMs       | 回收数据文件时，需要获取该文件的保护锁，这个配置表示等待锁的时间，单位ms，一般不需要改动                              |
-| store.noCache                    | 不使用os pagecache，如果true，会调用posixFadvise，建议os不要使用pagecache                   |
-| worker.buffSize                  | smss采用单线程持久化数据，该单线程称之为worker， buffSize即等待worker处理的任务的个数，一般不需要改动            |
-| worker.waitMsgTimeout            | worker等待新的命令的超时时长，单位ms，超过该时长，worker也会唤醒，唤醒后会打印日志                           |
-| worker.waitMsgTimeoutLogSample   | worker等待新命令超时后日志打印输出的采样率,连续超时唤醒 waitMsgTimeoutLogSample次后，打印一条日志           |
-| timeout.net.write                | smss向client端输出时的超时，单位ms                                                    |
-| time.server.alive                | 在client订阅消息时，当一直没有消息时会给订阅端发送server还活着的消息，当超过time.server.alive这么久没消息时会发送    |
-| background.life.defaultScanSec   | 扫描有生命周期的topic的线程在无任何有生命周期的topic的情况下，也需要被唤醒，defaultScanSec指明这个唤醒间隔，单位是s     |
-| background.delay.firstExec       | 延迟消息也需要一个线程，按时唤醒， firstExec指明smss启动后第一次被唤醒的时机，即启动firstExec后，执行一次延迟消息扫描，单位s |
+| 配置项                            | 描述                                                                         | 
+|:-------------------------------|:---------------------------------------------------------------------------|
+| port                           | 服务器端口                                                                      |
+| log.path                       | log文件的输出路径，可以是绝对路径，也可以是相对路径，还可以是 stdout, stdout表示输出到控制台上                   |
+| log.sample                     | 发布消息、管理topic命令的日志输出的采样率，每隔多少条输出一次日志，>=0, ==0表示不输出日志，== 1，每条都输出             |
+| log.withGid                    | 输出日志时,是否输出当前goroutine id                                                   |
+| log.rotate.maxSize             | 日志文件滚动，日志文件的最大值，单位M                                                        |
+| log.rotate.maxBackups          | 日志文件留存的个数                                                                  |
+| log.rotate.maxAge              | 日志文件保存时长，单位天                                                               |
+| store.path                     | 消息数据的存储路径，一般设置为data，即在当前目录下的data子目录中存储数据                                   |
+| store.maxLogSize               | 每个数据存储文件的大小，一般设置为1G,用字节数表示                                                 |
+| store.flushLevel               | 数据刷盘级别，0-不刷盘，使用os cache，1-每秒刷一次盘，2-每次都刷盘(不要使用，很慢)                          |
+| store.maxDays                  | 数据文件存活的最大天数，超过这个天数，文件会被删除                                                  |
+| store.clearInterval            | 数据回收线程的扫描间隔，即每隔这么久时间唤醒扫描一次，单位是s                                            |
+| store.waitDelLockTimeoutMs     | 回收数据文件时，需要获取该文件的保护锁，这个配置表示等待锁的时间，单位ms，一般不需要改动                              |
+| store.noCache                  | 不使用os pagecache，如果true，会调用posixFadvise，建议os不要使用pagecache                   |
+| worker.buffSize                | smss采用单线程持久化数据，该单线程称之为worker， buffSize即等待worker处理的任务的个数，一般不需要改动            |
+| worker.waitMsgTimeout          | worker等待新的命令的超时时长，单位ms，超过该时长，worker也会唤醒，唤醒后会打印日志                           |
+| worker.waitMsgTimeoutLogSample | worker等待新命令超时后日志打印输出的采样率,连续超时唤醒 waitMsgTimeoutLogSample次后，打印一条日志           |
+| timeout.net.write              | smss向client端输出时的超时，单位ms                                                    |
+| time.server.alive              | 在client订阅消息时，当一直没有消息时会给订阅端发送server还活着的消息，当超过time.server.alive这么久没消息时会发送    |
+| background.life.defaultScanSec | 扫描有生命周期的topic的线程在无任何有生命周期的topic的情况下，也需要被唤醒，defaultScanSec指明这个唤醒间隔，单位是s     |
+| background.delay.firstExec     | 延迟消息也需要一个线程，按时唤醒， firstExec指明smss启动后第一次被唤醒的时机，即启动firstExec后，执行一次延迟消息扫描，单位s |
 
 ## master部署
 
