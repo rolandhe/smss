@@ -172,44 +172,22 @@ eventId的语义是当前客户端已经消费的最后一个消息的eventId，
 ## 分组订阅
 smss支持多次消费topic中的消息，多个订阅者可以同时消费topic的相同或者不同的消息，这比较灵活，但有的服务由于ha的原因需要部署多个实例，但多个实例需要只有一个实例能消费topic的消息，类似kafka的group
 功能，smss的订阅者需要自行指定当前订阅者的名称，类似于kafka的分组名称，不同名称的订阅者之间可以并行，但相同的订阅者只能有1个实例能够消费。
-* smss的客户端并没有提供一个分布式锁来保证相同名称的订阅者之间的互斥，这需要开发者自行实现，比如是zookeeper或者redis来实现分布式锁
-* smss服务端提供了兜底方案，如果已经存在一个订阅者，后续的相同名称的订阅者将被拒绝
+* smss的客户端提供了分布式锁的接口定义，也提供了基于redis的分布式锁，可以满足大多数的场景，如果场景特殊，开发者也可自行实现，比如基于zookeeper或者etcd来实现分布式锁
+* smss服务端也提供了兜底方案，如果已经存在一个订阅者，后续的相同名称的订阅者将被拒绝
 
 ```
-    func NewSubClient(mqName, who, host string, port int, timeout time.Duration) (*SubClient, error)
+  // NewDLockSub 创建支持分布式锁的订阅客户端, 分布式锁保证多个实例只有一个实例能够订阅消息, 并且当获取锁的实例崩溃后可以协调另一个实例继续消费
+  // topicName topic name
+  // who 当前订阅者是谁
+  // host smss server host
+  // port smss server port
+  // timeout 网络超时，包括 connect timeout and soTimeout
+  // locker 分布式锁
+  func NewDLockSub(topicName, who, host string, port int, timeout time.Duration, locker dlock.SubLock) DLockSub
 ```
 
 参数 who即当前订阅者的名称
 
-### redis分布式锁
-订阅消息是一个长时间的过程，在订阅过程中可能随时中断，那么另一个实例需要能够马上获取到锁，然后开始订阅，但redis并没有提供像zookeeper那样的分布式锁。使用redis 的setnx + 超时+定时续约的方式
-可以模拟长时间锁。
-* 使用uuid生成当前订阅id
-* 使用setnx who id expire 获取锁，expire 是一个较小的时间，比如30s
-
-```
-func acquireLock(client *redis.Client, who string, subId string, expiration time.Duration) bool {
-    return client.SetNX(context.Background(), who, subId, expiration).Val()
-}
-```
-
-* 以短于30s的周期定时续约，比如25s，为了保持原子性，使用lua
-
-```
-  const luaExtendScript = `
-      if redis.call("get", KEYS[1]) == ARGV[1] then
-          return redis.call("expire", KEYS[1], ARGV[2])
-      else
-          return 0
-      end
-  `
-  func extendLock(client *redis.Client, who string, subId string, expiration int) bool {
-      cmd := client.Eval(context.Background(), luaExtendScript, []string{who}, subId, expiration)
-      return cmd.Val().(int64) == 1
-  }
-```
-* 使用完锁后，删除 who以释放锁
-* 另一个实例，定时长时获取锁，比如20s
 
 ## 复制
 
