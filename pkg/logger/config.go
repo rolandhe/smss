@@ -63,7 +63,7 @@ func InitLogger(ppath string) {
 		zapcore.AddSync(lumberjackLogger),
 		config.Level,
 	)
-	core = zap.New(ccore).Sugar()
+	core = zap.New(ccore, zap.AddCaller()).Sugar()
 }
 
 func Sync() {
@@ -98,6 +98,7 @@ func Infof(template string, args ...interface{}) {
 	if conf.LogWithGid {
 		nTemplate := fmt.Sprintf("gid=%d,%s", getGoroutineID(), template)
 		core.WithOptions(zap.AddCallerSkip(1)).Infof(nTemplate, args...)
+		//core.Infof(nTemplate, args...)
 		return
 	}
 	core.WithOptions(zap.AddCallerSkip(1)).Infof(template, args...)
