@@ -111,10 +111,12 @@ func (lc *TimeTriggerControl) consumeRecent(currentRecent int64) {
 }
 
 func (lc *TimeTriggerControl) waitNext(waitTimeMs int64) bool {
+	timer := time.NewTimer(time.Millisecond * time.Duration(waitTimeMs))
+	defer timer.Stop()
 	select {
 	case <-lc.quickAlive:
 		return true
-	case <-time.After(time.Millisecond * time.Duration(waitTimeMs)):
+	case <-timer.C:
 		return false
 	}
 }

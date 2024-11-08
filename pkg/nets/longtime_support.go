@@ -27,11 +27,19 @@ func longtimeReadMonitor(biz string, conn net.Conn, resultChan chan int, clientC
 			close(clientClosedNotify.ClientClosedNotifyChan)
 			break
 		}
-		select {
-		case resultChan <- code:
-		case <-time.After(time.Millisecond * 100):
-			logger.Infof("tid=%s,longtimeReadMonitor write ack code timeout,100 ms", tid)
-			return
+		waitFunc := func() bool {
+			timer := time.NewTimer(time.Millisecond * 100)
+			defer timer.Stop()
+			select {
+			case resultChan <- code:
+				return true
+			case <-timer.C:
+				logger.Infof("tid=%s,longtimeReadMonitor write ack code timeout,100 ms", tid)
+				return false
+			}
+		}
+		if !waitFunc() {
+			break
 		}
 	}
 
@@ -56,6 +64,7 @@ func LongTimeRun[T any](conn net.Conn, biz, tid string, ackTimeout, writeTimeout
 		clientClosedNotify.ClientClosedFlag.Store(true)
 	}()
 	var logCounter int64 = 0
+
 	for {
 		var msgs []*T
 		msgs, err = reader.Read(clientClosedNotify)
@@ -73,14 +82,24 @@ func LongTimeRun[T any](conn net.Conn, biz, tid string, ackTimeout, writeTimeout
 				return err
 			}
 			var ackCode int
-			select {
-			case <-clientClosedNotify.ClientClosedNotifyChan:
-				logger.Infof("tid=%s,conn peer closed", tid)
-				return errors.New("conn peer closed")
-			case ackCode = <-resultChan:
-			case <-time.After(ackTimeout):
-				logger.Infof("tid=%s,read ack timeout", tid)
-				return errors.New("read ack timeout")
+
+			waitFunc := func() error {
+				timerAck := time.NewTimer(ackTimeout)
+				defer timerAck.Stop()
+				select {
+				case <-clientClosedNotify.ClientClosedNotifyChan:
+					logger.Infof("tid=%s,conn peer closed", tid)
+					return errors.New("conn peer closed")
+				case ackCode = <-resultChan:
+				case <-timerAck.C:
+					logger.Infof("tid=%s,read ack timeout", tid)
+					return errors.New("read ack timeout")
+				}
+				return nil
+			}
+
+			if err = waitFunc(); err != nil {
+				return err
 			}
 
 			if ackCode == protocol.SubAckWithEnd {

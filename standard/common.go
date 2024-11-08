@@ -37,10 +37,12 @@ func (f *FutureMsg[T]) Complete(err error) {
 }
 
 func (f *FutureMsg[T]) WaitTimeout(timeout time.Duration) bool {
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
 	select {
 	case <-f.waiter:
 		return true
-	case <-time.After(timeout):
+	case <-timer.C:
 		return false
 	}
 }

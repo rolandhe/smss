@@ -35,10 +35,12 @@ func (de *topicDelExecutor) Submit(topicName, who string, traceId string) func(d
 		if d == 0 {
 			return <-ch
 		}
+		timer := time.NewTimer(d)
+		defer timer.Stop()
 		select {
 		case ok := <-ch:
 			return ok
-		case <-time.After(d):
+		case <-timer.C:
 			return false
 		}
 	}

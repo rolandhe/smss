@@ -221,10 +221,12 @@ func (l *DelFileLock) Lock(name, who string, traceId string) (func(), func(d tim
 	if loaded {
 		oldHolder := elem.(*lockerHolder)
 		return nil, func(d time.Duration) bool {
+			timer := time.NewTimer(d)
+			defer timer.Stop()
 			select {
 			case <-oldHolder.ch:
 				return true
-			case <-time.After(d):
+			case <-timer.C:
 				logger.Infof("tid=%s,wait lock %s timeout,i am %s, by %s(src-tid=%s) locked", traceId, name, who, oldHolder.who, oldHolder.traceId)
 				return false
 			}

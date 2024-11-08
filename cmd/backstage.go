@@ -120,10 +120,12 @@ func (worker *backWorker) Work(msg *protocol.RawMessage) error {
 }
 
 func (worker *backWorker) waitMsg(timeout time.Duration, syncWake bool) *standard.FutureMsg[protocol.RawMessage] {
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
 	select {
 	case msg := <-worker.c:
 		return msg
-	case <-time.After(timeout):
+	case <-timer.C:
 		if !syncWake {
 			if worker.CanLogger() {
 				logger.Infof("get future task tomeout")

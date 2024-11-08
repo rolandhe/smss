@@ -51,6 +51,8 @@ func (nd *NotifyDevice) Notify() bool {
 	}
 }
 func (nd *NotifyDevice) Wait(clientClosedNotifyChan <-chan struct{}) WaitNotifyResult {
+	timer := time.NewTimer(conf.ServerAliveTimeout)
+	defer timer.Stop()
 	select {
 	case <-clientClosedNotifyChan:
 		return WaitNotifyByClientClosed
@@ -59,7 +61,7 @@ func (nd *NotifyDevice) Wait(clientClosedNotifyChan <-chan struct{}) WaitNotifyR
 			return WaitNotifyTopicDeleted
 		}
 		return WaitNotifyResultOK
-	case <-time.After(conf.ServerAliveTimeout):
+	case <-timer.C:
 		return WaitNotifyResultTimeout
 	}
 }
