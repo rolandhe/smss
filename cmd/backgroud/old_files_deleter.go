@@ -14,6 +14,7 @@ import (
 	"path"
 	"slices"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -22,12 +23,20 @@ const (
 )
 
 var cronIns *cron.Cron
+var delTaskRunning atomic.Bool
 
 func StartClearOldFiles(root string, store store.Store, worker standard.MessageWorking, delTopicFileExecutor protocol.DelTopicFileExecutor) {
 	cronIns = cron.New()
 
 	// 添加定时任务
 	cronIns.AddFunc(fmt.Sprintf("@every %ds", conf.StoreClearInterval), func() {
+		if !delTaskRunning.CompareAndSwap(false, true) {
+			logger.Infof("last deleteOldFiles task not finish,wait next...")
+			return
+		}
+
+		defer delTaskRunning.Store(false)
+
 		deleteOldFiles(root, store, worker, delTopicFileExecutor)
 	})
 
